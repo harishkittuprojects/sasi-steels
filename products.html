@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Our Services & Steel Solutions | SASI Steel Engineering</title>
-  <meta name="description" content="Explore SASI Steel Engineering fabrication services, live pricing, specifications, saved wishlist, and instant quotation inquiries." />
+  <title>Industrial Steel Products Catalog | SASI Steel Engineering</title>
+  <meta name="description" content="Explore structural steel beams, warehouse pallet racks, Galvalume roofing sheets, steel gratings, and custom laser cut brackets from SASI Steel Engineering." />
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -37,13 +37,28 @@
   <!-- AOS Animation Library CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" />
   
-  <!-- Custom Styles -->
+  <!-- Custom Styles Matching Reference -->
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="bg-slate-50 text-slate-900 flex flex-col min-h-screen">
 
+  <!-- Top Announcement Bar -->
+  <div class="bg-slate-950 text-slate-300 text-xs py-2 px-4 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+      <div class="flex items-center gap-4">
+        <a href="tel:+919845012345" class="flex items-center gap-1.5 hover:text-orange-400 transition-colors">
+          <i class="fa-solid fa-phone text-orange-500"></i> +91 98450 12345
+        </a>
+        <span class="hidden sm:flex items-center gap-1.5"><i class="fa-solid fa-envelope text-orange-500"></i> contact@sasisteel.com</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-orange-400 font-semibold">• Certified Steel Materials & Structural Components</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Header -->
-  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-20">
         
@@ -57,8 +72,8 @@
           <a href="index.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Home</a>
           <a href="about.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">About Us</a>
           <a href="categories.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Categories</a>
-          <a href="services.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-orange-600 bg-orange-50 transition-colors">Our Services</a>
-          <a href="products.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Products</a>
+          <a href="services.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Our Services</a>
+          <a href="products.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-orange-600 bg-orange-50 transition-colors">Products</a>
           <a href="gallery.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Gallery</a>
           <a href="contact.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Contact Us</a>
         </nav>
@@ -102,13 +117,13 @@
             <span class="flex items-center gap-3"><i class="fa-solid fa-shapes text-orange-600"></i> Categories</span>
             <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
           </a>
-          <a href="services.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-bold bg-orange-50 text-orange-600">
+          <a href="services.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
             <span class="flex items-center gap-3"><i class="fa-solid fa-toolbox text-orange-600"></i> Our Services</span>
-            <i class="fa-solid fa-chevron-right text-xs text-orange-600"></i>
-          </a>
-          <a href="products.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
-            <span class="flex items-center gap-3"><i class="fa-solid fa-boxes-stacked text-orange-600"></i> Products</span>
             <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="products.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-bold bg-orange-50 text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-cube text-orange-600"></i> Products</span>
+            <i class="fa-solid fa-chevron-right text-xs text-orange-600"></i>
           </a>
           <a href="gallery.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
             <span class="flex items-center gap-3"><i class="fa-solid fa-images text-orange-600"></i> Gallery</span>
@@ -130,100 +145,55 @@
   </div>
 
   <!-- Header Banner -->
-  <section class="bg-slate-950 text-white py-12 lg:py-16 relative overflow-hidden">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center" data-aos="fade-up">
-      <span class="section-tag mb-3">CATALOG & PRICING</span>
+  <section class="relative bg-slate-950 text-white py-16 lg:py-20 overflow-hidden">
+    <div class="absolute inset-0 z-0">
+      <img src="steel-fabrication.jpg" 
+           alt="SASI Steel Products" 
+           class="w-full h-full object-cover opacity-20 filter brightness-50" />
+      <div class="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/95 to-slate-950"></div>
+    </div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center" data-aos="fade-up">
+      <span class="section-tag mb-3">MANUFACTURED INVENTORY</span>
       <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black font-heading tracking-tight">
-        Complete Steel Solutions
+        Industrial Steel Products
       </h1>
-      <p class="mt-3 text-slate-300 text-sm sm:text-base max-w-2xl mx-auto">
-        Browse transparent pricing, technical details, structural drawings, and request custom quotations for your industrial fabrication projects.
+      <p class="mt-4 text-slate-300 text-sm sm:text-base max-w-2xl mx-auto">
+        Factory-certified structural I-beams, warehouse racking components, PEB roofing profiles, and heavy electro-forged gratings ready for bulk delivery.
       </p>
     </div>
   </section>
 
-  <!-- Filter & Search Controls -->
-  <section class="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm py-4">
+  <!-- Filter & Products Section -->
+  <section class="py-12 sm:py-16 flex-1">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="flex flex-col lg:flex-row gap-4 items-center justify-between">
-        
-        <!-- Filter Tabs -->
-        <div class="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 scrollbar-none" id="filter-tabs-container">
-          <button onclick="setFilter('all')" data-filter="all" 
-                  class="filter-tab px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-orange-500 text-white shadow-sm">
-            All Solutions
+      <!-- Top Filters -->
+      <div class="flex flex-col sm:flex-row items-center justify-between pb-8 mb-8 border-b border-slate-200 gap-4">
+        <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-none" id="product-filter-tabs">
+          <button onclick="filterProducts('all')" data-pfilter="all" class="px-4 py-2 rounded-full text-xs font-bold bg-orange-500 text-white shadow-sm transition-all whitespace-nowrap">
+            All Products
           </button>
-          <button onclick="setFilter('steel-fabrication')" data-filter="steel-fabrication" 
-                  class="filter-tab px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600">
-            Steel Fabrication
+          <button onclick="filterProducts('structural-steel')" data-pfilter="structural-steel" class="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-all whitespace-nowrap">
+            Structural Steel
           </button>
-          <button onclick="setFilter('welding-works')" data-filter="welding-works" 
-                  class="filter-tab px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600">
-            Welding Works
+          <button onclick="filterProducts('storage-systems')" data-pfilter="storage-systems" class="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-all whitespace-nowrap">
+            Storage Systems
           </button>
-          <button onclick="setFilter('storage-and-racks')" data-filter="storage-and-racks" 
-                  class="filter-tab px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600">
-            Storage Racks & Shelving
+          <button onclick="filterProducts('peb-roofing')" data-pfilter="peb-roofing" class="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-all whitespace-nowrap">
+            PEB & Roofing
           </button>
-          <button onclick="setFilter('mezzanine-floors-and-structure')" data-filter="mezzanine-floors-and-structure" 
-                  class="filter-tab px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600">
-            Mezzanine Floors
-          </button>
-          <button onclick="setFilter('custom-fabrication')" data-filter="custom-fabrication" 
-                  class="filter-tab px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600">
-            Custom Fabrications
+          <button onclick="filterProducts('walkways-flooring')" data-pfilter="walkways-flooring" class="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-all whitespace-nowrap">
+            Gratings & Flooring
           </button>
         </div>
 
-        <!-- Search & Sort Controls -->
-        <div class="flex items-center gap-3 w-full lg:w-auto">
-          <div class="relative flex-1 lg:w-64">
-            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input type="text" id="service-search" placeholder="Search services..." 
-                   oninput="handleSearch(this.value)"
-                   class="w-full pl-9 pr-3.5 py-2 rounded-full border border-slate-200 text-xs focus:outline-none focus:border-orange-500 bg-slate-50 focus:bg-white transition-colors" />
-          </div>
-
-          <select id="sort-select" onchange="handleSort(this.value)" class="px-3.5 py-2 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 bg-slate-50 focus:outline-none focus:border-orange-500">
-            <option value="default">Sort: Default</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
-            <option value="name">Name (A-Z)</option>
-          </select>
-        </div>
-
+        <span class="text-xs font-semibold text-slate-500" id="product-count-text">Showing 6 products</span>
       </div>
 
-    </div>
-  </section>
-
-  <!-- Service Listing Section -->
-  <section class="py-12 flex-1">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
-      <div class="flex items-center justify-between mb-6">
-        <p class="text-xs text-slate-500 font-medium" id="services-count-text">Showing all 6 services</p>
-        <button onclick="openQuoteModal()" class="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1">
-          <i class="fa-solid fa-plus-circle"></i> Need something custom?
-        </button>
-      </div>
-
-      <!-- Services Grid (Using Reference Layout Cards) -->
-      <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Products Grid -->
+      <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Rendered by JS -->
-      </div>
-
-      <!-- Empty State -->
-      <div id="no-services-found" class="hidden text-center py-20 bg-white rounded-3xl border border-slate-200 p-8">
-        <div class="w-16 h-16 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center text-3xl mx-auto mb-4">
-          <i class="fa-solid fa-boxes-packing"></i>
-        </div>
-        <h3 class="text-xl font-bold text-slate-900">No Services Found</h3>
-        <p class="text-xs text-slate-500 mt-2 max-w-sm mx-auto">We couldn't find any services matching your search or filter criteria. Try resetting filters.</p>
-        <button onclick="resetFilters()" class="mt-5 btn-orange-pill text-xs">
-          Reset All Filters
-        </button>
       </div>
 
     </div>
@@ -278,6 +248,10 @@
               <i class="fa-solid fa-phone text-orange-500"></i>
               <span>+91 98450 12345</span>
             </li>
+            <li class="flex items-center gap-2.5">
+              <i class="fa-solid fa-envelope text-orange-500"></i>
+              <span>contact@sasisteel.com</span>
+            </li>
           </ul>
         </div>
 
@@ -292,98 +266,68 @@
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-  <script src="js/data.js?v=5"></script>
-  <script src="js/main.js?v=5"></script>
-
+  <script src="js/data.js?v=6"></script>
+  <script src="js/main.js?v=6"></script>
+  
   <script>
-    let activeFilter = 'all';
-    let searchQuery = '';
-    let sortMode = 'default';
+    let activeProductCategory = 'all';
 
-    function renderServices() {
-      const grid = document.getElementById('services-grid');
-      const emptyState = document.getElementById('no-services-found');
-      const countText = document.getElementById('services-count-text');
-      if (!grid) return;
+    function renderProducts() {
+      const grid = document.getElementById('products-grid');
+      const countText = document.getElementById('product-count-text');
+      if (!grid || typeof productsData === 'undefined') return;
 
-      let filtered = servicesData.filter(s => {
-        const matchesFilter = activeFilter === 'all' || s.categorySlug === activeFilter;
-        const matchesSearch = searchQuery === '' || 
-          s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-          s.shortDescription.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          s.category.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesFilter && matchesSearch;
-      });
+      const filtered = productsData.filter(p => activeProductCategory === 'all' || p.categorySlug === activeProductCategory);
+      if (countText) countText.textContent = `Showing ${filtered.length} products`;
 
-      if (sortMode === 'price-low') {
-        filtered.sort((a, b) => a.price - b.price);
-      } else if (sortMode === 'price-high') {
-        filtered.sort((a, b) => b.price - a.price);
-      } else if (sortMode === 'name') {
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-      }
+      grid.innerHTML = filtered.map((p, idx) => `
+        <div class="ref-service-card group flex flex-col justify-between" data-aos="fade-up" data-aos-delay="${(idx % 3) * 80}">
+          <div class="relative h-52 w-full overflow-hidden bg-slate-100">
+            <img src="${p.image}" alt="${p.name}" onerror="this.onerror=null;this.src='steel-fabrication.jpg'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div class="absolute top-3 left-3 bg-orange-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow">
+              ${p.badge}
+            </div>
+            <div class="absolute bottom-3 right-3 bg-slate-900/85 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">
+              ${p.priceFormatted}
+            </div>
+          </div>
 
-      countText.textContent = `Showing ${filtered.length} of ${servicesData.length} services`;
+          <div class="p-5 flex-1 flex flex-col justify-between">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-orange-600 block mb-1">${p.category}</span>
+              <h3 class="text-base font-bold text-slate-900 group-hover:text-orange-600 transition-colors">${p.name}</h3>
+              <p class="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">${p.description}</p>
+              
+              <div class="mt-3.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-600 font-medium">
+                <i class="fa-solid fa-screwdriver-wrench text-orange-500 mr-1"></i> ${p.specs}
+              </div>
+            </div>
 
-      if (filtered.length === 0) {
-        grid.innerHTML = '';
-        emptyState.classList.remove('hidden');
-      } else {
-        emptyState.classList.add('hidden');
-        grid.innerHTML = filtered.map((service, idx) => 
-          createServiceCardHTML(service, (idx % 3) * 80)
-        ).join('');
-      }
+            <div class="mt-5 pt-4 border-t border-slate-100">
+              <button onclick="openQuoteModal('${p.name.replace(/'/g, "\\'")}')" class="w-full py-2.5 rounded-xl bg-orange-500 text-white font-bold text-xs hover:bg-orange-600 shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
+                <i class="fa-solid fa-file-invoice"></i> Inquire for Bulk Order
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
 
-      if (typeof AOS !== 'undefined') {
-        AOS.refresh();
-      }
+      if (typeof AOS !== 'undefined') AOS.refresh();
     }
 
-    function setFilter(categorySlug) {
-      activeFilter = categorySlug;
-      document.querySelectorAll('.filter-tab').forEach(tab => {
-        if (tab.getAttribute('data-filter') === categorySlug) {
-          tab.className = 'filter-tab px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-orange-500 text-white shadow-sm';
+    function filterProducts(catSlug) {
+      activeProductCategory = catSlug;
+      document.querySelectorAll('#product-filter-tabs button').forEach(btn => {
+        if (btn.getAttribute('data-pfilter') === catSlug) {
+          btn.className = 'px-4 py-2 rounded-full text-xs font-bold bg-orange-500 text-white shadow-sm transition-all whitespace-nowrap';
         } else {
-          tab.className = 'filter-tab px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600';
+          btn.className = 'px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-all whitespace-nowrap';
         }
       });
-      renderServices();
+      renderProducts();
     }
 
-    function handleSearch(query) {
-      searchQuery = query.trim();
-      renderServices();
-    }
-
-    function handleSort(mode) {
-      sortMode = mode;
-      renderServices();
-    }
-
-    function resetFilters() {
-      activeFilter = 'all';
-      searchQuery = '';
-      sortMode = 'default';
-      document.getElementById('service-search').value = '';
-      document.getElementById('sort-select').value = 'default';
-      setFilter('all');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const catParam = urlParams.get('category');
-      if (catParam) {
-        setFilter(catParam);
-      } else {
-        renderServices();
-      }
-
-      window.addEventListener('wishlistUpdated', () => {
-        updateWishlistButtonStates();
-      });
-    });
+    document.addEventListener('DOMContentLoaded', renderProducts);
   </script>
 </body>
 </html>

@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Gallery & Portfolio | SASI Steel Engineering</title>
+  <meta name="description" content="Browse our project gallery featuring PEB industrial sheds, structural steel welding, warehouse mezzanine floors, heavy-duty racking, and custom fabrication." />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            orange: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
+  <!-- AOS Animation Library CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" />
+  
+  <!-- Custom Styles Matching Reference -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-slate-50 text-slate-900 flex flex-col min-h-screen">
+
+  <!-- Top Announcement Bar -->
+  <div class="bg-slate-950 text-slate-300 text-xs py-2 px-4 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+      <div class="flex items-center gap-4">
+        <a href="tel:+919845012345" class="flex items-center gap-1.5 hover:text-orange-400 transition-colors">
+          <i class="fa-solid fa-phone text-orange-500"></i> +91 98450 12345
+        </a>
+        <span class="hidden sm:flex items-center gap-1.5"><i class="fa-solid fa-envelope text-orange-500"></i> contact@sasisteel.com</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-orange-400 font-semibold">• 500+ Industrial Structural Projects Completed Across India</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        
+        <!-- SASI Logo (Using image.png) -->
+        <a href="index.html" class="flex items-center group py-1">
+          <img src="image.png" alt="SASI Steel Engineering Logo" class="h-12 sm:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-1 lg:gap-2">
+          <a href="index.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Home</a>
+          <a href="about.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">About Us</a>
+          <a href="categories.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Categories</a>
+          <a href="services.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Our Services</a>
+          <a href="products.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Products</a>
+          <a href="gallery.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-orange-600 bg-orange-50 transition-colors">Gallery</a>
+          <a href="contact.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Contact Us</a>
+        </nav>
+
+        <!-- Right Action Icons -->
+        <div class="flex items-center gap-3">
+          <button onclick="openQuoteModal()" class="hidden lg:inline-flex btn-orange-pill text-xs">
+            Get Quote
+          </button>
+
+          <button id="mobile-menu-button" class="md:hidden p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100" aria-label="Open Mobile Menu">
+            <i class="fa-solid fa-bars text-xl"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div id="mobile-menu" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden md:hidden">
+    <div class="fixed top-0 right-0 bottom-0 w-4/5 max-w-sm bg-white shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
+      <div>
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <img src="image.png" alt="SASI Steel Engineering Logo" class="h-10 w-auto object-contain" />
+          <button id="mobile-menu-close" class="p-2 text-slate-500 hover:text-slate-900">
+            <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+        </div>
+
+        <nav class="mt-6 flex flex-col gap-2">
+          <a href="index.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-house text-orange-600"></i> Home</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="about.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-circle-info text-orange-600"></i> About Us</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="categories.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-shapes text-orange-600"></i> Categories</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="services.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-screwdriver-wrench text-orange-600"></i> Our Services</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="products.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-boxes-stacked text-orange-600"></i> Products</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="gallery.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold bg-orange-50 text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-images text-orange-600"></i> Gallery</span>
+            <i class="fa-solid fa-chevron-right text-xs text-orange-600"></i>
+          </a>
+          <a href="contact.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-envelope text-orange-600"></i> Contact Us</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+        </nav>
+      </div>
+
+      <div class="pt-6 border-t border-slate-100">
+        <button onclick="openQuoteModal()" class="w-full btn-orange-pill justify-center text-sm py-3">
+          Get Free Quote
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breadcrumbs & Hero Header -->
+  <section class="bg-slate-900 text-white py-14 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#f97316_1px,transparent_1px)] [background-size:16px_16px]"></div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-orange-400 mb-3" data-aos="fade-down">
+        <a href="index.html" class="hover:underline">Home</a>
+        <i class="fa-solid fa-chevron-right text-[10px] text-slate-500"></i>
+        <span>Project Gallery</span>
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight" data-aos="fade-up">
+        Our Work <span class="text-orange-500">Gallery</span>
+      </h1>
+      <p class="mt-3 max-w-2xl text-slate-400 text-sm sm:text-base" data-aos="fade-up" data-aos-delay="100">
+        Explore our on-site execution across warehouse sheds, heavy welding joints, structural mezzanines, industrial racking systems, and precision metal fabrication.
+      </p>
+    </div>
+  </section>
+
+  <!-- Gallery Section with Filters -->
+  <section class="py-16 bg-slate-50 flex-1">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <!-- Filter Controls -->
+      <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-12" data-aos="fade-up">
+        <button onclick="filterGallery('all', this)" class="gallery-filter-btn px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-orange-600 text-white shadow-md shadow-orange-600/20">
+          <i class="fa-solid fa-border-all mr-1.5"></i> All Projects (<span id="count-all">6</span>)
+        </button>
+        <button onclick="filterGallery('peb', this)" class="gallery-filter-btn px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-white text-slate-700 border border-slate-200 hover:border-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-warehouse mr-1.5 text-orange-500"></i> PEB Sheds
+        </button>
+        <button onclick="filterGallery('welding', this)" class="gallery-filter-btn px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-white text-slate-700 border border-slate-200 hover:border-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-fire-burner mr-1.5 text-orange-500"></i> Heavy Welding
+        </button>
+        <button onclick="filterGallery('storage', this)" class="gallery-filter-btn px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-white text-slate-700 border border-slate-200 hover:border-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-cubes-stacked mr-1.5 text-orange-500"></i> Storage Racks
+        </button>
+        <button onclick="filterGallery('mezzanine', this)" class="gallery-filter-btn px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-white text-slate-700 border border-slate-200 hover:border-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-layer-group mr-1.5 text-orange-500"></i> Mezzanines
+        </button>
+        <button onclick="filterGallery('fabrication', this)" class="gallery-filter-btn px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-white text-slate-700 border border-slate-200 hover:border-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-gear mr-1.5 text-orange-500"></i> Custom Ironwork
+        </button>
+      </div>
+
+      <!-- Gallery Grid Container -->
+      <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <!-- Rendered dynamically by Javascript -->
+      </div>
+
+      <!-- Live Project Statistics Banner -->
+      <div class="mt-16 bg-slate-900 rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-xl" data-aos="fade-up">
+        <div class="absolute right-0 top-0 bottom-0 w-1/3 bg-orange-600/10 -skew-x-12 pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 text-center lg:text-left">
+          <div class="max-w-xl">
+            <span class="px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full text-xs font-bold uppercase tracking-wider">
+              Precision Engineering Since 2012
+            </span>
+            <h3 class="text-2xl sm:text-3xl font-extrabold mt-3 text-white">Have a Project Requiring Steel Engineering?</h3>
+            <p class="text-slate-400 text-sm mt-2">
+              Our in-house fabrication team handles turnkey projects from CAD shop drawings and CNC plasma cutting to final on-site bolting and structural NDT testing.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <button onclick="openQuoteModal()" class="btn-orange-pill justify-center text-sm py-3 px-8 shadow-lg shadow-orange-600/30">
+              Request Instant Quote
+            </button>
+            <a href="contact.html" class="inline-flex items-center justify-center px-6 py-3 rounded-full text-sm font-bold bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-phone mr-2 text-orange-400"></i> Speak to an Engineer
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive Lightbox Modal -->
+  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="relative max-w-5xl w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      
+      <!-- Top Modal Bar -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
+        <div class="flex items-center gap-3">
+          <span id="modal-category" class="px-3 py-1 rounded-full text-xs font-bold bg-orange-600/20 text-orange-400">Category</span>
+          <h4 id="modal-title" class="text-base sm:text-lg font-bold text-white truncate max-w-md">Project Title</h4>
+        </div>
+        <button onclick="closeLightbox()" class="w-9 h-9 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Image Viewport -->
+      <div class="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[350px] max-h-[550px]">
+        <img id="modal-image" src="" alt="" class="max-w-full max-h-full object-contain transition-all duration-300" />
+      </div>
+
+      <!-- Modal Footer Info -->
+      <div class="p-6 bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <p id="modal-desc" class="text-sm text-slate-300">Project details and technical description.</p>
+          <p id="modal-loc" class="text-xs text-orange-400 font-semibold mt-1"><i class="fa-solid fa-location-dot mr-1"></i> Location</p>
+        </div>
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <button onclick="closeLightbox(); openQuoteModal();" class="btn-orange-pill text-xs py-2.5 px-6 w-full sm:w-auto justify-center">
+            Inquire Similar Project
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Quote Request Modal -->
+  <div id="quote-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative animate-fade-in max-h-[90vh] overflow-y-auto">
+      <button onclick="closeQuoteModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+          <i class="fa-solid fa-calculator text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-xl font-bold text-slate-900">Request a Free Quote</h3>
+          <p class="text-xs text-slate-500">Complete the form below for technical consultation and pricing.</p>
+        </div>
+      </div>
+
+      <form id="quote-form" onsubmit="handleQuoteSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Your Full Name</label>
+          <input type="text" required placeholder="e.g. Rajesh Kumar" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-sm" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Phone Number</label>
+            <input type="tel" required placeholder="+91 98450 XXXXX" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email Address</label>
+            <input type="email" required placeholder="name@company.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-sm" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Service / Project Type</label>
+          <select class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-sm bg-white">
+            <option value="Industrial Roofing Sheds">Industrial Roofing Sheds (PEB)</option>
+            <option value="Heavy Welding Works">Heavy Structural Welding & Piping</option>
+            <option value="Storage Racks">Heavy Duty Storage Racks</option>
+            <option value="Mezzanine Floors">Multi-Tier Mezzanine Floors</option>
+            <option value="Steel Fabrication">Steel Structural Fabrication</option>
+            <option value="Custom Ironwork">Custom Ironwork & Laser Parts</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Project Details / Approximate Size</label>
+          <textarea rows="3" placeholder="Describe your dimensions, tonnage, location, or timeframe..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-sm"></textarea>
+        </div>
+
+        <button type="submit" class="w-full btn-orange-pill justify-center text-sm py-3 mt-2 shadow-lg shadow-orange-500/20">
+          Submit Quote Request
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-slate-950 text-slate-400 pt-16 pb-12 border-t border-slate-800 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-slate-800/80">
+        
+        <!-- Company Info -->
+        <div>
+          <img src="image.png" alt="SASI Steel Logo" class="h-12 w-auto object-contain mb-4" />
+          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed mb-4">
+            SASI Steel Engineering is a premier structural steel fabrication company providing turn-key PEB industrial sheds, heavy welding, storage solutions, and precision ironwork.
+          </p>
+          <div class="flex items-center gap-3">
+            <a href="#" class="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-orange-500 hover:border-orange-500 transition-colors"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="#" class="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-orange-500 hover:border-orange-500 transition-colors"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" class="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-orange-500 hover:border-orange-500 transition-colors"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="#" class="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-orange-500 hover:border-orange-500 transition-colors"><i class="fa-brands fa-whatsapp"></i></a>
+          </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div>
+          <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-4 border-l-2 border-orange-500 pl-2">Navigation</h4>
+          <ul class="space-y-2 text-xs sm:text-sm">
+            <li><a href="index.html" class="hover:text-orange-400 transition-colors">Home</a></li>
+            <li><a href="about.html" class="hover:text-orange-400 transition-colors">About Our Company</a></li>
+            <li><a href="categories.html" class="hover:text-orange-400 transition-colors">Service Categories</a></li>
+            <li><a href="services.html" class="hover:text-orange-400 transition-colors">Engineering Services</a></li>
+            <li><a href="products.html" class="hover:text-orange-400 transition-colors">Steel Products</a></li>
+            <li><a href="gallery.html" class="hover:text-orange-400 transition-colors text-orange-400 font-semibold">Project Gallery</a></li>
+            <li><a href="contact.html" class="hover:text-orange-400 transition-colors">Contact Us</a></li>
+          </ul>
+        </div>
+
+        <!-- Our Capabilities -->
+        <div>
+          <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-4 border-l-2 border-orange-500 pl-2">Capabilities</h4>
+          <ul class="space-y-2 text-xs sm:text-sm">
+            <li><span class="hover:text-orange-400 transition-colors">PEB Industrial Warehouses</span></li>
+            <li><span class="hover:text-orange-400 transition-colors">MIG / TIG / Arc Heavy Welding</span></li>
+            <li><span class="hover:text-orange-400 transition-colors">Heavy-Duty Pallet Racking</span></li>
+            <li><span class="hover:text-orange-400 transition-colors">Custom Structural Mezzanines</span></li>
+            <li><span class="hover:text-orange-400 transition-colors">CNC Laser & Plasma Metal Cutting</span></li>
+            <li><span class="hover:text-orange-400 transition-colors">Turnkey Erection & NDT Testing</span></li>
+          </ul>
+        </div>
+
+        <!-- Contact Coordinates -->
+        <div>
+          <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-4 border-l-2 border-orange-500 pl-2">Plant Location</h4>
+          <ul class="space-y-3 text-xs sm:text-sm">
+            <li class="flex items-start gap-3">
+              <i class="fa-solid fa-location-dot text-orange-500 mt-1"></i>
+              <span>Plot 42, Heavy Industrial Estate, Peenya, Bengaluru, Karnataka 560058</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <i class="fa-solid fa-phone text-orange-500"></i>
+              <a href="tel:+919845012345" class="hover:text-orange-400 transition-colors">+91 98450 12345</a>
+            </li>
+            <li class="flex items-center gap-3">
+              <i class="fa-solid fa-envelope text-orange-500"></i>
+              <span>contact@sasisteel.com</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <i class="fa-solid fa-clock text-orange-500"></i>
+              <span>Mon - Sat: 8:00 AM - 7:30 PM</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+        <p>&copy; 2026 SASI Steel Engineering Works. All rights reserved.</p>
+        <p>Built with Industrial Precision & Quality Standards</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <script src="js/data.js"></script>
+  <script>
+    AOS.init({
+      duration: 700,
+      once: true,
+      offset: 60
+    });
+
+    // Mobile menu toggle
+    const mobileBtn = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileClose = document.getElementById('mobile-menu-close');
+
+    if (mobileBtn && mobileMenu) {
+      mobileBtn.addEventListener('click', () => mobileMenu.classList.remove('hidden'));
+      mobileClose.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+    }
+
+    // Quote Modal Handlers
+    function openQuoteModal() {
+      document.getElementById('quote-modal').classList.remove('hidden');
+    }
+    function closeQuoteModal() {
+      document.getElementById('quote-modal').classList.add('hidden');
+    }
+    function handleQuoteSubmit(e) {
+      e.preventDefault();
+      alert('Thank you! Your quotation inquiry has been received. Our senior engineer will contact you within 2 business hours.');
+      closeQuoteModal();
+    }
+
+    // Gallery Render and Filter Logic
+    let currentGalleryData = typeof galleryData !== 'undefined' ? galleryData : [
+      {
+        id: "gal-1",
+        title: "Large Span Warehouse PEB Shed",
+        category: "peb",
+        categoryLabel: "PEB Sheds",
+        image: "gallery-peb-1.jpg",
+        location: "Hosur Industrial Complex, TN",
+        description: "45,000 sq.ft clear-span pre-engineered building with Galvalume color coated sheeting and ridge ventilation."
+      },
+      {
+        id: "gal-2",
+        title: "Structural Pipe Welding & Rig Joints",
+        category: "welding",
+        categoryLabel: "Heavy Welding",
+        image: "gallery-welding-1.jpg",
+        location: "Peenya Phase II, Bengaluru",
+        description: "ASME certified TIG & MIG weld seams on high-pressure structural steel pipes with radiographic inspection."
+      },
+      {
+        id: "gal-3",
+        title: "Multi-Tier Heavy Duty Pallet Racking",
+        category: "storage",
+        categoryLabel: "Storage Racks",
+        image: "gallery-racks-1.jpg",
+        location: "Logistics Hub, Nelamangala",
+        description: "Adjustable 7-tier warehouse pallet racking with 3.5-ton beam load capacity and seismic column base anchoring."
+      },
+      {
+        id: "gal-4",
+        title: "Industrial Structural Mezzanine Floor",
+        category: "mezzanine",
+        categoryLabel: "Mezzanines",
+        image: "gallery-mezzanine-1.jpg",
+        location: "Electronic City, Bengaluru",
+        description: "Heavy-duty steel mezzanine with 750 kg/m² floor payload rating, chequered steel decking, and safety toe-guards."
+      },
+      {
+        id: "gal-5",
+        title: "Precision CNC Laser Cut Steel Assemblies",
+        category: "fabrication",
+        categoryLabel: "Custom Ironwork",
+        image: "gallery-laser-1.jpg",
+        location: "SASI Fabrication Plant 1",
+        description: "High-tolerance laser-profiled structural brackets and gusset plates for heavy machinery mounting."
+      },
+      {
+        id: "gal-6",
+        title: "Heavy-Duty Spiral & Fire Escape Stairs",
+        category: "fabrication",
+        categoryLabel: "Custom Ironwork",
+        image: "gallery-stairs-1.jpg",
+        location: "Chemical Manufacturing Plant, Bommasandra",
+        description: "Galvanized non-slip perforated steel industrial staircases with welded safety handrails compliant with factory norms."
+      }
+    ];
+
+    function renderGallery(items) {
+      const grid = document.getElementById('gallery-grid');
+      if (!grid) return;
+
+      grid.innerHTML = items.map((item, idx) => `
+        <div class="group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col" data-aos="fade-up" data-aos-delay="${idx * 75}">
+          <div class="relative overflow-hidden aspect-[4/3] bg-slate-950 cursor-pointer" onclick="openLightbox('${item.id}')">
+            <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent opacity-60 group-hover:opacity-90 transition-opacity"></div>
+            
+            <div class="absolute top-3 left-3">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-900/80 backdrop-blur-md text-orange-400 border border-slate-700">
+                ${item.categoryLabel}
+              </span>
+            </div>
+
+            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span class="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-expand text-xs"></i>
+              </span>
+            </div>
+
+            <div class="absolute bottom-3 left-3 right-3 text-white">
+              <span class="text-[11px] font-semibold text-orange-400 flex items-center gap-1 mb-1">
+                <i class="fa-solid fa-location-dot text-[10px]"></i> ${item.location}
+              </span>
+              <h3 class="text-base font-bold leading-tight group-hover:text-orange-300 transition-colors">${item.title}</h3>
+            </div>
+          </div>
+
+          <div class="p-4 sm:p-5 flex-1 flex flex-col justify-between bg-white">
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+              ${item.description}
+            </p>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <button onclick="openLightbox('${item.id}')" class="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-eye"></i> View High-Res
+              </button>
+              <button onclick="openQuoteModal()" class="text-xs font-bold text-slate-600 hover:text-orange-600 flex items-center gap-1">
+                Get RFQ <i class="fa-solid fa-arrow-right text-[10px]"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterGallery(category, btnElement) {
+      // Update filter button styling
+      document.querySelectorAll('.gallery-filter-btn').forEach(btn => {
+        btn.className = 'gallery-filter-btn px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-white text-slate-700 border border-slate-200 hover:border-orange-500 hover:text-orange-600';
+      });
+      if (btnElement) {
+        btnElement.className = 'gallery-filter-btn px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all bg-orange-600 text-white shadow-md shadow-orange-600/20';
+      }
+
+      if (category === 'all') {
+        renderGallery(currentGalleryData);
+      } else {
+        const filtered = currentGalleryData.filter(i => i.category === category);
+        renderGallery(filtered);
+      }
+    }
+
+    // Lightbox Modal Functions
+    function openLightbox(itemId) {
+      const item = currentGalleryData.find(i => i.id === itemId);
+      if (!item) return;
+
+      document.getElementById('modal-image').src = item.image;
+      document.getElementById('modal-title').textContent = item.title;
+      document.getElementById('modal-category').textContent = item.categoryLabel;
+      document.getElementById('modal-desc').textContent = item.description;
+      document.getElementById('modal-loc').innerHTML = `<i class="fa-solid fa-location-dot mr-1"></i> ${item.location}`;
+
+      document.getElementById('lightbox-modal').classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox-modal').classList.add('hidden');
+    }
+
+    // Initialize gallery
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGallery(currentGalleryData);
+    });
+  </script>
+</body>
+</html>

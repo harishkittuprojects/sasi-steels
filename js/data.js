@@ -1,4 +1,6 @@
-// SASI Steel Engineering - Central Service & Category Database
+// SASI Steel Engineering - Central Database
+
+// 1. Services Database
 const servicesData = [
   {
     id: "steel-fabrication",
@@ -176,6 +178,7 @@ const servicesData = [
   }
 ];
 
+// 2. Categories Database
 const categoriesData = [
   {
     slug: "steel-fabrication",
@@ -221,5 +224,145 @@ const categoriesData = [
     image: "custom-fabrication.jpg",
     startingPrice: "₹7,500",
     icon: "fa-gears"
+  }
+];
+
+// 3. Products Database
+const productsData = [
+  {
+    id: "heavy-ismb-beams",
+    name: "Structural ISMB Steel Beams & Columns",
+    category: "Structural Steel",
+    categorySlug: "structural-steel",
+    priceFormatted: "₹65 / kg",
+    rating: "4.9 (42 reviews)",
+    image: "product-beams.jpg",
+    badge: "IS 2062 Standard",
+    specs: "ISMB 100 to 600mm | Length: 6m - 12m | Anti-Rust Primer",
+    description: "High tensile hot-rolled universal I-beams, H-columns, and structural channels engineered for heavy load foundations, warehouse frames, and bridge spans."
+  },
+  {
+    id: "industrial-pallet-racks",
+    name: "Heavy-Duty Warehouse Pallet Racks",
+    category: "Storage Systems",
+    categorySlug: "storage-systems",
+    priceFormatted: "₹4,200 / bay level",
+    rating: "5.0 (58 reviews)",
+    image: "product-racks.jpg",
+    badge: "3.5 Ton Capacity",
+    specs: "Upright Height: 2m to 10m | Beam Length: 2.7m | Powder Coated",
+    description: "Multi-tier selective pallet racking systems engineered for forklift loading, high-density warehousing, and extreme seismic resistance."
+  },
+  {
+    id: "galvalume-roofing-sheets",
+    name: "Galvalume Corrugated Roofing Sheets",
+    category: "PEB & Roofing",
+    categorySlug: "peb-roofing",
+    priceFormatted: "₹380 / sq.meter",
+    rating: "4.8 (39 reviews)",
+    image: "product-sheets.jpg",
+    badge: "AZ-150 Coating",
+    specs: "Thickness: 0.45 - 0.60 mm | Color Coated | Wind Tested",
+    description: "Weather-resistant, corrosion-proof profiled steel roofing and wall cladding sheets for industrial factory sheds and commercial buildings."
+  },
+  {
+    id: "electroforged-steel-gratings",
+    name: "Electro-Forged Industrial Steel Gratings",
+    category: "Walkways & Flooring",
+    categorySlug: "walkways-flooring",
+    priceFormatted: "₹1,850 / sq.meter",
+    rating: "4.9 (31 reviews)",
+    image: "product-gratings.jpg",
+    badge: "Hot-Dip Galvanized",
+    specs: "Bearing Bar: 25x3mm - 50x5mm | Anti-Skid Serrated Edge",
+    description: "Heavy-duty steel floor gratings and trench covers for mezzanine walkways, offshore platforms, oil refineries, and drainage channels."
+  },
+  {
+    id: "fire-escape-staircases",
+    name: "Prefabricated Industrial Steel Staircases",
+    category: "Structural Steel",
+    categorySlug: "structural-steel",
+    priceFormatted: "₹28,000 / flight",
+    rating: "5.0 (27 reviews)",
+    image: "gallery-stairs-1.jpg",
+    badge: "OSHA Compliant",
+    specs: "Chequered Treads | 1.1m Heavy Handrails | Modular Assembly",
+    description: "Engineered emergency fire escape staircases, spiral access steps, and catwalk platforms manufactured with certified structural welding."
+  },
+  {
+    id: "cnc-laser-cut-brackets",
+    name: "CNC Precision Laser Cut Base Plates & Brackets",
+    category: "Custom Fabrication",
+    categorySlug: "custom-fabrication",
+    priceFormatted: "₹95 / unit",
+    rating: "4.9 (64 reviews)",
+    image: "gallery-laser-1.jpg",
+    badge: "±0.2mm Precision",
+    specs: "Plate Thickness: 2mm to 40mm | Laser CNC Cut | Chamfered Holes",
+    description: "Custom beam gusset plates, column base anchors, connection brackets, and decorative architectural screens cut to CAD precision."
+  }
+];
+
+// 4. Project Gallery Database
+const galleryData = [
+  {
+    id: "gallery-1",
+    title: "100,000 Sq.Ft Pre-Engineered Logistics Warehouse",
+    category: "PEB Sheds & Warehouses",
+    categorySlug: "peb-sheds",
+    location: "Heavy Industrial Zone, Karnataka",
+    year: "2025",
+    image: "gallery-peb-1.jpg",
+    description: "End-to-end design, fabrication, and on-site erection of a 100,000 sq.ft clear-span PEB logistics warehouse with 20-ton crane rails and Galvalume roof."
+  },
+  {
+    id: "gallery-2",
+    title: "High-Pressure Pipe Welding & NDT Testing",
+    category: "Welding & Piping",
+    categorySlug: "welding",
+    location: "Petrochemical Refinery Unit, India",
+    year: "2025",
+    image: "gallery-welding-1.jpg",
+    description: "Certified ASME Section IX TIG & MIG welding on heavy gauge carbon steel pipelines with 100% radiographic and ultrasonic flaw detection."
+  },
+  {
+    id: "gallery-3",
+    title: "4-Tier High-Density Pallet Racking Hub",
+    category: "Storage & Racks",
+    categorySlug: "storage",
+    location: "E-Commerce Fulfillment Center",
+    year: "2026",
+    image: "gallery-racks-1.jpg",
+    description: "Fabrication and precision assembly of 2,400 pallet capacity heavy-duty racking bays rated at 3,500 kg per beam level with safety wire mesh decks."
+  },
+  {
+    id: "gallery-4",
+    title: "Structural Mezzanine Floor with Office Platform",
+    category: "Mezzanine & Structure",
+    categorySlug: "mezzanine",
+    location: "Manufacturing Plant, Chennai",
+    year: "2025",
+    image: "gallery-mezzanine-1.jpg",
+    description: "Heavy structural steel mezzanine deck adding 12,000 sq.ft of operational assembly floor over existing ground level production line."
+  },
+  {
+    id: "gallery-5",
+    title: "CNC Fiber Laser Structural Plate Processing",
+    category: "Custom Ironwork",
+    categorySlug: "custom",
+    location: "SASI Fabrication Yard",
+    year: "2026",
+    image: "gallery-laser-1.jpg",
+    description: "Automated high-speed fiber laser profiling of 25mm structural steel connection plates, gussets, and machine chassis."
+  },
+  {
+    id: "gallery-6",
+    title: "Multi-Level Industrial Fire Exit Stair Tower",
+    category: "Structural Steel",
+    categorySlug: "peb-sheds",
+    location: "Commercial Technology Park",
+    year: "2025",
+    image: "gallery-stairs-1.jpg",
+    description: "5-Story external emergency fire exit staircase with anti-skid chequered plate steps, safety balustrades, and weather-proof epoxy finish."
   }
 ];
