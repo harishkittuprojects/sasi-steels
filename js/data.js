@@ -242,6 +242,18 @@ const productsData = [
     description: "High tensile hot-rolled universal I-beams, H-columns, and structural channels engineered for heavy load foundations, warehouse frames, and bridge spans."
   },
   {
+    id: "commercial-display-racks",
+    name: "Commercial Showroom & Apparel Steel Display Racks",
+    category: "Storage Systems",
+    categorySlug: "storage-systems",
+    priceFormatted: "₹6,500 / unit bay",
+    rating: "5.0 (42 reviews)",
+    image: "product-display-racks.png",
+    badge: "Showroom Grade",
+    specs: "Matte Black Powder Coat | Modular Hanging Rails | Wooden Shelf Mounts",
+    description: "Architectural showroom steel display racks, heavy garment hanging fixtures, and boutique retail shelving fabricated with precision welded steel tubing."
+  },
+  {
     id: "industrial-pallet-racks",
     name: "Heavy-Duty Warehouse Pallet Racks",
     category: "Storage Systems",
