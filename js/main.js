@@ -9,7 +9,23 @@ const STATE_KEYS = {
 function getWishlist() {
   try {
     const data = localStorage.getItem(STATE_KEYS.WISHLIST);
-    return data ? JSON.parse(data) : [];
+    let items = data ? JSON.parse(data) : [];
+    if (typeof servicesData !== 'undefined' && Array.isArray(items)) {
+      items = items.map(item => {
+        const found = servicesData.find(s => s.id === item.id);
+        if (found) {
+          return {
+            ...item,
+            image: found.image,
+            name: found.name,
+            price: found.price,
+            priceFormatted: found.priceFormatted
+          };
+        }
+        return item;
+      });
+    }
+    return items;
   } catch (e) {
     console.error('Error reading wishlist', e);
     return [];
@@ -217,8 +233,8 @@ function createServiceCardHTML(service, animationDelay = 0) {
       <!-- Top Image -->
       <div class="relative h-48 w-full overflow-hidden bg-slate-100">
         <img src="${service.image}" alt="${service.name}" 
-             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-             loading="lazy" />
+             onerror="this.onerror=null;this.src='welding-works.jpg'"
+             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         
         <!-- Wishlist Button -->
         <button onclick="toggleWishlist('${service.id}')" data-wishlist-id="${service.id}"
@@ -258,7 +274,7 @@ function createServiceCardHTML(service, animationDelay = 0) {
                   class="py-2 px-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-[11px] hover:bg-slate-50 transition-all flex items-center justify-center gap-1">
             <i class="fa-regular fa-eye text-orange-500"></i> View Details
           </button>
-          <button onclick="openQuoteModal('${service.name}')"
+          <button onclick="openQuoteModal('${service.name.replace(/'/g, "\\'")}')"
                   class="py-2 px-2.5 rounded-xl bg-orange-500 text-white font-bold text-[11px] hover:bg-orange-600 shadow-sm transition-all flex items-center justify-center gap-1 active:scale-95">
             <i class="fa-solid fa-file-signature"></i> Get Quote
           </button>
@@ -293,7 +309,9 @@ function openServiceModal(serviceId) {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         <div>
           <div class="relative rounded-2xl overflow-hidden shadow-inner border border-slate-200 h-64 md:h-72 bg-slate-100">
-            <img src="${service.image}" alt="${service.name}" class="w-full h-full object-cover" />
+            <img src="${service.image}" alt="${service.name}" 
+                 onerror="this.onerror=null;this.src='welding-works.jpg'"
+                 class="w-full h-full object-cover" />
             <div class="absolute top-3 left-3 bg-orange-500 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow">
               ${service.category}
             </div>
