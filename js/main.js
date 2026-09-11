@@ -275,8 +275,8 @@ function createServiceCardHTML(service, animationDelay = 0) {
             <i class="fa-regular fa-eye text-orange-500"></i> View Details
           </button>
           <button onclick="openQuoteModal('${service.name.replace(/'/g, "\\'")}')"
-                  class="py-2 px-2.5 rounded-xl bg-orange-500 text-white font-bold text-[11px] hover:bg-orange-600 shadow-sm transition-all flex items-center justify-center gap-1 active:scale-95">
-            <i class="fa-solid fa-file-signature"></i> Get Quote
+                  class="py-2 px-2.5 rounded-xl bg-orange-500 text-white font-bold text-[11px] hover:bg-orange-600 shadow-sm transition-all flex items-center justify-center active:scale-95">
+            Get Quote
           </button>
         </div>
       </div>
@@ -364,8 +364,8 @@ function openServiceModal(serviceId) {
 
           <div class="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row gap-3">
             <button onclick="closeServiceModal(); openQuoteModal('${service.name}');"
-                    class="flex-1 py-3 px-5 rounded-full bg-orange-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-orange-500/30 active:scale-95">
-              <i class="fa-solid fa-file-signature"></i> Request Custom Quote
+                    class="flex-1 py-3 px-5 rounded-full bg-orange-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all flex items-center justify-center shadow-md hover:shadow-orange-500/30 active:scale-95">
+              Request Custom Quote
             </button>
             <button onclick="toggleWishlist('${service.id}'); closeServiceModal();"
                     class="py-3 px-4 rounded-full border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
