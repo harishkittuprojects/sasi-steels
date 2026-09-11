@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SASI Steel Engineering | Strong Steel. Smart Engineering.</title>
+  <meta name="description" content="SASI Steel Engineering - Complete steel fabrication, welding works, and interior solutions with quality, safety, and timely delivery." />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            orange: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
+  <!-- AOS Animation Library CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" />
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-white text-slate-900 flex flex-col min-h-screen font-sans">
+
+  <!-- Top Announcement Bar -->
+  <div class="bg-slate-950 text-slate-300 text-xs py-2 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+      <div class="flex items-center gap-4">
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-phone text-orange-500"></i> +91 98450 12345</span>
+        <span class="hidden sm:flex items-center gap-1.5"><i class="fa-solid fa-envelope text-orange-500"></i> contact@sasisteel.com</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-orange-400 font-semibold">• Certified Steel & Structural Engineering</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        
+        <!-- SASI Logo (Using image.png) -->
+        <a href="index.html" class="flex items-center group py-1">
+          <img src="image.png" alt="SASI Steel Engineering Logo" class="h-12 sm:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-1 lg:gap-2">
+          <a href="index.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-orange-600 bg-orange-50 transition-colors">Home</a>
+          <a href="about.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">About Us</a>
+          <a href="categories.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Categories</a>
+          <a href="services.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Our Services</a>
+          <a href="wishlist.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Wishlist</a>
+          <a href="cart.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Cart</a>
+        </nav>
+
+        <!-- Right Action Icons (Wishlist & Cart & Hamburger) -->
+        <div class="flex items-center gap-3">
+          
+          <!-- Wishlist -->
+          <a href="wishlist.html" class="relative p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50 transition-all" aria-label="Wishlist">
+            <i class="fa-regular fa-heart text-lg"></i>
+            <span class="wishlist-count-badge absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm hidden">0</span>
+          </a>
+
+          <!-- Cart -->
+          <a href="cart.html" class="relative p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50 transition-all" aria-label="Cart">
+            <i class="fa-solid fa-cart-shopping text-lg"></i>
+            <span class="cart-count-badge absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm hidden">0</span>
+          </a>
+
+          <!-- Call / Quote CTA -->
+          <a href="tel:+919845012345" class="hidden lg:inline-flex btn-orange-pill text-xs">
+            <i class="fa-solid fa-phone"></i> Call Now
+          </a>
+
+          <!-- Mobile Hamburger -->
+          <button id="mobile-menu-button" class="md:hidden p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100" aria-label="Open Mobile Menu">
+            <i class="fa-solid fa-bars text-xl"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div id="mobile-menu" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden md:hidden">
+    <div class="fixed top-0 right-0 bottom-0 w-4/5 max-w-sm bg-white shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
+      <div>
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <img src="image.png" alt="SASI Steel Engineering Logo" class="h-10 w-auto object-contain" />
+          <button id="mobile-menu-close" class="p-2 text-slate-500 hover:text-slate-900">
+            <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+        </div>
+
+        <nav class="mt-6 flex flex-col gap-2">
+          <a href="index.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-bold bg-orange-50 text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-house text-orange-600"></i> Home</span>
+            <i class="fa-solid fa-chevron-right text-xs text-orange-600"></i>
+          </a>
+          <a href="about.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-circle-info text-orange-600"></i> About Us</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="categories.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-shapes text-orange-600"></i> Categories</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="services.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-toolbox text-orange-600"></i> Our Services</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="wishlist.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-heart text-red-500"></i> Wishlist</span>
+            <span class="wishlist-count-badge bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+          </a>
+          <a href="cart.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-cart-shopping text-orange-600"></i> Cart</span>
+            <span class="cart-count-badge bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="pt-6 border-t border-slate-100 space-y-3">
+        <a href="tel:+919845012345" class="w-full btn-orange-pill text-xs text-center justify-center">
+          <i class="fa-solid fa-phone"></i> Call Now (+91 98450 12345)
+        </a>
+        <a href="https://wa.me/919845012345" target="_blank" class="w-full py-2.5 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2">
+          <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp Us
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Section (Matches Reference Design Exactly) -->
+  <section class="relative min-h-[520px] sm:min-h-[580px] lg:min-h-[620px] flex items-center overflow-hidden bg-slate-950 text-white">
+    <!-- Hero Background Image: Steel warehouse, racks, and welder in action with sparks -->
+    <div class="absolute inset-0 z-0">
+      <img src="https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=2000&q=80" 
+           alt="Steel Fabrication and Welding Works" 
+           class="w-full h-full object-cover object-right filter brightness-90" />
+      <div class="hero-diagonal-accent"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent"></div>
+    </div>
+
+    <!-- Orange Diagonal Angular Ribbon (From Screenshot) -->
+    <div class="hidden lg:block absolute top-12 right-1/3 w-32 h-1.5 bg-orange-500 transform -rotate-45 z-10"></div>
+    <div class="hidden lg:block absolute bottom-16 right-1/4 w-40 h-2 bg-orange-500 transform -rotate-45 z-10"></div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-left">
+      <div class="max-w-2xl">
+        
+        <!-- Heading -->
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black font-heading tracking-tight leading-tight text-white" data-aos="fade-up">
+          Strong Steel. <br />
+          <span class="text-orange-500">Smart Engineering.</span>
+        </h1>
+
+        <!-- Subheading -->
+        <p class="mt-4 text-base sm:text-lg text-slate-200 font-medium tracking-wide" data-aos="fade-up" data-aos-delay="100">
+          Welding Works & Interior Works
+        </p>
+
+        <!-- CTA Buttons (Call Now & WhatsApp) -->
+        <div class="mt-8 flex flex-wrap gap-3.5 items-center" data-aos="fade-up" data-aos-delay="200">
+          <a href="tel:+919845012345" class="btn-orange-pill text-sm px-6 py-3">
+            <i class="fa-solid fa-phone"></i>
+            <span>Call Now</span>
+          </a>
+          <a href="https://wa.me/919845012345" target="_blank" class="btn-dark-pill text-sm px-6 py-3">
+            <i class="fa-brands fa-whatsapp text-emerald-400 text-base"></i>
+            <span>WhatsApp</span>
+          </a>
+          <a href="services.html" class="px-5 py-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 backdrop-blur-md transition-all">
+            Explore Services
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- About Us Section (Matches Reference Design) -->
+  <section class="py-16 sm:py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        
+        <!-- Left Text Content -->
+        <div class="lg:col-span-7" data-aos="fade-right">
+          <span class="section-tag mb-2">ABOUT US</span>
+          <h2 class="text-3xl sm:text-4xl font-black font-heading text-slate-900 tracking-tight mt-1">
+            SASI Steel Engineering
+          </h2>
+          <p class="mt-5 text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
+            We deliver reliable steel fabrication, welding and interior solutions for industrial, commercial and residential projects. With a focus on quality, safety and timely delivery, we turn your vision into durable structures.
+          </p>
+
+          <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div class="p-3.5 rounded-xl bg-orange-50/50 border border-orange-100">
+              <div class="text-2xl font-black text-orange-600 font-heading">500+</div>
+              <div class="text-xs text-slate-600 font-medium mt-0.5">Projects Built</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-orange-50/50 border border-orange-100">
+              <div class="text-2xl font-black text-slate-900 font-heading">100%</div>
+              <div class="text-xs text-slate-600 font-medium mt-0.5">Certified Safety</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-orange-50/50 border border-orange-100 col-span-2 sm:col-span-1">
+              <div class="text-2xl font-black text-orange-600 font-heading">20+ Yrs</div>
+              <div class="text-xs text-slate-600 font-medium mt-0.5">Industry Masters</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Image with Angular Orange Corner Accent -->
+        <div class="lg:col-span-5 relative" data-aos="fade-left">
+          <div class="relative rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-100">
+            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80" 
+                 alt="Structural Steel Framing" 
+                 class="w-full h-72 sm:h-80 object-cover" />
+            <!-- Orange Angular Slash Accent -->
+            <div class="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-tl from-orange-500 to-transparent transform rotate-45 translate-x-8 translate-y-8"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Complete Steel Solutions / Our Services Section (Matches Reference Design) -->
+  <section class="py-16 sm:py-20 bg-slate-50 border-t border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Section Header -->
+      <div class="text-center max-w-2xl mx-auto mb-12" data-aos="fade-up">
+        <span class="section-tag mb-2">OUR SERVICES</span>
+        <h2 class="text-3xl sm:text-4xl font-black font-heading text-slate-900 tracking-tight mt-1">
+          Complete Steel Solutions
+        </h2>
+        <p class="mt-3 text-xs sm:text-sm text-slate-600">
+          From fabrication to installation, we provide end-to-end steel and interior solutions.
+        </p>
+      </div>
+
+      <!-- Reference Layout Service Cards Grid -->
+      <div id="featured-services-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Rendered by main.js with circular badges & reference card styling -->
+      </div>
+
+    </div>
+  </section>
+
+  <!-- App Showcase Section (Matches Dark Midnight App Banner in Reference Image) -->
+  <section class="py-20 glass-dark-app text-white relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <!-- Left Content -->
+        <div class="lg:col-span-6 text-left" data-aos="fade-right">
+          <span class="section-tag mb-2">APP SHOWCASE</span>
+          <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black font-heading tracking-tight leading-tight mt-1">
+            Manage Your Projects <br />
+            <span class="text-orange-500">With Our App</span>
+          </h2>
+          <p class="mt-4 text-sm sm:text-base text-slate-300 max-w-md leading-relaxed">
+            Track progress, manage tasks, and stay connected — anytime, anywhere.
+          </p>
+
+          <div class="mt-8 flex items-center gap-4">
+            <button onclick="openQuoteModal('App Inquiry')" class="btn-orange-pill text-sm px-6 py-3">
+              <i class="fa-solid fa-mobile-screen-button"></i>
+              <span>View App</span>
+            </button>
+            <span class="text-xs text-slate-400">Real-time fabrication milestones & tracking</span>
+          </div>
+        </div>
+
+        <!-- Right Dual Phone Mockups (Matches Screenshot) -->
+        <div class="lg:col-span-6 flex justify-center items-center gap-4 sm:gap-6" data-aos="fade-left">
+          
+          <!-- Phone 1 Mockup: Project Overview -->
+          <div class="w-48 sm:w-56 bg-slate-900 border-4 border-slate-700 rounded-[2.5rem] shadow-2xl p-3 overflow-hidden text-slate-900 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+            <div class="bg-white rounded-[2rem] p-3 text-xs h-80 flex flex-col justify-between overflow-hidden">
+              <div>
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <span class="font-black text-[10px]">SASI APP</span>
+                  <i class="fa-solid fa-bars text-[10px]"></i>
+                </div>
+                
+                <div class="mt-2 bg-slate-900 text-white p-2 rounded-xl text-[10px]">
+                  <div class="text-[9px] text-slate-400">Project Overview</div>
+                  <div class="flex justify-between mt-1 font-bold">
+                    <span>5 Active</span>
+                    <span class="text-orange-400">2 Done</span>
+                  </div>
+                </div>
+
+                <div class="mt-3 space-y-1.5 text-[9px]">
+                  <div class="p-1.5 bg-slate-50 rounded-lg flex justify-between items-center border border-slate-100">
+                    <span class="font-bold text-slate-800">Shed Fabrication</span>
+                    <span class="text-emerald-600 font-semibold">90%</span>
+                  </div>
+                  <div class="p-1.5 bg-slate-50 rounded-lg flex justify-between items-center border border-slate-100">
+                    <span class="font-bold text-slate-800">Welding Pipeline</span>
+                    <span class="text-orange-500 font-semibold">60%</span>
+                  </div>
+                  <div class="p-1.5 bg-slate-50 rounded-lg flex justify-between items-center border border-slate-100">
+                    <span class="font-bold text-slate-800">Interior Racks</span>
+                    <span class="text-sky-600 font-semibold">30%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="text-[8px] text-center text-slate-400 font-medium">Live sync active</div>
+            </div>
+          </div>
+
+          <!-- Phone 2 Mockup: Projects Listing -->
+          <div class="w-48 sm:w-56 bg-slate-900 border-4 border-slate-700 rounded-[2.5rem] shadow-2xl p-3 overflow-hidden text-slate-900 transform rotate-3 hover:rotate-0 transition-transform duration-300">
+            <div class="bg-white rounded-[2rem] p-3 text-xs h-80 flex flex-col justify-between overflow-hidden">
+              <div>
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <span class="font-black text-[10px]">Projects</span>
+                  <i class="fa-solid fa-sliders text-[10px]"></i>
+                </div>
+
+                <div class="mt-2 flex gap-1 text-[8px] font-bold">
+                  <span class="bg-orange-500 text-white px-2 py-0.5 rounded-full">All</span>
+                  <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Active</span>
+                </div>
+
+                <div class="mt-2.5 space-y-2 text-[9px]">
+                  <div class="border border-slate-100 rounded-xl p-2 bg-slate-50">
+                    <div class="font-black text-slate-900">Warehouse Project</div>
+                    <div class="text-[8px] text-slate-500">5 Engrs Assigned</div>
+                    <div class="w-full bg-slate-200 h-1 rounded-full mt-1.5 overflow-hidden">
+                      <div class="bg-orange-500 h-full w-3/4"></div>
+                    </div>
+                  </div>
+
+                  <div class="border border-slate-100 rounded-xl p-2 bg-slate-50">
+                    <div class="font-black text-slate-900">Office Interior</div>
+                    <div class="text-[8px] text-slate-500">2 Engrs Assigned</div>
+                    <div class="w-full bg-slate-200 h-1 rounded-full mt-1.5 overflow-hidden">
+                      <div class="bg-emerald-500 h-full w-1/2"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-[8px] text-center text-slate-400 font-medium">SASI Engineering App</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Call Us Today Bar (Matches Bottom CTA Bar from Reference Image) -->
+  <section class="py-6 bg-white border-y border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        
+        <!-- Left Phone Icon Badge & Text -->
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center text-xl shadow-md shrink-0">
+            <i class="fa-solid fa-phone"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-orange-600 uppercase tracking-widest block">CALL US TODAY</span>
+            <h3 class="text-base sm:text-lg font-black text-slate-900">Let's Build Something Great</h3>
+            <p class="text-xs text-slate-500">Talk to our team for your next project.</p>
+          </div>
+        </div>
+
+        <!-- Right Call Button -->
+        <div>
+          <a href="tel:+919845012345" class="btn-orange-pill text-xs px-6 py-3 whitespace-nowrap">
+            <span>Call Now</span>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Professional Footer -->
+  <footer class="bg-slate-950 text-slate-400 text-sm pt-16 pb-12 border-t border-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-slate-800">
+        
+        <div class="lg:col-span-2">
+          <div class="inline-block bg-white p-2 rounded-2xl mb-4 shadow-sm">
+            <img src="image.png" alt="SASI Steel Engineering Logo" class="h-12 w-auto object-contain" />
+          </div>
+          <p class="mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed max-w-sm">
+            SASI Steel Engineering delivers reliable steel fabrication, welding and interior solutions with a focus on quality, safety and timely delivery.
+          </p>
+          <div class="mt-6 flex items-center gap-3">
+            <a href="#" class="w-9 h-9 rounded-full bg-slate-900 hover:bg-orange-500 hover:text-white flex items-center justify-center transition-colors text-slate-400" aria-label="Facebook"><i class="fa-brands fa-facebook-f text-xs"></i></a>
+            <a href="#" class="w-9 h-9 rounded-full bg-slate-900 hover:bg-orange-500 hover:text-white flex items-center justify-center transition-colors text-slate-400" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in text-xs"></i></a>
+            <a href="#" class="w-9 h-9 rounded-full bg-slate-900 hover:bg-orange-500 hover:text-white flex items-center justify-center transition-colors text-slate-400" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp text-xs"></i></a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-4">Quick Links</h4>
+          <ul class="space-y-2.5 text-xs">
+            <li><a href="index.html" class="hover:text-orange-400 transition-colors">Home</a></li>
+            <li><a href="about.html" class="hover:text-orange-400 transition-colors">About Us</a></li>
+            <li><a href="categories.html" class="hover:text-orange-400 transition-colors">Categories</a></li>
+            <li><a href="services.html" class="hover:text-orange-400 transition-colors">Our Services</a></li>
+            <li><a href="wishlist.html" class="hover:text-orange-400 transition-colors">Wishlist</a></li>
+            <li><a href="cart.html" class="hover:text-orange-400 transition-colors">Cart</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-4">Our Services</h4>
+          <ul class="space-y-2.5 text-xs">
+            <li><a href="services.html?category=steel-fabrication" class="hover:text-orange-400 transition-colors">Steel Fabrication</a></li>
+            <li><a href="services.html?category=welding-works" class="hover:text-orange-400 transition-colors">Welding Works</a></li>
+            <li><a href="services.html?category=storage-and-racks" class="hover:text-orange-400 transition-colors">Storage Racks & Shelving</a></li>
+            <li><a href="services.html?category=mezzanine-floors-and-structure" class="hover:text-orange-400 transition-colors">Mezzanine Floors & Structures</a></li>
+            <li><a href="services.html?category=custom-fabrication" class="hover:text-orange-400 transition-colors">Custom Fabrications</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-4">Contact Details</h4>
+          <ul class="space-y-3 text-xs">
+            <li class="flex items-start gap-2.5">
+              <i class="fa-solid fa-location-dot text-orange-500 mt-0.5"></i>
+              <span>SASI Steel Engineering Industrial Zone, India</span>
+            </li>
+            <li class="flex items-center gap-2.5">
+              <i class="fa-solid fa-phone text-orange-500"></i>
+              <span>+91 98450 12345</span>
+            </li>
+            <li class="flex items-center gap-2.5">
+              <i class="fa-solid fa-envelope text-orange-500"></i>
+              <span>contact@sasisteel.com</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+        <p>© 2026 SASI Steel Engineering. All Rights Reserved.</p>
+        <p class="mt-2 sm:mt-0">Strong Steel. Smart Engineering.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const featuredContainer = document.getElementById('featured-services-grid');
+      if (featuredContainer && typeof servicesData !== 'undefined') {
+        featuredContainer.innerHTML = servicesData.map((service, idx) => 
+          createServiceCardHTML(service, (idx % 3) * 100)
+        ).join('');
+      }
+    });
+  </script>
+</body>
+</html>

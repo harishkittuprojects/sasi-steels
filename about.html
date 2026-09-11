@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Us | SASI Steel Engineering</title>
+  <meta name="description" content="Learn about SASI Steel Engineering - our heritage, certified fabrication infrastructure, structural engineering team, and commitment to quality." />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            orange: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
+  <!-- AOS Animation Library CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" />
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-white text-slate-900 flex flex-col min-h-screen font-sans">
+
+  <!-- Top Announcement Bar -->
+  <div class="bg-slate-950 text-slate-300 text-xs py-2 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+      <div class="flex items-center gap-4">
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-phone text-orange-500"></i> +91 98450 12345</span>
+        <span class="hidden sm:flex items-center gap-1.5"><i class="fa-solid fa-envelope text-orange-500"></i> contact@sasisteel.com</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-orange-400 font-semibold">• ISO 9001:2015 & AWS D1.1 Certified</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        
+        <!-- SASI Logo (Using image.png) -->
+        <a href="index.html" class="flex items-center group py-1">
+          <img src="image.png" alt="SASI Steel Engineering Logo" class="h-12 sm:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-1 lg:gap-2">
+          <a href="index.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Home</a>
+          <a href="about.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-orange-600 bg-orange-50 transition-colors">About Us</a>
+          <a href="categories.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Categories</a>
+          <a href="services.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Our Services</a>
+          <a href="wishlist.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Wishlist</a>
+          <a href="cart.html" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">Cart</a>
+        </nav>
+
+        <!-- Right Action Icons -->
+        <div class="flex items-center gap-3">
+          <a href="wishlist.html" class="relative p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50 transition-all" aria-label="Wishlist">
+            <i class="fa-regular fa-heart text-lg"></i>
+            <span class="wishlist-count-badge absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm hidden">0</span>
+          </a>
+
+          <a href="cart.html" class="relative p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50 transition-all" aria-label="Cart">
+            <i class="fa-solid fa-cart-shopping text-lg"></i>
+            <span class="cart-count-badge absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm hidden">0</span>
+          </a>
+
+          <a href="tel:+919845012345" class="hidden lg:inline-flex btn-orange-pill text-xs">
+            <i class="fa-solid fa-phone"></i> Call Now
+          </a>
+
+          <button id="mobile-menu-button" class="md:hidden p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100" aria-label="Open Mobile Menu">
+            <i class="fa-solid fa-bars text-xl"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div id="mobile-menu" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden md:hidden">
+    <div class="fixed top-0 right-0 bottom-0 w-4/5 max-w-sm bg-white shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
+      <div>
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <img src="image.png" alt="SASI Steel Engineering Logo" class="h-10 w-auto object-contain" />
+          <button id="mobile-menu-close" class="p-2 text-slate-500 hover:text-slate-900">
+            <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+        </div>
+
+        <nav class="mt-6 flex flex-col gap-2">
+          <a href="index.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-house text-orange-600"></i> Home</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="about.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-bold bg-orange-50 text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-circle-info text-orange-600"></i> About Us</span>
+            <i class="fa-solid fa-chevron-right text-xs text-orange-600"></i>
+          </a>
+          <a href="categories.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-shapes text-orange-600"></i> Categories</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="services.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-toolbox text-orange-600"></i> Our Services</span>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+          </a>
+          <a href="wishlist.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-heart text-red-500"></i> Wishlist</span>
+            <span class="wishlist-count-badge bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+          </a>
+          <a href="cart.html" class="flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-600">
+            <span class="flex items-center gap-3"><i class="fa-solid fa-cart-shopping text-orange-600"></i> Cart</span>
+            <span class="cart-count-badge bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="pt-6 border-t border-slate-100">
+        <a href="tel:+919845012345" class="w-full btn-orange-pill text-xs text-center justify-center">
+          <i class="fa-solid fa-phone"></i> Call Now (+91 98450 12345)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Banner -->
+  <section class="relative bg-slate-950 text-white py-16 lg:py-20 overflow-hidden">
+    <div class="absolute inset-0 z-0">
+      <img src="https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=2000&q=80" 
+           alt="SASI Steel Engineering Works" 
+           class="w-full h-full object-cover opacity-25 filter brightness-50" />
+      <div class="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-slate-950"></div>
+    </div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center" data-aos="fade-up">
+      <span class="section-tag mb-3">CORPORATE OVERVIEW</span>
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black font-heading tracking-tight">
+        About SASI Steel Engineering
+      </h1>
+      <p class="mt-4 text-slate-300 text-sm sm:text-base max-w-2xl mx-auto">
+        Building the industrial backbone with precision steel fabrication, certified welding, and end-to-end structural & interior execution.
+      </p>
+    </div>
+  </section>
+
+  <!-- Main Story Section -->
+  <section class="py-16 sm:py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <!-- Left Visuals -->
+        <div class="lg:col-span-6 relative" data-aos="fade-right">
+          <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-slate-100">
+            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1000&q=80" 
+                 alt="Structural Steel Framing" 
+                 class="w-full h-[420px] object-cover" />
+            <div class="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-orange-500 to-transparent transform rotate-45 translate-x-10 translate-y-10"></div>
+          </div>
+          
+          <!-- Experience Badge Card -->
+          <div class="absolute -bottom-6 -right-2 sm:bottom-6 sm:-right-6 bg-slate-900 text-white p-5 rounded-2xl shadow-2xl border border-slate-800 max-w-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center text-2xl font-black shrink-0">
+                <i class="fa-solid fa-award"></i>
+              </div>
+              <div>
+                <p class="text-xs text-orange-400 font-bold uppercase tracking-wider">20+ Years</p>
+                <p class="text-sm font-black text-white">Fabrication Mastery</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Content -->
+        <div class="lg:col-span-6" data-aos="fade-left">
+          <span class="section-tag mb-2">OUR STORY & HERITAGE</span>
+          <h2 class="text-3xl sm:text-4xl font-black font-heading text-slate-900 tracking-tight mt-1">
+            Strong Steel. Smart Engineering.
+          </h2>
+          <p class="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed">
+            We deliver reliable steel fabrication, welding and interior solutions for industrial, commercial and residential projects. With a focus on quality, safety and timely delivery, we turn your vision into durable structures.
+          </p>
+          <p class="mt-3 text-sm text-slate-600 leading-relaxed">
+            Starting from a dedicated welding workshop, SASI Steel Engineering has grown into a comprehensive industrial fabrication hub equipped with high-capacity CNC beam cutters, automated rolling lines, heavy MIG/TIG stations, and specialized structural erection teams.
+          </p>
+
+          <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div class="p-4 rounded-2xl bg-orange-50/60 border border-orange-100">
+              <div class="flex items-center gap-2 font-bold text-slate-900 text-sm mb-1">
+                <i class="fa-solid fa-check-circle text-orange-500"></i>
+                <span>Precision Engineering</span>
+              </div>
+              <p class="text-slate-600">Tight millimeter tolerances across heavy beams, plates, and joints.</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-orange-50/60 border border-orange-100">
+              <div class="flex items-center gap-2 font-bold text-slate-900 text-sm mb-1">
+                <i class="fa-solid fa-shield-halved text-orange-500"></i>
+                <span>100% Certified Safety</span>
+              </div>
+              <p class="text-slate-600">Rigorous NDT ultrasonic weld validation and seismic load ratings.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Pillars / Values Section -->
+  <section class="py-16 sm:py-20 bg-slate-50 border-y border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-2xl mx-auto mb-14" data-aos="fade-up">
+        <span class="section-tag mb-2">OUR COMMITMENT</span>
+        <h2 class="text-3xl sm:text-4xl font-black font-heading text-slate-900 tracking-tight mt-1">
+          The Pillars of SASI Engineering
+        </h2>
+        <p class="mt-3 text-xs sm:text-sm text-slate-600">
+          Everything we design, weld, and erect is anchored by uncompromising industrial standards.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <div class="p-8 rounded-3xl bg-white border border-slate-200 hover:border-orange-400 hover:shadow-xl transition-all" data-aos="fade-up" data-aos-delay="50">
+          <div class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-2xl mb-6">
+            <i class="fa-solid fa-gears"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Customized Fabrication</h3>
+          <p class="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Tailored to exact architectural drawings, structural CAD files, and client-specific footprint specifications.
+          </p>
+        </div>
+
+        <div class="p-8 rounded-3xl bg-white border border-slate-200 hover:border-orange-400 hover:shadow-xl transition-all" data-aos="fade-up" data-aos-delay="100">
+          <div class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-2xl mb-6">
+            <i class="fa-solid fa-fire-burner"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Certified Welding</h3>
+          <p class="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+            AWS / ASME D1.1 certified welders specializing in high-stress joint penetration, pressure pipelines, and clean grinding.
+          </p>
+        </div>
+
+        <div class="p-8 rounded-3xl bg-white border border-slate-200 hover:border-orange-400 hover:shadow-xl transition-all" data-aos="fade-up" data-aos-delay="150">
+          <div class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-2xl mb-6">
+            <i class="fa-solid fa-truck-ramp-box"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Turnkey Erection</h3>
+          <p class="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+            From raw steel procurement to factory fabrication, logistics, crane assembly, and final on-site structural sign-off.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Infrastructure & Capabilities Showcase -->
+  <section class="py-16 sm:py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        
+        <div class="lg:col-span-6" data-aos="fade-right">
+          <span class="section-tag mb-2">INFRASTRUCTURE</span>
+          <h2 class="text-3xl sm:text-4xl font-black font-heading text-slate-900 tracking-tight mt-1">
+            State-Of-The-Art Fabrication Yard
+          </h2>
+          <p class="mt-4 text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Our fabrication yard houses heavy overhead cranes, CNC high-definition plasma cutting tables, hydraulic shearing and bending presses, automated shot-blasting, and multi-bay painting facilities.
+          </p>
+
+          <div class="mt-6 space-y-3 text-xs text-slate-700">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <i class="fa-solid fa-bolt text-orange-500 text-base"></i>
+              <span class="font-bold">CNC High-Definition Plasma & Oxy-Fuel Cutting (Up to 100mm)</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <i class="fa-solid fa-bolt text-orange-500 text-base"></i>
+              <span class="font-bold">500-Ton Hydraulic Press Brake for High-Precision Steel Bending</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <i class="fa-solid fa-bolt text-orange-500 text-base"></i>
+              <span class="font-bold">Automated Submerged Arc Welding (SAW) for Heavy Girders</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6" data-aos="fade-left">
+          <div class="grid grid-cols-2 gap-4">
+            <img src="https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=600&q=80" alt="Machinery" class="rounded-2xl shadow-md h-48 w-full object-cover" />
+            <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80" alt="Storage Racks" class="rounded-2xl shadow-md h-48 w-full object-cover" />
+            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80" alt="Mezzanine" class="rounded-2xl shadow-md h-48 w-full object-cover col-span-2" />
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Bottom Call Us Today Bar -->
+  <section class="py-6 bg-white border-y border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center text-xl shadow-md shrink-0">
+            <i class="fa-solid fa-phone"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-orange-600 uppercase tracking-widest block">CALL US TODAY</span>
+            <h3 class="text-base sm:text-lg font-black text-slate-900">Let's Build Something Great</h3>
+            <p class="text-xs text-slate-500">Talk to our team for your next project.</p>
+          </div>
+        </div>
+
+        <div>
+          <a href="tel:+919845012345" class="btn-orange-pill text-xs px-6 py-3 whitespace-nowrap">
+            <span>Call Now</span>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Professional Footer -->
+  <footer class="bg-slate-950 text-slate-400 text-sm pt-16 pb-12 border-t border-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-slate-800">
+        
+        <div class="lg:col-span-2">
+          <div class="inline-block bg-white p-2 rounded-2xl mb-4 shadow-sm">
+            <img src="image.png" alt="SASI Steel Engineering Logo" class="h-12 w-auto object-contain" />
+          </div>
+          <p class="mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed max-w-sm">
+            SASI Steel Engineering delivers reliable steel fabrication, welding and interior solutions with a focus on quality, safety and timely delivery.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-4">Quick Links</h4>
+          <ul class="space-y-2.5 text-xs">
+            <li><a href="index.html" class="hover:text-orange-400 transition-colors">Home</a></li>
+            <li><a href="about.html" class="hover:text-orange-400 transition-colors">About Us</a></li>
+            <li><a href="categories.html" class="hover:text-orange-400 transition-colors">Categories</a></li>
+            <li><a href="services.html" class="hover:text-orange-400 transition-colors">Our Services</a></li>
+            <li><a href="wishlist.html" class="hover:text-orange-400 transition-colors">Wishlist</a></li>
+            <li><a href="cart.html" class="hover:text-orange-400 transition-colors">Cart</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-4">Our Services</h4>
+          <ul class="space-y-2.5 text-xs">
+            <li><a href="services.html?category=steel-fabrication" class="hover:text-orange-400 transition-colors">Steel Fabrication</a></li>
+            <li><a href="services.html?category=welding-works" class="hover:text-orange-400 transition-colors">Welding Works</a></li>
+            <li><a href="services.html?category=storage-and-racks" class="hover:text-orange-400 transition-colors">Storage Racks & Shelving</a></li>
+            <li><a href="services.html?category=mezzanine-floors-and-structure" class="hover:text-orange-400 transition-colors">Mezzanine Floors & Structures</a></li>
+            <li><a href="services.html?category=custom-fabrication" class="hover:text-orange-400 transition-colors">Custom Fabrications</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-4">Contact Details</h4>
+          <ul class="space-y-3 text-xs">
+            <li class="flex items-start gap-2.5">
+              <i class="fa-solid fa-location-dot text-orange-500 mt-0.5"></i>
+              <span>SASI Steel Engineering Industrial Zone, India</span>
+            </li>
+            <li class="flex items-center gap-2.5">
+              <i class="fa-solid fa-phone text-orange-500"></i>
+              <span>+91 98450 12345</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+        <p>© 2026 SASI Steel Engineering. All Rights Reserved.</p>
+        <p class="mt-2 sm:mt-0">Strong Steel. Smart Engineering.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
