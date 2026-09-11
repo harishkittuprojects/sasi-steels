@@ -37,7 +37,7 @@ const servicesData = [
     price: 2500,
     priceFormatted: "₹2,500",
     unit: "per meter / joint assembly",
-    image: "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=800&q=80",
+    image: "welding-works.jpg",
     icon: "fa-fire-burner",
     badge: "Certified",
     shortDescription: "Professional welding works for strong, durable, and reliable steel structures & pipelines.",
@@ -162,7 +162,7 @@ const categoriesData = [
     name: "Welding Works",
     count: "8+ Specializations",
     description: "Certified MIG, TIG, and Arc welding for heavy structural joints, piping, and repairs.",
-    image: "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=800&q=80",
+    image: "welding-works.jpg",
     startingPrice: "₹2,500",
     icon: "fa-fire-burner"
   },
