@@ -144,6 +144,35 @@ const servicesData = [
       "Application": "Specialty Machinery, Hoppers, Enclosures, Architectural Art",
       "Standard Lead Time": "7 - 12 Business Days"
     }
+  },
+  {
+    id: "industrial-roofing-sheds",
+    name: "Industrial Roofing & PEB Sheds",
+    category: "Steel Fabrication",
+    categorySlug: "steel-fabrication",
+    price: 8500,
+    priceFormatted: "₹8,500",
+    unit: "per 100 sq.ft covered area",
+    image: "industrial-roofing-sheds.jpg",
+    icon: "fa-warehouse",
+    badge: "Turnkey PEB",
+    shortDescription: "Heavy-duty pre-engineered steel buildings, warehouse trusses, and industrial sheet roofing solutions.",
+    detailedDescription: "SASI Steel Engineering designs, fabricates, and erects turnkey Pre-Engineered Buildings (PEB), factory sheds, industrial roofing trusses, and standing seam steel roofing. Built to endure extreme wind loads and harsh weather, our roofing systems provide expansive clear spans and long-lasting galvanized durability.",
+    features: [
+      "Clear span structural steel truss framing",
+      "Galvalume / Color-coated corrugated roofing sheets",
+      "High wind resistance design compliant with IS 875",
+      "Integrated turbo ventilators and translucent sky-lighting",
+      "Complete rainwater gutter and downpipe drainage system",
+      "Fast on-site assembly with zero disruption"
+    ],
+    specifications: {
+      "Truss Material": "IS 2062 Grade Structural Steel / Tubular Sections",
+      "Roofing Sheet": "0.5mm Galvalume / Color Coated AZ-150",
+      "Wind Speed Design": "Up to 180 km/h load rated",
+      "Application": "Industrial Factories, Warehouses, Workshops, Aircraft Hangars",
+      "Standard Lead Time": "8 - 14 Business Days"
+    }
   }
 ];
 
