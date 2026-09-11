@@ -269,14 +269,10 @@ function createServiceCardHTML(service, animationDelay = 0) {
         </div>
 
         <!-- Actions -->
-        <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
+        <div class="mt-4 pt-3 border-t border-slate-100">
           <button onclick="openServiceModal('${service.id}')"
-                  class="py-2 px-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-[11px] hover:bg-slate-50 transition-all flex items-center justify-center gap-1">
+                  class="w-full py-2.5 px-3 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300 transition-all flex items-center justify-center gap-1.5 shadow-sm">
             <i class="fa-regular fa-eye text-orange-500"></i> View Details
-          </button>
-          <button onclick="openQuoteModal('${service.name.replace(/'/g, "\\'")}')"
-                  class="py-2 px-2.5 rounded-xl bg-orange-500 text-white font-bold text-[11px] hover:bg-orange-600 shadow-sm transition-all flex items-center justify-center active:scale-95">
-            Get Quote
           </button>
         </div>
       </div>
