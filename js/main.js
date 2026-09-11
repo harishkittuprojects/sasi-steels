@@ -220,12 +220,8 @@ function toggleFloatingDock() {
   }
 }
 
-// Service Card HTML Generator (Clean & professional with Details & Get Quote buttons)
+// Service Card HTML Generator (Clean & professional with Details action)
 function createServiceCardHTML(service, animationDelay = 0) {
-  const inWishlist = isInWishlist(service.id);
-  const heartIconClass = inWishlist ? 'fa-solid text-red-500' : 'fa-regular text-slate-500';
-  const heartBgClass = inWishlist ? 'bg-red-50 border-red-200' : 'bg-white/90 border-slate-200';
-
   return `
     <div class="ref-service-card group flex flex-col justify-between"
          data-aos="fade-up" data-aos-delay="${animationDelay}">
@@ -235,13 +231,6 @@ function createServiceCardHTML(service, animationDelay = 0) {
         <img src="${service.image}" alt="${service.name}" 
              onerror="this.onerror=null;this.src='welding-works.jpg'"
              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-        
-        <!-- Wishlist Button -->
-        <button onclick="toggleWishlist('${service.id}')" data-wishlist-id="${service.id}"
-                aria-label="Add to Wishlist"
-                class="wishlist-btn absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center ${heartBgClass} shadow-md border hover:scale-110 active:scale-95 transition-all">
-          <i class="${heartIconClass} text-xs"></i>
-        </button>
 
         <div class="absolute bottom-2 right-3">
           <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-900/80 text-white backdrop-blur-sm">
@@ -292,9 +281,6 @@ function openServiceModal(serviceId) {
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm transition-opacity duration-300';
     document.body.appendChild(modal);
   }
-
-  const inWishlist = isInWishlist(service.id);
-  const heartIconClass = inWishlist ? 'fa-solid text-red-500' : 'fa-regular text-slate-600';
 
   modal.innerHTML = `
     <div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 md:p-8" onclick="event.stopPropagation()">
@@ -360,12 +346,8 @@ function openServiceModal(serviceId) {
 
           <div class="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row gap-3">
             <button onclick="closeServiceModal(); openQuoteModal('${service.name}');"
-                    class="flex-1 py-3 px-5 rounded-full bg-orange-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all flex items-center justify-center shadow-md hover:shadow-orange-500/30 active:scale-95">
+                    class="w-full py-3 px-5 rounded-full bg-orange-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all flex items-center justify-center shadow-md hover:shadow-orange-500/30 active:scale-95">
               Request Custom Quote
-            </button>
-            <button onclick="toggleWishlist('${service.id}'); closeServiceModal();"
-                    class="py-3 px-4 rounded-full border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
-              <i class="${heartIconClass}"></i> Wishlist
             </button>
           </div>
         </div>

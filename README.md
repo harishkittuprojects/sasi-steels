@@ -7,7 +7,7 @@
 
 ## 🌟 Overview
 
-A modern, responsive static web application for **SASI Steel Engineering** featuring structural fabrication showcases, transparent pricing, interactive Wishlist, and instant RFQ / custom quotation request workflow.
+A modern, responsive static web application for **SASI Steel Engineering** featuring structural fabrication showcases, transparent pricing, interactive service exploration, and instant RFQ / custom quotation request workflow.
 
 ---
 
@@ -17,7 +17,6 @@ A modern, responsive static web application for **SASI Steel Engineering** featu
 - `about.html` — About Us (Heritage, fabrication yard infrastructure, certified welding values, and metrics)
 - `categories.html` — Steel Fabrication Categories (Steel Fabrication, Welding Works, Storage Racks & Shelving, Mezzanine Floors & Structures, Custom Fabrications)
 - `services.html` — Our Services (Interactive live search, category filter tabs, price sorting, and quick quotation modal)
-- `wishlist.html` — Wishlist (Saved services with `localStorage` sync, bulk quote request, and item removal)
 
 ---
 
@@ -25,7 +24,7 @@ A modern, responsive static web application for **SASI Steel Engineering** featu
 
 - **HTML5** (Semantic structure)
 - **Tailwind CSS** (Modern utility styling)
-- **Vanilla JavaScript** (Wishlist, Quotation Modal, Floating WhatsApp/Call, and Toast engines)
+- **Vanilla JavaScript** (Quotation Modal, Floating WhatsApp/Call, and Toast engines)
 - **AOS (Animate On Scroll)** (Subtle industrial micro-animations)
 - **FontAwesome 6** (Industrial and ecommerce icon set)
 
