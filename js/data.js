@@ -254,6 +254,18 @@ const productsData = [
     description: "Architectural showroom steel display racks, heavy garment hanging fixtures, and boutique retail shelving fabricated with precision welded steel tubing."
   },
   {
+    id: "ss-showroom-mirror-trolley",
+    name: "Stainless Steel Showroom Mirror Trolleys & Retail Fixtures",
+    category: "Custom Fabrication",
+    categorySlug: "custom-fabrication",
+    priceFormatted: "₹8,800 / unit",
+    rating: "5.0 (36 reviews)",
+    image: "product-ss-display-mirror.png",
+    badge: "SS 304 Polished",
+    specs: "304 Stainless Steel Frame | Heavy-Duty 360° Castors | Full-Length Mirror Mount",
+    description: "Premium stainless steel movable full-length trial mirror units, showroom apparel fixtures, and retail display trolleys with locking caster wheels and mirror polish."
+  },
+  {
     id: "industrial-pallet-racks",
     name: "Heavy-Duty Warehouse Pallet Racks",
     category: "Storage Systems",
