@@ -2,85 +2,8 @@
 
 // State Management
 const STATE_KEYS = {
-  CART: 'sasi_cart_items',
   WISHLIST: 'sasi_wishlist_items'
 };
-
-// Cart Helper Functions
-function getCart() {
-  try {
-    const data = localStorage.getItem(STATE_KEYS.CART);
-    return data ? JSON.parse(data) : [];
-  } catch (e) {
-    console.error('Error reading cart', e);
-    return [];
-  }
-}
-
-function saveCart(cart) {
-  try {
-    localStorage.setItem(STATE_KEYS.CART, JSON.stringify(cart));
-    updateHeaderCounts();
-    window.dispatchEvent(new CustomEvent('cartUpdated', { detail: cart }));
-  } catch (e) {
-    console.error('Error saving cart', e);
-  }
-}
-
-function addToCart(serviceId, quantity = 1) {
-  const service = servicesData.find(s => s.id === serviceId);
-  if (!service) return;
-
-  let cart = getCart();
-  const existingIndex = cart.findIndex(item => item.id === serviceId);
-
-  if (existingIndex > -1) {
-    cart[existingIndex].quantity += quantity;
-  } else {
-    cart.push({
-      id: service.id,
-      name: service.name,
-      category: service.category,
-      price: service.price,
-      priceFormatted: service.priceFormatted,
-      unit: service.unit,
-      image: service.image,
-      quantity: quantity
-    });
-  }
-
-  saveCart(cart);
-  showToast(`Added <strong>${service.name}</strong> to Cart!`, 'success', '<a href="cart.html" class="underline font-semibold ml-1 text-orange-400">View Cart</a>');
-}
-
-function updateCartQuantity(serviceId, newQty) {
-  let cart = getCart();
-  const itemIndex = cart.findIndex(item => item.id === serviceId);
-
-  if (itemIndex > -1) {
-    if (newQty <= 0) {
-      removeFromCart(serviceId);
-      return;
-    }
-    cart[itemIndex].quantity = newQty;
-    saveCart(cart);
-  }
-}
-
-function removeFromCart(serviceId) {
-  let cart = getCart();
-  const removedItem = cart.find(item => item.id === serviceId);
-  cart = cart.filter(item => item.id !== serviceId);
-  saveCart(cart);
-  if (removedItem) {
-    showToast(`Removed <strong>${removedItem.name}</strong> from Cart`, 'info');
-  }
-}
-
-function clearCart() {
-  saveCart([]);
-  showToast('Your Cart has been cleared.', 'info');
-}
 
 // Wishlist Helper Functions
 function getWishlist() {
@@ -136,24 +59,10 @@ function isInWishlist(serviceId) {
   return wishlist.some(item => item.id === serviceId);
 }
 
-function moveWishlistToCart(serviceId) {
-  addToCart(serviceId, 1);
-  let wishlist = getWishlist();
-  wishlist = wishlist.filter(item => item.id !== serviceId);
-  saveWishlist(wishlist);
-}
-
 // Update Header Badges
 function updateHeaderCounts() {
-  const cart = getCart();
-  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const wishlist = getWishlist();
   const totalWishlistCount = wishlist.length;
-
-  document.querySelectorAll('.cart-count-badge').forEach(el => {
-    el.textContent = totalCartCount;
-    el.classList.toggle('hidden', totalCartCount === 0);
-  });
 
   document.querySelectorAll('.wishlist-count-badge').forEach(el => {
     el.textContent = totalWishlistCount;
@@ -295,7 +204,7 @@ function toggleFloatingDock() {
   }
 }
 
-// Reference Design Service Card HTML Generator
+// Service Card HTML Generator (Clean & professional with Details & Get Quote buttons)
 function createServiceCardHTML(service, animationDelay = 0) {
   const inWishlist = isInWishlist(service.id);
   const heartIconClass = inWishlist ? 'fa-solid text-red-500' : 'fa-regular text-slate-500';
@@ -319,7 +228,7 @@ function createServiceCardHTML(service, animationDelay = 0) {
         </button>
 
         <div class="absolute bottom-2 right-3">
-          <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-900/80 text-white backdrop-blur-sm">
+          <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-900/80 text-white backdrop-blur-sm">
             ${service.priceFormatted}
           </span>
         </div>
@@ -347,11 +256,11 @@ function createServiceCardHTML(service, animationDelay = 0) {
         <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
           <button onclick="openServiceModal('${service.id}')"
                   class="py-2 px-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-[11px] hover:bg-slate-50 transition-all flex items-center justify-center gap-1">
-            <i class="fa-regular fa-eye text-orange-500"></i> Details
+            <i class="fa-regular fa-eye text-orange-500"></i> View Details
           </button>
-          <button onclick="addToCart('${service.id}')"
+          <button onclick="openQuoteModal('${service.name}')"
                   class="py-2 px-2.5 rounded-xl bg-orange-500 text-white font-bold text-[11px] hover:bg-orange-600 shadow-sm transition-all flex items-center justify-center gap-1 active:scale-95">
-            <i class="fa-solid fa-cart-plus"></i> Add to Cart
+            <i class="fa-solid fa-file-signature"></i> Get Quote
           </button>
         </div>
       </div>
@@ -359,7 +268,7 @@ function createServiceCardHTML(service, animationDelay = 0) {
   `;
 }
 
-// Service Details Modal
+// Service Details Modal (With Request Quote Action)
 function openServiceModal(serviceId) {
   const service = servicesData.find(s => s.id === serviceId);
   if (!service) return;
@@ -436,9 +345,9 @@ function openServiceModal(serviceId) {
           </div>
 
           <div class="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row gap-3">
-            <button onclick="addToCart('${service.id}'); closeServiceModal();"
+            <button onclick="closeServiceModal(); openQuoteModal('${service.name}');"
                     class="flex-1 py-3 px-5 rounded-full bg-orange-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-orange-500/30 active:scale-95">
-              <i class="fa-solid fa-cart-plus"></i> Add to Cart
+              <i class="fa-solid fa-file-signature"></i> Request Custom Quote
             </button>
             <button onclick="toggleWishlist('${service.id}'); closeServiceModal();"
                     class="py-3 px-4 rounded-full border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-all flex items-center justify-center gap-2">

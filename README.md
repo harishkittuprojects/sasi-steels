@@ -7,7 +7,7 @@
 
 ## 🌟 Overview
 
-A modern, responsive static web application for **SASI Steel Engineering** featuring structural fabrication showcases, transparent pricing, Add to Cart, Wishlist, and RFQ / quotation request simulator.
+A modern, responsive static web application for **SASI Steel Engineering** featuring structural fabrication showcases, transparent pricing, interactive Wishlist, and instant RFQ / custom quotation request workflow.
 
 ---
 
@@ -16,9 +16,8 @@ A modern, responsive static web application for **SASI Steel Engineering** featu
 - `index.html` — Home (Hero with Call/WhatsApp actions, About SASI Steels, Complete Steel Solutions grid, App Showcase, Bottom Call Us Today bar, and Footer)
 - `about.html` — About Us (Heritage, fabrication yard infrastructure, certified welding values, and metrics)
 - `categories.html` — Steel Fabrication Categories (Steel Fabrication, Welding Works, Storage Racks & Shelving, Mezzanine Floors & Structures, Custom Fabrications)
-- `services.html` — Our Services (Interactive live search, category filter tabs, price sorting, and quick view modal)
-- `wishlist.html` — Wishlist (Saved services with `localStorage` sync, bulk move to cart, and remove)
-- `cart.html` — Service Cart (Quantity increment/decrement, 18% GST calculation, and Order Inquiry modal)
+- `services.html` — Our Services (Interactive live search, category filter tabs, price sorting, and quick quotation modal)
+- `wishlist.html` — Wishlist (Saved services with `localStorage` sync, bulk quote request, and item removal)
 
 ---
 
@@ -26,7 +25,7 @@ A modern, responsive static web application for **SASI Steel Engineering** featu
 
 - **HTML5** (Semantic structure)
 - **Tailwind CSS** (Modern utility styling)
-- **Vanilla JavaScript** (Cart, Wishlist, Modal, and Toast engines)
+- **Vanilla JavaScript** (Wishlist, Quotation Modal, Floating WhatsApp/Call, and Toast engines)
 - **AOS (Animate On Scroll)** (Subtle industrial micro-animations)
 - **FontAwesome 6** (Industrial and ecommerce icon set)
 
