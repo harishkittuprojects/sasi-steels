@@ -13,7 +13,7 @@ A modern, responsive static web application for **SASI Steel Engineering** featu
 
 ## 🚀 Pages
 
-- `index.html` — Home (Hero with Call/WhatsApp actions, About SASI Steels, Complete Steel Solutions grid, App Showcase, Bottom Call Us Today bar, and Footer)
+- `index.html` — Home (Hero with Call/WhatsApp actions, About SASI Steels, Complete Steel Solutions grid, Quotation Estimator, Products Catalog, Bottom Call Us Today bar, and Footer)
 - `about.html` — About Us (Heritage, fabrication yard infrastructure, certified welding values, and metrics)
 - `categories.html` — Steel Fabrication Categories (Steel Fabrication, Welding Works, Storage Racks & Shelving, Mezzanine Floors & Structures, Custom Fabrications)
 - `services.html` — Our Services (Interactive live search, category filter tabs, price sorting, and quick quotation modal)
