@@ -162,7 +162,7 @@ function injectFloatingContactButtons() {
   dock.className = 'floating-actions-dock';
   dock.innerHTML = `
     <!-- WhatsApp Floating Button -->
-    <a href="https://wa.me/918333991114?text=Hello%20SASI%20Steel%20Engineering,%20I%20would%20like%20to%20inquire%20about%20fabrication%20services." 
+    <a href="https://api.whatsapp.com/send?phone=918333991114&text=Hello%20SASI%20Steel%20Engineering,%20I%20would%20like%20to%20inquire%20about%20fabrication%20services." 
        target="_blank" 
        rel="noopener noreferrer"
        class="floating-btn-item group" 
