@@ -162,7 +162,7 @@ function injectFloatingContactButtons() {
   dock.className = 'floating-actions-dock';
   dock.innerHTML = `
     <!-- WhatsApp Floating Button -->
-    <a href="https://wa.me/919845012345?text=Hello%20SASI%20Steel%20Engineering,%20I%20would%20like%20to%20inquire%20about%20fabrication%20services." 
+    <a href="https://wa.me/918333991114?text=Hello%20SASI%20Steel%20Engineering,%20I%20would%20like%20to%20inquire%20about%20fabrication%20services." 
        target="_blank" 
        rel="noopener noreferrer"
        class="floating-btn-item group" 
@@ -174,10 +174,10 @@ function injectFloatingContactButtons() {
     </a>
 
     <!-- Call Floating Button -->
-    <a href="tel:+919845012345" 
+    <a href="tel:+918333991114" 
        class="floating-btn-item group" 
        aria-label="Call SASI Steel Engineering">
-      <span class="floating-btn-label">Call Now (+91 98450 12345)</span>
+      <span class="floating-btn-label">Call Now (+91 83339 91114)</span>
       <div class="floating-circle-btn floating-call-btn pulse-ring text-white">
         <i class="fa-solid fa-phone"></i>
       </div>
@@ -402,7 +402,7 @@ function openQuoteModal(serviceName = '') {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-slate-700 font-bold mb-1">Phone Number</label>
-            <input type="tel" required placeholder="+91 98450 12345" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500" />
+            <input type="tel" required placeholder="+91 83339 91114" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500" />
           </div>
           <div>
             <label class="block text-slate-700 font-bold mb-1">Email Address</label>
