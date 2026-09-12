@@ -126,7 +126,7 @@ const servicesData = [
     price: 7500,
     priceFormatted: "₹7,500",
     unit: "per customized assembly",
-    image: "product-ss-display-mirror.png",
+    image: "product-gold-partition-divider.png",
     icon: "fa-gears",
     badge: "Custom CAD",
     shortDescription: "Customized steel fabrication and precision assembly designed to exact client blueprints.",
@@ -221,7 +221,7 @@ const categoriesData = [
     name: "Custom Fabrications",
     count: "Unlimited Options",
     description: "Bespoke steel equipment, machine frames, tanks, architectural elements, and custom enclosures.",
-    image: "product-ss-display-mirror.png",
+    image: "product-gold-partition-divider.png",
     startingPrice: "₹7,500",
     icon: "fa-gears"
   }
