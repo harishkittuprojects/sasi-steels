@@ -230,16 +230,16 @@ const categoriesData = [
 // 3. Products Database
 const productsData = [
   {
-    id: "heavy-ismb-beams",
-    name: "Structural ISMB Steel Beams & Columns",
-    category: "Structural Steel",
-    categorySlug: "structural-steel",
-    priceFormatted: "₹65 / kg",
-    rating: "4.9 (42 reviews)",
-    image: "product-beams.jpg",
-    badge: "IS 2062 Standard",
-    specs: "ISMB 100 to 600mm | Length: 6m - 12m | Anti-Rust Primer",
-    description: "High tensile hot-rolled universal I-beams, H-columns, and structural channels engineered for heavy load foundations, warehouse frames, and bridge spans."
+    id: "showroom-island-display-racks",
+    name: "Showroom Saree & Apparel Display Island Racks",
+    category: "Storage Systems",
+    categorySlug: "storage-systems",
+    priceFormatted: "₹12,500 / unit",
+    rating: "5.0 (48 reviews)",
+    image: "product-island-display-rack.png",
+    badge: "SS & Glass Shelving",
+    specs: "Polished Stainless Steel Frame | Multi-Tier Glass Shelves | Blouse & Saree Rails",
+    description: "Premium retail showroom island display racks designed with high-grade stainless steel frames, multi-tier tempered glass shelving for saree stacks, and extended side hanging arms for apparel presentation."
   },
   {
     id: "commercial-display-racks",
