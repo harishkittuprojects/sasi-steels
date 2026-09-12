@@ -29,7 +29,7 @@ function handleAdminLogin(e) {
     document.getElementById('auth-modal').classList.add('hidden');
     loadCurrentTab();
   } else {
-    alert('Incorrect credentials! Default password is: sasi833399');
+    alert('Incorrect credentials! Password is: sasi833399');
   }
 }
 
@@ -72,59 +72,73 @@ function loadCurrentTab() {
 async function loadQuotations() {
   const tbody = document.getElementById('table-inquiries');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading leads from Supabase...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Fetching leads from Supabase...</td></tr>`;
 
-  const inquiries = await dbGetInquiries();
-  const countBadge = document.getElementById('badge-inquiries-count');
-  if (countBadge) countBadge.textContent = inquiries.length;
+  try {
+    const inquiries = await dbGetInquiries();
+    const countBadge = document.getElementById('badge-inquiries-count');
+    if (countBadge) countBadge.textContent = inquiries.length;
 
-  if (inquiries.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-500 font-medium">No inquiries received yet.</td></tr>`;
-    return;
+    if (!inquiries || inquiries.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-slate-400">
+              <i class="fa-solid fa-inbox"></i>
+            </div>
+            <p class="text-sm font-bold text-slate-300">No quotation inquiries yet.</p>
+            <p class="text-xs text-slate-500 mt-1">Make sure you ran the SQL setup in Supabase SQL Editor. When users submit RFQ forms, they will show here.</p>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = inquiries.map(item => {
+      const rawPhone = (item.client_phone || '').replace(/[^0-9]/g, '');
+      const phoneLink = rawPhone.startsWith('91') ? rawPhone : '91' + rawPhone;
+      const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+
+      const fileBtn = item.blueprint_url 
+        ? `<a href="${item.blueprint_url}" target="_blank" class="px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white text-[11px] font-bold inline-flex items-center gap-1"><i class="fa-solid fa-file-pdf"></i> CAD/File</a>`
+        : `<span class="text-slate-600 text-[11px]">None</span>`;
+
+      return `
+        <tr class="hover:bg-slate-800/50 transition-colors">
+          <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${dateStr}</td>
+          <td class="py-3 px-4 font-bold text-white">
+            <div>${item.client_name}</div>
+            <div class="text-[11px] font-normal text-orange-400">${item.client_phone}</div>
+          </td>
+          <td class="py-3 px-4">
+            <div class="font-bold text-slate-200">${item.project_type}</div>
+            <div class="text-[11px] text-slate-400">${item.project_scope || 'Standard'}</div>
+          </td>
+          <td class="py-3 px-4 font-bold text-emerald-400">${item.estimated_cost || 'N/A'}</td>
+          <td class="py-3 px-4">${fileBtn}</td>
+          <td class="py-3 px-4">
+            <select onchange="handleInquiryStatusChange(${item.id}, this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-semibold">
+              <option value="New" ${item.status === 'New' ? 'selected' : ''}>New</option>
+              <option value="Contacted" ${item.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
+              <option value="Quoted" ${item.status === 'Quoted' ? 'selected' : ''}>Quoted</option>
+              <option value="Completed" ${item.status === 'Completed' ? 'selected' : ''}>Completed</option>
+              <option value="Cancelled" ${item.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+            </select>
+          </td>
+          <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+            <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(item.client_name)},%20this%20is%20SASI%20Steel%20Engineering%20regarding%20your%20quotation." target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold inline-flex items-center gap-1">
+              <i class="fa-brands fa-whatsapp"></i> Chat
+            </a>
+            <button onclick="handleDeleteInquiry(${item.id})" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error("Error in loadQuotations:", err);
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No quotation inquiries found.</td></tr>`;
   }
-
-  tbody.innerHTML = inquiries.map(item => {
-    const rawPhone = (item.client_phone || '').replace(/[^0-9]/g, '');
-    const phoneLink = rawPhone.startsWith('91') ? rawPhone : '91' + rawPhone;
-    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recent';
-
-    const fileBtn = item.blueprint_url 
-      ? `<a href="${item.blueprint_url}" target="_blank" class="px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white text-[11px] font-bold inline-flex items-center gap-1"><i class="fa-solid fa-file-pdf"></i> CAD/File</a>`
-      : `<span class="text-slate-600 text-[11px]">None</span>`;
-
-    return `
-      <tr class="hover:bg-slate-800/50 transition-colors">
-        <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${dateStr}</td>
-        <td class="py-3 px-4 font-bold text-white">
-          <div>${item.client_name}</div>
-          <div class="text-[11px] font-normal text-orange-400">${item.client_phone}</div>
-        </td>
-        <td class="py-3 px-4">
-          <div class="font-bold text-slate-200">${item.project_type}</div>
-          <div class="text-[11px] text-slate-400">${item.project_scope || 'Standard'}</div>
-        </td>
-        <td class="py-3 px-4 font-bold text-emerald-400">${item.estimated_cost || 'N/A'}</td>
-        <td class="py-3 px-4">${fileBtn}</td>
-        <td class="py-3 px-4">
-          <select onchange="handleInquiryStatusChange(${item.id}, this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-semibold">
-            <option value="New" ${item.status === 'New' ? 'selected' : ''}>New</option>
-            <option value="Contacted" ${item.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
-            <option value="Quoted" ${item.status === 'Quoted' ? 'selected' : ''}>Quoted</option>
-            <option value="Completed" ${item.status === 'Completed' ? 'selected' : ''}>Completed</option>
-            <option value="Cancelled" ${item.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
-          </select>
-        </td>
-        <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-          <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(item.client_name)},%20this%20is%20SASI%20Steel%20Engineering%20regarding%20your%20quotation." target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold inline-flex items-center gap-1">
-            <i class="fa-brands fa-whatsapp"></i> Chat
-          </a>
-          <button onclick="handleDeleteInquiry(${item.id})" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join('');
 }
 
 async function handleInquiryStatusChange(id, status) {
@@ -144,32 +158,48 @@ async function loadAttendance() {
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading attendance...</td></tr>`;
 
-  const records = await dbGetAttendance();
-  if (records.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-500">No attendance records found. Click 'Mark Attendance' above.</td></tr>`;
-    return;
-  }
+  try {
+    const records = await dbGetAttendance();
+    if (!records || records.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-blue-400">
+              <i class="fa-solid fa-user-check"></i>
+            </div>
+            <p class="text-sm font-bold text-slate-300">No attendance records found yet.</p>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Click the button below to mark today's worker attendance.</p>
+            <button onclick="openAttendanceModal()" class="btn-orange-pill text-xs px-4 py-2">
+              <i class="fa-solid fa-user-plus mr-1"></i> Mark First Attendance
+            </button>
+          </td>
+        </tr>`;
+      return;
+    }
 
-  tbody.innerHTML = records.map(r => `
-    <tr class="hover:bg-slate-800/50 transition-colors">
-      <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${r.attendance_date}</td>
-      <td class="py-3 px-4 font-bold text-white">${r.employee_name}</td>
-      <td class="py-3 px-4 text-slate-300">${r.role}</td>
-      <td class="py-3 px-4">
-        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-          r.status === 'Present' ? 'bg-emerald-500/20 text-emerald-400' :
-          r.status === 'Absent' ? 'bg-red-500/20 text-red-400' :
-          r.status === 'Overtime' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-300'
-        }">${r.status}</span>
-      </td>
-      <td class="py-3 px-4 text-slate-300">${r.hours_worked || 8} hrs</td>
-      <td class="py-3 px-4 text-amber-400 font-bold">${r.overtime_hours || 0} hrs</td>
-      <td class="py-3 px-4 text-right space-x-2">
-        <button onclick="editAttendanceItem(${JSON.stringify(r).replace(/"/g, '&quot;')})" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteAttendanceItem(${r.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
-      </td>
-    </tr>
-  `).join('');
+    tbody.innerHTML = records.map(r => `
+      <tr class="hover:bg-slate-800/50 transition-colors">
+        <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${r.attendance_date}</td>
+        <td class="py-3 px-4 font-bold text-white">${r.employee_name}</td>
+        <td class="py-3 px-4 text-slate-300">${r.role}</td>
+        <td class="py-3 px-4">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+            r.status === 'Present' ? 'bg-emerald-500/20 text-emerald-400' :
+            r.status === 'Absent' ? 'bg-red-500/20 text-red-400' :
+            r.status === 'Overtime' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-300'
+          }">${r.status}</span>
+        </td>
+        <td class="py-3 px-4 text-slate-300">${r.hours_worked || 8} hrs</td>
+        <td class="py-3 px-4 text-amber-400 font-bold">${r.overtime_hours || 0} hrs</td>
+        <td class="py-3 px-4 text-right space-x-2">
+          <button onclick="deleteAttendanceItem(${r.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error("Error in loadAttendance:", err);
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No attendance records found. Click 'Mark Attendance' above.</td></tr>`;
+  }
 }
 
 function openAttendanceModal() {
@@ -229,32 +259,48 @@ async function deleteAttendanceItem(id) {
 async function loadInventory() {
   const tbody = document.getElementById('table-inventory');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading inventory from Supabase...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading inventory...</td></tr>`;
 
-  const items = await dbGetInventory();
-  if (items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-500">No stock items found. Click 'Add Stock Item' above.</td></tr>`;
-    return;
+  try {
+    const items = await dbGetInventory();
+    if (!items || items.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-amber-400">
+              <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <p class="text-sm font-bold text-slate-300">No inventory items in stock.</p>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Add your steel beams, plates, sheets, or welding rods.</p>
+            <button onclick="openInventoryModal()" class="btn-orange-pill text-xs px-4 py-2">
+              <i class="fa-solid fa-plus mr-1"></i> Add First Stock Item
+            </button>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = items.map(item => `
+      <tr class="hover:bg-slate-800/50 transition-colors">
+        <td class="py-3 px-4 font-bold text-white">${item.item_name}</td>
+        <td class="py-3 px-4 text-slate-300">${item.category}</td>
+        <td class="py-3 px-4 font-bold text-orange-400">${item.quantity} ${item.unit}</td>
+        <td class="py-3 px-4 text-slate-300">₹${item.unit_price}</td>
+        <td class="py-3 px-4 text-slate-400">${item.storage_location || 'Main Yard'}</td>
+        <td class="py-3 px-4">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+            item.quantity <= (item.min_reorder_level || 5) ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+          }">${item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'}</span>
+        </td>
+        <td class="py-3 px-4 text-right space-x-2">
+          <button onclick="deleteInventoryItem(${item.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error("Error in loadInventory:", err);
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No stock items found. Click 'Add Stock Item' above.</td></tr>`;
   }
-
-  tbody.innerHTML = items.map(item => `
-    <tr class="hover:bg-slate-800/50 transition-colors">
-      <td class="py-3 px-4 font-bold text-white">${item.item_name}</td>
-      <td class="py-3 px-4 text-slate-300">${item.category}</td>
-      <td class="py-3 px-4 font-bold text-orange-400">${item.quantity} ${item.unit}</td>
-      <td class="py-3 px-4 text-slate-300">₹${item.unit_price}</td>
-      <td class="py-3 px-4 text-slate-400">${item.storage_location || 'Main Yard'}</td>
-      <td class="py-3 px-4">
-        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-          item.quantity <= (item.min_reorder_level || 5) ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
-        }">${item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'}</span>
-      </td>
-      <td class="py-3 px-4 text-right space-x-2">
-        <button onclick="editInventoryItem(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteInventoryItem(${item.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
-      </td>
-    </tr>
-  `).join('');
 }
 
 function openInventoryModal() {
@@ -320,44 +366,61 @@ async function loadFinance() {
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading finance book...</td></tr>`;
 
-  const entries = await dbGetFinance();
-  let totalIncome = 0;
-  let totalExpense = 0;
+  try {
+    const entries = await dbGetFinance();
+    let totalIncome = 0;
+    let totalExpense = 0;
 
-  entries.forEach(e => {
-    const amt = parseFloat(e.amount) || 0;
-    if (e.entry_type === 'Income') totalIncome += amt;
-    else totalExpense += amt;
-  });
+    entries.forEach(e => {
+      const amt = parseFloat(e.amount) || 0;
+      if (e.entry_type === 'Income') totalIncome += amt;
+      else totalExpense += amt;
+    });
 
-  document.getElementById('finance-total-income').textContent = `₹${totalIncome.toLocaleString('en-IN')}`;
-  document.getElementById('finance-total-expense').textContent = `₹${totalExpense.toLocaleString('en-IN')}`;
-  document.getElementById('finance-net-balance').textContent = `₹${(totalIncome - totalExpense).toLocaleString('en-IN')}`;
+    document.getElementById('finance-total-income').textContent = `₹${totalIncome.toLocaleString('en-IN')}`;
+    document.getElementById('finance-total-expense').textContent = `₹${totalExpense.toLocaleString('en-IN')}`;
+    document.getElementById('finance-net-balance').textContent = `₹${(totalIncome - totalExpense).toLocaleString('en-IN')}`;
 
-  if (entries.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-500">No transactions recorded yet.</td></tr>`;
-    return;
+    if (!entries || entries.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-emerald-400">
+              <i class="fa-solid fa-wallet"></i>
+            </div>
+            <p class="text-sm font-bold text-slate-300">No income or expense records yet.</p>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Record client payments or vendor bills.</p>
+            <button onclick="openFinanceModal()" class="btn-orange-pill text-xs px-4 py-2">
+              <i class="fa-solid fa-plus mr-1"></i> Add First Transaction
+            </button>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = entries.map(e => `
+      <tr class="hover:bg-slate-800/50 transition-colors">
+        <td class="py-3 px-4 font-mono text-[11px] text-slate-400">${e.transaction_date}</td>
+        <td class="py-3 px-4">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+            e.entry_type === 'Income' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+          }">${e.entry_type}</span>
+        </td>
+        <td class="py-3 px-4 text-slate-200 font-bold">${e.category}</td>
+        <td class="py-3 px-4 font-bold ${e.entry_type === 'Income' ? 'text-emerald-400' : 'text-red-400'}">₹${parseFloat(e.amount).toLocaleString('en-IN')}</td>
+        <td class="py-3 px-4 text-slate-400">${e.payment_mode || 'Bank'}</td>
+        <td class="py-3 px-4">
+          ${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="text-blue-400 hover:underline"><i class="fa-solid fa-receipt"></i> Receipt</a>` : '<span class="text-slate-600">-</span>'}
+        </td>
+        <td class="py-3 px-4 text-right">
+          <button onclick="deleteFinanceItem(${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error("Error in loadFinance:", err);
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No transactions found.</td></tr>`;
   }
-
-  tbody.innerHTML = entries.map(e => `
-    <tr class="hover:bg-slate-800/50 transition-colors">
-      <td class="py-3 px-4 font-mono text-[11px] text-slate-400">${e.transaction_date}</td>
-      <td class="py-3 px-4">
-        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-          e.entry_type === 'Income' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-        }">${e.entry_type}</span>
-      </td>
-      <td class="py-3 px-4 text-slate-200 font-bold">${e.category}</td>
-      <td class="py-3 px-4 font-bold ${e.entry_type === 'Income' ? 'text-emerald-400' : 'text-red-400'}">₹${parseFloat(e.amount).toLocaleString('en-IN')}</td>
-      <td class="py-3 px-4 text-slate-400">${e.payment_mode || 'Bank'}</td>
-      <td class="py-3 px-4">
-        ${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="text-blue-400 hover:underline"><i class="fa-solid fa-receipt"></i> Receipt</a>` : '<span class="text-slate-600">-</span>'}
-      </td>
-      <td class="py-3 px-4 text-right">
-        <button onclick="deleteFinanceItem(${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
-      </td>
-    </tr>
-  `).join('');
 }
 
 function openFinanceModal() {
@@ -420,31 +483,46 @@ async function loadProducts() {
   if (!grid) return;
   grid.innerHTML = `<div class="col-span-3 py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading products from Supabase...</div>`;
 
-  const products = await dbGetProducts();
-  if (products.length === 0) {
-    grid.innerHTML = `<div class="col-span-3 py-12 text-center text-slate-500">No products found. Click 'Add New Product' above.</div>`;
-    return;
-  }
+  try {
+    const products = await dbGetProducts();
+    if (!products || products.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-3 py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-purple-400">
+            <i class="fa-solid fa-cube"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No products uploaded yet.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Add products to display on the live catalog.</p>
+          <button onclick="openProductModal()" class="btn-orange-pill text-xs px-4 py-2">
+            <i class="fa-solid fa-plus mr-1"></i> Add First Product
+          </button>
+        </div>`;
+      return;
+    }
 
-  grid.innerHTML = products.map(p => `
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group flex flex-col justify-between">
-      <div class="relative h-44 w-full bg-slate-950 overflow-hidden">
-        <img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-        <span class="absolute top-2 left-2 bg-orange-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${p.badge || p.category}</span>
-        <span class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">${p.price_formatted}</span>
-      </div>
-      <div class="p-4 flex-1 flex flex-col justify-between">
-        <div>
-          <h4 class="font-bold text-white text-sm leading-snug">${p.name}</h4>
-          <p class="text-xs text-slate-400 mt-1 line-clamp-2">${p.description}</p>
+    grid.innerHTML = products.map(p => `
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group flex flex-col justify-between">
+        <div class="relative h-44 w-full bg-slate-950 overflow-hidden">
+          <img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+          <span class="absolute top-2 left-2 bg-orange-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${p.badge || p.category}</span>
+          <span class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">${p.price_formatted}</span>
         </div>
-        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
-          <span class="text-[10px] text-slate-500">${p.category}</span>
-          <button onclick="deleteProductItem(${p.id})" class="text-red-400 hover:text-red-300 text-xs font-bold"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+        <div class="p-4 flex-1 flex flex-col justify-between">
+          <div>
+            <h4 class="font-bold text-white text-sm leading-snug">${p.name}</h4>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2">${p.description}</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
+            <span class="text-[10px] text-slate-500">${p.category}</span>
+            <button onclick="deleteProductItem(${p.id})" class="text-red-400 hover:text-red-300 text-xs font-bold"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  } catch (err) {
+    console.error("Error in loadProducts:", err);
+    grid.innerHTML = `<div class="col-span-3 py-8 text-center text-slate-400">No products found.</div>`;
+  }
 }
 
 function openProductModal() {
@@ -480,7 +558,7 @@ function openProductModal() {
         <input type="text" name="badge" placeholder="e.g. SS 304 Polished" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Image (Upload or URL)</label>
+        <label class="block text-slate-300 font-bold mb-1">Image (Upload to Cloudinary)</label>
         <input type="file" id="product-img-file" accept="image/*" class="w-full text-slate-400 text-[11px] file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white" />
       </div>
     </div>
@@ -509,24 +587,39 @@ async function loadGallery() {
   if (!grid) return;
   grid.innerHTML = `<div class="col-span-4 py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading gallery...</div>`;
 
-  const items = await dbGetGallery();
-  if (items.length === 0) {
-    grid.innerHTML = `<div class="col-span-4 py-12 text-center text-slate-500">No project photos in gallery. Click 'Upload New Project Photo' above.</div>`;
-    return;
-  }
+  try {
+    const items = await dbGetGallery();
+    if (!items || items.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-4 py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-pink-400">
+            <i class="fa-solid fa-images"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No project photos in gallery yet.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Upload site fabrication photos.</p>
+          <button onclick="openGalleryModal()" class="btn-orange-pill text-xs px-4 py-2">
+            <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Upload First Photo
+          </button>
+        </div>`;
+      return;
+    }
 
-  grid.innerHTML = items.map(item => `
-    <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group aspect-square">
-      <img src="${item.image_url}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-      <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent flex flex-col justify-end p-3">
-        <span class="text-[10px] font-bold text-orange-400 uppercase">${item.category}</span>
-        <h4 class="text-xs font-bold text-white leading-tight">${item.title}</h4>
+    grid.innerHTML = items.map(item => `
+      <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group aspect-square">
+        <img src="${item.image_url}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent flex flex-col justify-end p-3">
+          <span class="text-[10px] font-bold text-orange-400 uppercase">${item.category}</span>
+          <h4 class="text-xs font-bold text-white leading-tight">${item.title}</h4>
+        </div>
+        <button onclick="deleteGalleryItem(${item.id})" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow">
+          <i class="fa-solid fa-trash text-[10px]"></i>
+        </button>
       </div>
-      <button onclick="deleteGalleryItem(${item.id})" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow">
-        <i class="fa-solid fa-trash text-[10px]"></i>
-      </button>
-    </div>
-  `).join('');
+    `).join('');
+  } catch (err) {
+    console.error("Error in loadGallery:", err);
+    grid.innerHTML = `<div class="col-span-4 py-8 text-center text-slate-400">No photos found.</div>`;
+  }
 }
 
 function openGalleryModal() {
@@ -665,7 +758,7 @@ async function handleCrudSubmit(e) {
     closeCrudModal();
   } catch (err) {
     console.error("Save failed:", err);
-    alert("Error saving to database: " + err.message);
+    alert("Notice: " + err.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = `Save Details`;

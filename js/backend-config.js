@@ -14,8 +14,15 @@ const BACKEND_CONFIG = {
   CLOUDINARY_UPLOAD_PRESET: "sasi_steels_preset"
 };
 
-// Initialize Supabase Client
-let supabase = window.supabase ? window.supabase.createClient(BACKEND_CONFIG.SUPABASE_URL, BACKEND_CONFIG.SUPABASE_ANON_KEY) : null;
+// Safe Supabase Client Initializer
+function getSupabaseClient() {
+  if (window.sasiSupabaseClient) return window.sasiSupabaseClient;
+  if (window.supabase && typeof window.supabase.createClient === 'function') {
+    window.sasiSupabaseClient = window.supabase.createClient(BACKEND_CONFIG.SUPABASE_URL, BACKEND_CONFIG.SUPABASE_ANON_KEY);
+    return window.sasiSupabaseClient;
+  }
+  return null;
+}
 
 // SHA-1 Helper for Cloudinary Signed Uploads
 async function generateSha1(message) {
@@ -68,159 +75,260 @@ async function uploadToCloudinary(file) {
 
 // 2. SUPABASE INQUIRIES & QUOTATIONS CRUD
 async function dbSubmitInquiry(inquiryData) {
-  if (!supabase) return { success: false, error: "Supabase not initialized" };
-  const { data, error } = await supabase
-    .from('inquiries')
-    .insert([{
-      client_name: inquiryData.name || inquiryData.client_name,
-      client_phone: inquiryData.phone || inquiryData.client_phone,
-      client_email: inquiryData.email || inquiryData.client_email || null,
-      project_type: inquiryData.projectType || inquiryData.project_type || 'General Fabrication',
-      project_scope: inquiryData.scope || inquiryData.project_scope || 'Custom Dimensions',
-      estimated_cost: inquiryData.estimatedCost || inquiryData.estimated_cost || 'Contact for Quote',
-      blueprint_url: inquiryData.blueprintUrl || inquiryData.blueprint_url || null,
-      message: inquiryData.message || null,
-      status: 'New'
-    }])
-    .select();
-  return { success: !error, data, error };
+  const client = getSupabaseClient();
+  if (!client) return { success: false, error: "Supabase not loaded" };
+  try {
+    const { data, error } = await client
+      .from('inquiries')
+      .insert([{
+        client_name: inquiryData.name || inquiryData.client_name,
+        client_phone: inquiryData.phone || inquiryData.client_phone,
+        client_email: inquiryData.email || inquiryData.client_email || null,
+        project_type: inquiryData.projectType || inquiryData.project_type || 'General Fabrication',
+        project_scope: inquiryData.scope || inquiryData.project_scope || 'Custom Dimensions',
+        estimated_cost: inquiryData.estimatedCost || inquiryData.estimated_cost || 'Contact for Quote',
+        blueprint_url: inquiryData.blueprintUrl || inquiryData.blueprint_url || null,
+        message: inquiryData.message || null,
+        status: 'New'
+      }])
+      .select();
+    return { success: !error, data, error };
+  } catch (e) {
+    return { success: false, error: e };
+  }
 }
 
 async function dbGetInquiries() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('inquiries').select('*').order('created_at', { ascending: false });
-  return error ? [] : data;
+  const client = getSupabaseClient();
+  if (!client) return [];
+  try {
+    const { data, error } = await client.from('inquiries').select('*').order('created_at', { ascending: false });
+    if (error) {
+      console.warn("Inquiries fetch notice:", error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.warn("Inquiries error:", e);
+    return [];
+  }
 }
 
 async function dbUpdateInquiryStatus(id, newStatus) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('inquiries').update({ status: newStatus }).eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('inquiries').update({ status: newStatus }).eq('id', id);
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
 
 async function dbDeleteInquiry(id) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('inquiries').delete().eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('inquiries').delete().eq('id', id);
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
 
 // 3. SUPABASE ATTENDANCE CRUD
 async function dbGetAttendance(date = null) {
-  if (!supabase) return [];
-  let query = supabase.from('attendance').select('*').order('created_at', { ascending: false });
-  if (date) query = query.eq('attendance_date', date);
-  const { data, error } = await query;
-  return error ? [] : data;
+  const client = getSupabaseClient();
+  if (!client) return [];
+  try {
+    let query = client.from('attendance').select('*').order('created_at', { ascending: false });
+    if (date) query = query.eq('attendance_date', date);
+    const { data, error } = await query;
+    if (error) {
+      console.warn("Attendance fetch notice:", error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.warn("Attendance error:", e);
+    return [];
+  }
 }
 
 async function dbAddAttendance(record) {
-  if (!supabase) return { success: false };
-  const { data, error } = await supabase.from('attendance').insert([record]).select();
-  return { success: !error, data, error };
-}
-
-async function dbUpdateAttendance(id, updates) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('attendance').update(updates).eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return { success: false };
+  try {
+    const { data, error } = await client.from('attendance').insert([record]).select();
+    return { success: !error, data, error };
+  } catch (e) {
+    return { success: false, error: e };
+  }
 }
 
 async function dbDeleteAttendance(id) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('attendance').delete().eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('attendance').delete().eq('id', id);
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
 
 // 4. SUPABASE INVENTORY CRUD
 async function dbGetInventory() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('inventory').select('*').order('item_name', { ascending: true });
-  return error ? [] : data;
+  const client = getSupabaseClient();
+  if (!client) return [];
+  try {
+    const { data, error } = await client.from('inventory').select('*').order('item_name', { ascending: true });
+    if (error) {
+      console.warn("Inventory fetch notice:", error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.warn("Inventory error:", e);
+    return [];
+  }
 }
 
 async function dbAddInventory(item) {
-  if (!supabase) return { success: false };
-  const { data, error } = await supabase.from('inventory').insert([item]).select();
-  return { success: !error, data, error };
-}
-
-async function dbUpdateInventory(id, updates) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('inventory').update(updates).eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return { success: false };
+  try {
+    const { data, error } = await client.from('inventory').insert([item]).select();
+    return { success: !error, data, error };
+  } catch (e) {
+    return { success: false, error: e };
+  }
 }
 
 async function dbDeleteInventory(id) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('inventory').delete().eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('inventory').delete().eq('id', id);
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
 
 // 5. SUPABASE FINANCE (INCOME & EXPENSES) CRUD
 async function dbGetFinance() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('finance').select('*').order('transaction_date', { ascending: false });
-  return error ? [] : data;
+  const client = getSupabaseClient();
+  if (!client) return [];
+  try {
+    const { data, error } = await client.from('finance').select('*').order('transaction_date', { ascending: false });
+    if (error) {
+      console.warn("Finance fetch notice:", error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.warn("Finance error:", e);
+    return [];
+  }
 }
 
 async function dbAddFinance(entry) {
-  if (!supabase) return { success: false };
-  const { data, error } = await supabase.from('finance').insert([entry]).select();
-  return { success: !error, data, error };
-}
-
-async function dbUpdateFinance(id, updates) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('finance').update(updates).eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return { success: false };
+  try {
+    const { data, error } = await client.from('finance').insert([entry]).select();
+    return { success: !error, data, error };
+  } catch (e) {
+    return { success: false, error: e };
+  }
 }
 
 async function dbDeleteFinance(id) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('finance').delete().eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('finance').delete().eq('id', id);
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
 
 // 6. SUPABASE PRODUCTS CRUD
 async function dbGetProducts() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-  return error ? [] : data;
+  const client = getSupabaseClient();
+  if (!client) return [];
+  try {
+    const { data, error } = await client.from('products').select('*').order('created_at', { ascending: false });
+    if (error) {
+      console.warn("Products fetch notice:", error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.warn("Products error:", e);
+    return [];
+  }
 }
 
 async function dbAddProduct(prod) {
-  if (!supabase) return { success: false };
-  const { data, error } = await supabase.from('products').insert([prod]).select();
-  return { success: !error, data, error };
-}
-
-async function dbUpdateProduct(id, updates) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('products').update(updates).eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return { success: false };
+  try {
+    const { data, error } = await client.from('products').insert([prod]).select();
+    return { success: !error, data, error };
+  } catch (e) {
+    return { success: false, error: e };
+  }
 }
 
 async function dbDeleteProduct(id) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('products').delete().eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('products').delete().eq('id', id);
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
 
 // 7. SUPABASE GALLERY CRUD
 async function dbGetGallery() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('gallery').select('*').order('created_at', { ascending: false });
-  return error ? [] : data;
+  const client = getSupabaseClient();
+  if (!client) return [];
+  try {
+    const { data, error } = await client.from('gallery').select('*').order('created_at', { ascending: false });
+    if (error) {
+      console.warn("Gallery fetch notice:", error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.warn("Gallery error:", e);
+    return [];
+  }
 }
 
 async function dbAddGalleryItem(item) {
-  if (!supabase) return { success: false };
-  const { data, error } = await supabase.from('gallery').insert([item]).select();
-  return { success: !error, data, error };
+  const client = getSupabaseClient();
+  if (!client) return { success: false };
+  try {
+    const { data, error } = await client.from('gallery').insert([item]).select();
+    return { success: !error, data, error };
+  } catch (e) {
+    return { success: false, error: e };
+  }
 }
 
 async function dbDeleteGalleryItem(id) {
-  if (!supabase) return false;
-  const { error } = await supabase.from('gallery').delete().eq('id', id);
-  return !error;
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('gallery').delete().eq('id', id);
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
