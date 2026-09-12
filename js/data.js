@@ -68,7 +68,7 @@ const servicesData = [
     price: 4000,
     priceFormatted: "₹4,000",
     unit: "per bay / shelf tier",
-    image: "storage-racks.jpg",
+    image: "product-white-shelving.png",
     icon: "fa-boxes-stacked",
     badge: "Heavy Duty",
     shortDescription: "Custom steel storage racks, heavy-duty warehouse pallet shelving, and cantilever systems.",
