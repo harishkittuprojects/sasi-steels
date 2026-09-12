@@ -184,6 +184,14 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   border-color: #f97316;
 }
 
+@media (max-width: 640px) {
+  .btn-orange-pill, .btn-dark-pill {
+    padding: 0.45rem 0.95rem;
+    font-size: 0.75rem;
+    gap: 0.35rem;
+  }
+}
+
 /* Glassmorphism Dark Panels */
 .glass-dark-app {
   background: linear-gradient(180deg, #0b132b 0%, #060a17 100%);
