@@ -639,6 +639,8 @@
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/backend-config.js"></script>
   <script src="js/data.js?v=7"></script>
   <script src="js/main.js?v=7"></script>
   
@@ -696,7 +698,7 @@
       document.getElementById('calc-price-max').textContent = '₹' + maxLakhs + 'L';
     }
 
-    function handleCalculatorSubmit(e) {
+    async function handleCalculatorSubmit(e) {
       e.preventDefault();
       const name = document.getElementById('calc-client-name').value;
       const phone = document.getElementById('calc-client-phone').value;
@@ -704,7 +706,18 @@
       const minP = document.getElementById('calc-price-min').textContent;
       const maxP = document.getElementById('calc-price-max').textContent;
 
-      alert(`Thank you, ${name}! Your quotation inquiry for a ${area} sq.ft ${calcState.typeName} (${minP} - ${maxP}) has been logged. Our engineering manager will contact you at ${phone} promptly.`);
+      if (typeof dbSubmitInquiry === 'function') {
+        await dbSubmitInquiry({
+          name: name,
+          phone: phone,
+          projectType: calcState.typeName,
+          scope: `${area} Sq.Ft Project Area`,
+          estimatedCost: `${minP} - ${maxP}`,
+          message: `Calculated Estimate: ${minP} - ${maxP} for ${area} sq.ft ${calcState.typeName}`
+        });
+      }
+
+      alert(`Thank you, ${name}! Your quotation inquiry for a ${area} sq.ft ${calcState.typeName} (${minP} - ${maxP}) has been saved. Our engineering manager will contact you at ${phone} promptly.`);
       document.getElementById('calculator-inquiry-form').reset();
     }
 

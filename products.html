@@ -270,18 +270,38 @@
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/backend-config.js"></script>
   <script src="js/data.js?v=7"></script>
   <script src="js/main.js?v=7"></script>
   
   <script>
     let activeProductCategory = 'all';
 
-    function renderProducts() {
+    async function renderProducts() {
       const grid = document.getElementById('products-grid');
       const countText = document.getElementById('product-count-text');
-      if (!grid || typeof productsData === 'undefined') return;
+      if (!grid) return;
 
-      const filtered = productsData.filter(p => activeProductCategory === 'all' || p.categorySlug === activeProductCategory);
+      let sourceProducts = (typeof productsData !== 'undefined') ? productsData : [];
+      if (typeof dbGetProducts === 'function') {
+        const dbProducts = await dbGetProducts();
+        if (dbProducts && dbProducts.length > 0) {
+          sourceProducts = dbProducts.map(p => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            categorySlug: p.category_slug,
+            priceFormatted: p.price_formatted,
+            badge: p.badge || p.category,
+            image: p.image_url,
+            specs: p.specs || 'Standard Specification',
+            description: p.description
+          }));
+        }
+      }
+
+      const filtered = sourceProducts.filter(p => activeProductCategory === 'all' || p.categorySlug === activeProductCategory);
       if (countText) countText.textContent = `Showing ${filtered.length} products`;
 
       grid.innerHTML = filtered.map((p, idx) => `

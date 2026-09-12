@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard &bull; SASI Steel Engineering</title>
+  <link rel="icon" type="image/png" href="image.png" />
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              900: '#7c2d12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .sidebar-link.active {
+      background-color: rgba(249, 115, 22, 0.15);
+      color: #f97316;
+      border-right: 3px solid #f97316;
+      font-weight: 700;
+    }
+    .modal-backdrop {
+      background-color: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased">
+
+  <!-- ================= AUTHENTICATION MODAL ================= -->
+  <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl relative text-center">
+      <div class="w-16 h-16 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center mx-auto mb-4 text-2xl border border-orange-500/20">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h2 class="text-2xl font-black font-heading text-white">SASI Steels Admin</h2>
+      <p class="text-xs text-slate-400 mt-1 mb-6">Enter your master admin credentials to manage workshop operations.</p>
+      
+      <form onsubmit="handleAdminLogin(event)" class="space-y-4 text-left">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">Username</label>
+          <input type="text" id="admin-user" required value="admin" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">Password / PIN</label>
+          <input type="password" id="admin-pass" required placeholder="Enter password (default: sasi833399)" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-orange-600/30">
+          Unlock Admin Portal
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <a href="index.html" class="flex items-center gap-2.5">
+          <div class="bg-white p-1 rounded-lg">
+            <img src="image.png" alt="SASI Steels Logo" class="h-7 w-auto object-contain" />
+          </div>
+          <div>
+            <span class="font-heading font-extrabold text-sm text-white tracking-wide block">SASI STEEL</span>
+            <span class="text-[9px] font-bold text-orange-400 uppercase tracking-widest block -mt-1">ADMIN PORTAL</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div id="db-indicator" class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-[11px] text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Supabase RDS Connected</span>
+        </div>
+        <button onclick="openSettingsModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800" title="Cloudinary & Supabase Settings">
+          <i class="fa-solid fa-gear text-sm"></i>
+        </button>
+        <button onclick="adminLogout()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 text-xs font-bold transition-all border border-slate-700">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= MAIN APP LAYOUT ================= -->
+  <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6">
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside id="admin-sidebar" class="w-64 bg-slate-900 border border-slate-800 rounded-3xl p-4 shrink-0 hidden lg:block h-[calc(100vh-7rem)] sticky top-20 flex flex-col justify-between">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 py-2">Workshop Management</p>
+        
+        <button onclick="switchTab('quotations')" id="tab-btn-quotations" class="sidebar-link active w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+          <i class="fa-solid fa-file-invoice text-orange-500 w-4 text-center"></i>
+          <span>Quotations & Leads</span>
+          <span id="badge-inquiries-count" class="ml-auto bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
+        </button>
+
+        <button onclick="switchTab('attendance')" id="tab-btn-attendance" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+          <i class="fa-solid fa-user-clock text-blue-400 w-4 text-center"></i>
+          <span>Worker Attendance</span>
+        </button>
+
+        <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+          <i class="fa-solid fa-boxes-stacked text-amber-400 w-4 text-center"></i>
+          <span>Steel Inventory</span>
+        </button>
+
+        <button onclick="switchTab('finance')" id="tab-btn-finance" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+          <i class="fa-solid fa-chart-line text-emerald-400 w-4 text-center"></i>
+          <span>Income & Expenses</span>
+        </button>
+
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 pt-4 pb-2">Website Catalog</p>
+
+        <button onclick="switchTab('products')" id="tab-btn-products" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+          <i class="fa-solid fa-cube text-purple-400 w-4 text-center"></i>
+          <span>Products Catalog</span>
+        </button>
+
+        <button onclick="switchTab('gallery')" id="tab-btn-gallery" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+          <i class="fa-solid fa-images text-pink-400 w-4 text-center"></i>
+          <span>Project Gallery</span>
+        </button>
+      </div>
+
+      <div class="pt-4 border-t border-slate-800 text-center">
+        <a href="index.html" target="_blank" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold inline-flex items-center justify-center gap-2 transition-all">
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> View Live Website
+        </a>
+      </div>
+    </aside>
+
+    <!-- CONTENT AREA -->
+    <main class="flex-1 min-w-0">
+
+      <!-- ================= SECTION 1: QUOTATIONS & LEADS ================= -->
+      <section id="section-quotations" class="tab-section">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Quotations & Inquiries</h2>
+            <p class="text-xs text-slate-400">Incoming RFQ calculator submissions and direct client inquiries.</p>
+          </div>
+          <button onclick="openNewInquiryModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
+            <i class="fa-solid fa-plus"></i> Add Manual Lead
+          </button>
+        </div>
+
+        <!-- Table Container -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+                  <th class="py-3.5 px-4">Date</th>
+                  <th class="py-3.5 px-4">Client</th>
+                  <th class="py-3.5 px-4">Project & Scope</th>
+                  <th class="py-3.5 px-4">Est. Rate</th>
+                  <th class="py-3.5 px-4">Blueprint</th>
+                  <th class="py-3.5 px-4">Status</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-inquiries" class="divide-y divide-slate-800 text-slate-200">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 2: ATTENDANCE ================= -->
+      <section id="section-attendance" class="tab-section hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Workshop Worker Attendance</h2>
+            <p class="text-xs text-slate-400">Track daily presence, overtime hours, and daily wage records.</p>
+          </div>
+          <button onclick="openAttendanceModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
+            <i class="fa-solid fa-user-plus"></i> Mark Attendance
+          </button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+                  <th class="py-3.5 px-4">Date</th>
+                  <th class="py-3.5 px-4">Employee</th>
+                  <th class="py-3.5 px-4">Role</th>
+                  <th class="py-3.5 px-4">Status</th>
+                  <th class="py-3.5 px-4">Hours</th>
+                  <th class="py-3.5 px-4">Overtime</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-attendance" class="divide-y divide-slate-800 text-slate-200">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 3: INVENTORY ================= -->
+      <section id="section-inventory" class="tab-section hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Raw Steel & Stock Inventory</h2>
+            <p class="text-xs text-slate-400">Manage steel coils, I-beams, pipes, sheets, and welding consumables.</p>
+          </div>
+          <button onclick="openInventoryModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
+            <i class="fa-solid fa-box-open"></i> Add Stock Item
+          </button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+                  <th class="py-3.5 px-4">Item Name</th>
+                  <th class="py-3.5 px-4">Category</th>
+                  <th class="py-3.5 px-4">Current Stock</th>
+                  <th class="py-3.5 px-4">Unit Price</th>
+                  <th class="py-3.5 px-4">Location</th>
+                  <th class="py-3.5 px-4">Status</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-inventory" class="divide-y divide-slate-800 text-slate-200">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 4: FINANCE (INCOME & EXPENSES) ================= -->
+      <section id="section-finance" class="tab-section hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Income & Expenses Book</h2>
+            <p class="text-xs text-slate-400">Track client payments, steel purchase invoices, wages, and receipts.</p>
+          </div>
+          <button onclick="openFinanceModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
+            <i class="fa-solid fa-plus-minus"></i> Add Income / Expense
+          </button>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Income</span>
+            <div class="text-2xl font-black text-emerald-400 mt-1 font-heading" id="finance-total-income">₹0</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Expenses</span>
+            <div class="text-2xl font-black text-red-400 mt-1 font-heading" id="finance-total-expense">₹0</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Net Balance</span>
+            <div class="text-2xl font-black text-white mt-1 font-heading" id="finance-net-balance">₹0</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+                  <th class="py-3.5 px-4">Date</th>
+                  <th class="py-3.5 px-4">Type</th>
+                  <th class="py-3.5 px-4">Category</th>
+                  <th class="py-3.5 px-4">Amount</th>
+                  <th class="py-3.5 px-4">Mode</th>
+                  <th class="py-3.5 px-4">Receipt</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-finance" class="divide-y divide-slate-800 text-slate-200">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 5: PRODUCTS ================= -->
+      <section id="section-products" class="tab-section hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Live Website Products</h2>
+            <p class="text-xs text-slate-400">Add, edit, or remove products displayed on the public catalog.</p>
+          </div>
+          <button onclick="openProductModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
+            <i class="fa-solid fa-plus"></i> Add New Product
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="grid-products">
+          <!-- JS populated -->
+        </div>
+      </section>
+
+      <!-- ================= SECTION 6: GALLERY ================= -->
+      <section id="section-gallery" class="tab-section hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Project Showcase Gallery</h2>
+            <p class="text-xs text-slate-400">Upload site fabrication photos directly to Cloudinary.</p>
+          </div>
+          <button onclick="openGalleryModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Upload New Project Photo
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="grid-gallery">
+          <!-- JS populated -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= COMMON CRUD MODAL ================= -->
+  <div id="crud-modal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeCrudModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <h3 class="text-xl font-bold text-white font-heading mb-1" id="crud-modal-title">Add Item</h3>
+      <p class="text-xs text-slate-400 mb-5" id="crud-modal-subtitle">Fill in the details below.</p>
+      
+      <form id="crud-form" onsubmit="handleCrudSubmit(event)" class="space-y-4 text-xs">
+        <div id="crud-form-fields" class="space-y-4">
+          <!-- Dynamic Form Fields -->
+        </div>
+        <button type="submit" id="crud-submit-btn" class="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow">
+          Save Details
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Settings Modal for Cloudinary & Cloud Name -->
+  <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+      <button onclick="closeSettingsModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <h3 class="text-lg font-bold text-white font-heading mb-1">Backend Configuration</h3>
+      <p class="text-xs text-slate-400 mb-4">Set your Cloudinary Cloud Name for direct image uploads.</p>
+      
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">Cloudinary Cloud Name</label>
+          <input type="text" id="settings-cloud-name" placeholder="e.g. your_cloud_name" class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <button onclick="saveSettings()" class="w-full py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold transition-colors">
+          Save Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/backend-config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

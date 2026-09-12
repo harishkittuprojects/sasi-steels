@@ -397,21 +397,21 @@ function openQuoteModal(serviceName = '') {
       <form id="quote-form" onsubmit="handleQuoteSubmit(event)" class="space-y-4 text-xs">
         <div>
           <label class="block text-slate-700 font-bold mb-1">Your Full Name</label>
-          <input type="text" required placeholder="e.g. Sasi Kumar" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500" />
+          <input type="text" id="quote-name" required placeholder="e.g. Sasi Kumar" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500" />
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-slate-700 font-bold mb-1">Phone Number</label>
-            <input type="tel" required placeholder="+91 83339 91114" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500" />
+            <input type="tel" id="quote-phone" required placeholder="+91 83339 91114" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500" />
           </div>
           <div>
             <label class="block text-slate-700 font-bold mb-1">Email Address</label>
-            <input type="email" required placeholder="name@company.com" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500" />
+            <input type="email" id="quote-email" placeholder="name@company.com" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500" />
           </div>
         </div>
         <div>
           <label class="block text-slate-700 font-bold mb-1">Service Required</label>
-          <select class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500">
+          <select id="quote-service" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500">
             ${servicesData.map(s => `
               <option value="${s.name}" ${serviceName === s.name ? 'selected' : ''}>${s.name} (${s.priceFormatted})</option>
             `).join('')}
@@ -419,10 +419,14 @@ function openQuoteModal(serviceName = '') {
           </select>
         </div>
         <div>
-          <label class="block text-slate-700 font-bold mb-1">Project Details or Site Address</label>
-          <textarea rows="3" placeholder="Dimensions, tonnage, location, CAD blueprints..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500"></textarea>
+          <label class="block text-slate-700 font-bold mb-1">Attach Blueprint / Site Drawing (Cloudinary)</label>
+          <input type="file" id="quote-file" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs file:mr-3 file:py-1.5 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-500 file:text-white hover:file:bg-orange-600" />
         </div>
-        <button type="submit" class="w-full py-3.5 rounded-full bg-orange-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all shadow-md">
+        <div>
+          <label class="block text-slate-700 font-bold mb-1">Project Details or Site Address</label>
+          <textarea id="quote-message" rows="3" placeholder="Dimensions, tonnage, location, CAD blueprints..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500"></textarea>
+        </div>
+        <button type="submit" id="quote-submit-btn" class="w-full py-3.5 rounded-full bg-orange-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all shadow-md">
           Submit Quote Request
         </button>
       </form>
@@ -443,10 +447,41 @@ function closeQuoteModal() {
   document.body.classList.remove('overflow-hidden');
 }
 
-function handleQuoteSubmit(e) {
+async function handleQuoteSubmit(e) {
   e.preventDefault();
+  const btn = document.getElementById('quote-submit-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting to Supabase...`;
+  }
+
+  const name = document.getElementById('quote-name').value;
+  const phone = document.getElementById('quote-phone').value;
+  const email = document.getElementById('quote-email').value;
+  const service = document.getElementById('quote-service').value;
+  const message = document.getElementById('quote-message').value;
+  
+  let blueprintUrl = null;
+  const fileInput = document.getElementById('quote-file');
+  if (fileInput && fileInput.files[0] && typeof uploadToCloudinary === 'function') {
+    blueprintUrl = await uploadToCloudinary(fileInput.files[0]);
+  }
+
+  if (typeof dbSubmitInquiry === 'function') {
+    await dbSubmitInquiry({
+      name,
+      phone,
+      email,
+      projectType: service,
+      scope: 'Direct RFQ Form',
+      estimatedCost: 'Contact for Quote',
+      blueprintUrl,
+      message
+    });
+  }
+
   closeQuoteModal();
-  showToast('Inquiry Submitted! Our engineering team will contact you within 2 hours.', 'success');
+  showToast('Inquiry Submitted! Your request has been sent to our engineering desk.', 'success');
 }
 
 // Mobile Menu Handler
