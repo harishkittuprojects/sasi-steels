@@ -126,7 +126,7 @@ const servicesData = [
     price: 7500,
     priceFormatted: "₹7,500",
     unit: "per customized assembly",
-    image: "custom-fabrication.jpg",
+    image: "product-ss-display-mirror.png",
     icon: "fa-gears",
     badge: "Custom CAD",
     shortDescription: "Customized steel fabrication and precision assembly designed to exact client blueprints.",
@@ -203,7 +203,7 @@ const categoriesData = [
     name: "Storage Racks & Shelving",
     count: "15+ Configurations",
     description: "High-density warehouse pallet racks, cantilever arms, multi-tier shelving, and bin systems.",
-    image: "storage-racks.jpg",
+    image: "product-display-racks.png",
     startingPrice: "₹4,000",
     icon: "fa-boxes-stacked"
   },
@@ -221,7 +221,7 @@ const categoriesData = [
     name: "Custom Fabrications",
     count: "Unlimited Options",
     description: "Bespoke steel equipment, machine frames, tanks, architectural elements, and custom enclosures.",
-    image: "custom-fabrication.jpg",
+    image: "product-ss-display-mirror.png",
     startingPrice: "₹7,500",
     icon: "fa-gears"
   }
