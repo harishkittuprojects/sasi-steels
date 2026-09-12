@@ -97,7 +97,7 @@ const servicesData = [
     price: 15000,
     priceFormatted: "₹15,000",
     unit: "per 100 sq.ft module",
-    image: "mezzanine-floors.jpg",
+    image: "mezzanine-floors-real.jpg",
     icon: "fa-layer-group",
     badge: "Space Saver",
     shortDescription: "Strong and customized mezzanine floors, multi-tier platforms, and steel structural expansions.",
@@ -212,7 +212,7 @@ const categoriesData = [
     name: "Mezzanine Floors & Structures",
     count: "6+ Structural Types",
     description: "Free-standing multi-tier industrial mezzanine platforms, walkways, and access stairs.",
-    image: "mezzanine-floors.jpg",
+    image: "mezzanine-floors-real.jpg",
     startingPrice: "₹15,000",
     icon: "fa-layer-group"
   },
