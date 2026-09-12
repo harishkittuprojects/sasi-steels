@@ -68,7 +68,7 @@ const servicesData = [
     price: 4000,
     priceFormatted: "₹4,000",
     unit: "per bay / shelf tier",
-    image: "storage-racks-warehouse.jpg",
+    image: "about-sasi-steels-hd.jpg",
     icon: "fa-boxes-stacked",
     badge: "Heavy Duty",
     shortDescription: "Custom steel storage racks, heavy-duty warehouse pallet shelving, and cantilever systems.",
@@ -203,7 +203,7 @@ const categoriesData = [
     name: "Storage Racks & Shelving",
     count: "15+ Configurations",
     description: "High-density warehouse pallet racks, cantilever arms, multi-tier shelving, and bin systems.",
-    image: "storage-racks-warehouse.jpg",
+    image: "about-sasi-steels-hd.jpg",
     startingPrice: "₹4,000",
     icon: "fa-boxes-stacked"
   },
