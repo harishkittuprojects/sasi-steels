@@ -334,7 +334,7 @@ const galleryData = [
     title: "100,000 Sq.Ft Pre-Engineered Logistics Warehouse",
     category: "PEB Sheds & Warehouses",
     categorySlug: "peb-sheds",
-    location: "Heavy Industrial Zone, Karnataka",
+    location: "Guntur, Andhra Pradesh",
     year: "2025",
     image: "gallery-peb-1.jpg",
     description: "End-to-end design, fabrication, and on-site erection of a 100,000 sq.ft clear-span PEB logistics warehouse with 20-ton crane rails and Galvalume roof."
@@ -344,7 +344,7 @@ const galleryData = [
     title: "High-Pressure Pipe Welding & NDT Testing",
     category: "Welding & Piping",
     categorySlug: "welding",
-    location: "Petrochemical Refinery Unit, India",
+    location: "Industrial Unit, Andhra Pradesh",
     year: "2025",
     image: "gallery-welding-1.jpg",
     description: "Certified ASME Section IX TIG & MIG welding on heavy gauge carbon steel pipelines with 100% radiographic and ultrasonic flaw detection."
