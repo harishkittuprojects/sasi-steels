@@ -10,7 +10,7 @@ const servicesData = [
     price: 5000,
     priceFormatted: "₹5,000",
     unit: "per ton / structural unit",
-    image: "steel-fabrication-new.jpg",
+    image: "steel-fabrication-real.png",
     icon: "fa-industry",
     badge: "Structural",
     shortDescription: "Complete structural steel fabrication for warehouses, industrial sheds, and PEB buildings.",
@@ -185,7 +185,7 @@ const categoriesData = [
     name: "Steel Fabrication",
     count: "12+ Solutions",
     description: "Heavy structural beams, industrial PEB sheds, trusses, and load-bearing steel frameworks.",
-    image: "steel-fabrication-new.jpg",
+    image: "steel-fabrication-real.png",
     startingPrice: "₹5,000",
     icon: "fa-industry"
   },
