@@ -13,11 +13,41 @@
   --steel-border: #e2e8f0;
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  position: relative;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   color: #0f172a;
   background-color: #ffffff;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  position: relative;
+}
+
+/* Ensure no section or banner can cause horizontal overflow */
+header, section, footer, main {
+  max-width: 100% !important;
+  overflow-x: clip;
+}
+
+/* Prevent AOS library from causing horizontal scrollbars */
+html[data-aos-easing], body[data-aos-easing] {
+  overflow-x: hidden !important;
+}
+
+[data-aos] {
+  max-width: 100%;
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading {
@@ -163,13 +193,15 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 /* Floating WhatsApp & Call Buttons Widget */
 .floating-actions-dock {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 20px;
+  right: 16px;
   z-index: 9990;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 12px;
+  max-width: calc(100vw - 32px);
+  pointer-events: auto;
 }
 
 .floating-btn-item {
@@ -196,15 +228,14 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   border: 1px solid rgba(255, 255, 255, 0.15);
   white-space: nowrap;
   opacity: 0;
-  transform: translateX(10px);
-  transition: all 0.25s ease;
+  transform: translateX(0);
+  transition: opacity 0.25s ease;
   pointer-events: none;
 }
 
 .floating-actions-dock:hover .floating-btn-label,
 .floating-btn-item:hover .floating-btn-label {
   opacity: 1;
-  transform: translateX(0);
 }
 
 .floating-circle-btn {
@@ -291,8 +322,9 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 /* Toast Container (Shifted upward so it never overlaps floating dock) */
 #toast-container {
   position: fixed;
-  bottom: 150px;
-  right: 24px;
+  bottom: 140px;
+  right: 16px;
+  max-width: calc(100vw - 32px);
   z-index: 9999;
   display: flex;
   flex-direction: column;
