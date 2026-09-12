@@ -230,6 +230,18 @@ const categoriesData = [
 // 3. Products Database
 const productsData = [
   {
+    id: "gold-metal-interior-partition",
+    name: "Architectural Gold Metal Interior Room Divider & Partition Screen",
+    category: "Custom Fabrication",
+    categorySlug: "custom-fabrication",
+    priceFormatted: "₹14,500 / unit",
+    rating: "5.0 (46 reviews)",
+    image: "product-gold-partition-divider.png",
+    badge: "Luxury Gold PVD",
+    specs: "Gold PVD Coated Steel | Vertical Slat Divider | 5 Integrated Planter Shelves",
+    description: "Modern luxury architectural metal room divider and partition screen fabricated with gold PVD coated steel slats and integrated wooden planter boxes. Perfect for living rooms, offices, and boutique showroom spaces."
+  },
+  {
     id: "showroom-island-display-racks",
     name: "Showroom Saree & Apparel Display Island Racks",
     category: "Storage Systems",
