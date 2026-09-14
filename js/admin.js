@@ -7,6 +7,29 @@ let activeModalType = null;
 let editingItemId = null;
 
 // Auth check on load
+async function loadInitialCounts() {
+  try {
+    const inq = await dbGetInquiries();
+    if (inq) {
+      const unread = inq.filter(i => i.status === 'New').length;
+      const b = document.getElementById('badge-inquiries-count');
+      if (b) b.textContent = unread;
+    }
+    const orders = await dbGetOrders();
+    if (orders) {
+      allOrdersRecords = orders;
+      const activeOrd = orders.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
+      const b = document.getElementById('badge-orders-count');
+      if (b) b.textContent = activeOrd;
+    }
+    const emp = await dbGetEmployees();
+    if (emp) {
+      const b = document.getElementById('badge-employees-count');
+      if (b) b.textContent = emp.length;
+    }
+  } catch (e) {}
+}
+
 function checkAdminAuth() {
   const isAuth = sessionStorage.getItem('sasi_admin_auth');
   const authModal = document.getElementById('auth-modal');
@@ -15,6 +38,7 @@ function checkAdminAuth() {
   } else {
     if (authModal) authModal.classList.add('hidden');
     loadCurrentTab();
+    loadInitialCounts();
   }
 }
 
@@ -28,6 +52,7 @@ function handleAdminLogin(e) {
     sessionStorage.setItem('sasi_admin_auth', 'true');
     document.getElementById('auth-modal').classList.add('hidden');
     loadCurrentTab();
+    loadInitialCounts();
   } else {
     alert('Incorrect credentials! Password is: sasi833399');
   }
@@ -60,6 +85,7 @@ function switchTab(tabName) {
 function loadCurrentTab() {
   switch (currentActiveTab) {
     case 'quotations': loadQuotations(); break;
+    case 'orders': loadOrders(); break;
     case 'employees': loadEmployees(); break;
     case 'attendance': loadAttendance(); break;
     case 'inventory': loadInventory(); break;
@@ -70,6 +96,7 @@ function loadCurrentTab() {
 
 // Global State for Filtering & Exports
 let allInquiriesRecords = [];
+let allOrdersRecords = [];
 let allEmployeesRecords = [];
 let allAttendanceRecords = [];
 let allInventoryRecords = [];
@@ -229,7 +256,385 @@ async function handleDeleteInquiry(id) {
   }
 }
 
-// ================= 2. EMPLOYEES & STAFF DIRECTORY =================
+// ================= 2. CUSTOMER ORDERS & BOOKINGS (AUTO-INVENTORY SYNC) =================
+async function loadOrders() {
+  const tbody = document.getElementById('table-orders');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & bookings...</td></tr>`;
+
+  try {
+    const orders = await dbGetOrders();
+    allOrdersRecords = orders || [];
+    filterOrdersData();
+  } catch (err) {
+    console.error("Error in loadOrders:", err);
+    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Failed to load orders.</td></tr>`;
+  }
+}
+
+function renderOrdersList(list) {
+  const tbody = document.getElementById('table-orders');
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" class="py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-emerald-400">
+            <i class="fa-solid fa-cart-shopping"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No orders match your filter.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Create a manual customer order or reset your filters.</p>
+          <button onclick="openOrderModal()" class="btn-orange-pill text-xs px-4 py-2">
+            <i class="fa-solid fa-plus mr-1"></i> Create Manual Order
+          </button>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(ord => {
+    const rawPhone = (ord.customer_phone || '').replace(/[^0-9]/g, '');
+    const phoneLink = rawPhone.startsWith('91') ? rawPhone : (rawPhone ? '91' + rawPhone : '');
+    const orderDate = ord.order_date || (ord.created_at ? new Date(ord.created_at).toLocaleDateString('en-IN') : 'Recent');
+
+    return `
+      <tr class="hover:bg-slate-800/50 transition-colors">
+        <td class="py-3 px-4">
+          <div class="font-bold text-white font-mono text-xs text-orange-400">${ord.order_number || ('ORD-' + ord.id)}</div>
+          <div class="text-[11px] text-slate-400 font-mono">${orderDate}</div>
+        </td>
+        <td class="py-3 px-4">
+          <div class="font-bold text-white">${ord.customer_name}</div>
+          <div class="text-[11px] text-slate-400">${ord.customer_phone || 'No phone'}</div>
+        </td>
+        <td class="py-3 px-4">
+          <div class="font-bold text-slate-200">${ord.item_name}</div>
+          <div class="text-[10px] text-slate-400">${ord.category || 'Standard Stock'}</div>
+        </td>
+        <td class="py-3 px-4 font-bold text-cyan-400">
+          ${ord.quantity} ${ord.unit || 'Units'}
+        </td>
+        <td class="py-3 px-4">
+          <div class="font-bold text-emerald-400 font-mono">₹${(parseFloat(ord.total_amount) || 0).toLocaleString('en-IN')}</div>
+          <div class="text-[10px] text-slate-400">@ ₹${(parseFloat(ord.unit_price) || 0).toLocaleString('en-IN')}/${ord.unit || 'unit'}</div>
+        </td>
+        <td class="py-3 px-4">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+            ord.payment_status === 'Paid' ? 'bg-emerald-500/20 text-emerald-400' :
+            ord.payment_status === 'Partial' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
+          }">${ord.payment_status || 'Pending'}</span>
+        </td>
+        <td class="py-3 px-4">
+          <select onchange="handleOrderStatusChange('${ord.id}', this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-[11px] font-semibold">
+            <option value="Pending" ${ord.order_status === 'Pending' ? 'selected' : ''}>Pending</option>
+            <option value="Confirmed" ${ord.order_status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
+            <option value="Processing" ${ord.order_status === 'Processing' ? 'selected' : ''}>Processing</option>
+            <option value="Delivered" ${ord.order_status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+            <option value="Cancelled" ${ord.order_status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+          </select>
+        </td>
+        <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+          ${phoneLink ? `
+            <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(ord.customer_name)},%20this%20is%20SASI%20Steel%20Engineering%20regarding%20your%20Order%20${encodeURIComponent(ord.order_number || '')}." target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white text-[11px] font-bold inline-flex items-center gap-1">
+              <i class="fa-brands fa-whatsapp"></i>
+            </a>` : ''}
+          <button onclick="openOrderModal('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px]" title="Edit Order">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button onclick="deleteOrderItem('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]" title="Delete Order">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updateOrdersMetrics() {
+  const totalCount = allOrdersRecords.length;
+  const activeCount = allOrdersRecords.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
+  const deliveredCount = allOrdersRecords.filter(o => o.order_status === 'Delivered').length;
+  const totalRevenue = allOrdersRecords
+    .filter(o => o.order_status !== 'Cancelled')
+    .reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+
+  const badgeEl = document.getElementById('badge-orders-count');
+  if (badgeEl) badgeEl.textContent = activeCount;
+
+  const totalEl = document.getElementById('orders-total-count');
+  if (totalEl) totalEl.textContent = totalCount;
+
+  const activeEl = document.getElementById('orders-active-count');
+  if (activeEl) activeEl.textContent = activeCount;
+
+  const deliveredEl = document.getElementById('orders-delivered-count');
+  if (deliveredEl) deliveredEl.textContent = deliveredCount;
+
+  const revenueEl = document.getElementById('orders-total-revenue');
+  if (revenueEl) revenueEl.textContent = `₹${totalRevenue.toLocaleString('en-IN')}`;
+}
+
+function filterOrdersData() {
+  updateOrdersMetrics();
+
+  const searchVal = (document.getElementById('order-filter-search')?.value || '').toLowerCase().trim();
+  const statusVal = document.getElementById('order-filter-status')?.value || 'ALL';
+  const paymentVal = document.getElementById('order-filter-payment')?.value || 'ALL';
+
+  const filtered = allOrdersRecords.filter(ord => {
+    if (statusVal !== 'ALL' && ord.order_status !== statusVal) return false;
+    if (paymentVal !== 'ALL' && ord.payment_status !== paymentVal) return false;
+    if (searchVal) {
+      const matchNum = (ord.order_number || '').toLowerCase().includes(searchVal);
+      const matchCust = (ord.customer_name || '').toLowerCase().includes(searchVal);
+      const matchPhone = (ord.customer_phone || '').toLowerCase().includes(searchVal);
+      const matchItem = (ord.item_name || '').toLowerCase().includes(searchVal);
+      if (!matchNum && !matchCust && !matchPhone && !matchItem) return false;
+    }
+    return true;
+  });
+
+  renderOrdersList(filtered);
+}
+
+async function handleOrderStatusChange(id, newStatus) {
+  await dbUpdateOrderStatus(id, newStatus);
+  loadOrders();
+  loadInventory();
+}
+
+function resetOrdersFilter() {
+  const searchInput = document.getElementById('order-filter-search');
+  const statusSelect = document.getElementById('order-filter-status');
+  const paymentSelect = document.getElementById('order-filter-payment');
+  if (searchInput) searchInput.value = '';
+  if (statusSelect) statusSelect.value = 'ALL';
+  if (paymentSelect) paymentSelect.value = 'ALL';
+  filterOrdersData();
+}
+
+function setOrderDatePreset(preset) {
+  updateOrdersMetrics();
+
+  const searchVal = (document.getElementById('order-filter-search')?.value || '').toLowerCase().trim();
+  const statusVal = document.getElementById('order-filter-status')?.value || 'ALL';
+  const paymentVal = document.getElementById('order-filter-payment')?.value || 'ALL';
+
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const thisMonthStr = todayStr.substring(0, 7);
+
+  const filtered = allOrdersRecords.filter(ord => {
+    if (statusVal !== 'ALL' && ord.order_status !== statusVal) return false;
+    if (paymentVal !== 'ALL' && ord.payment_status !== paymentVal) return false;
+    if (searchVal) {
+      const matchNum = (ord.order_number || '').toLowerCase().includes(searchVal);
+      const matchCust = (ord.customer_name || '').toLowerCase().includes(searchVal);
+      const matchPhone = (ord.customer_phone || '').toLowerCase().includes(searchVal);
+      const matchItem = (ord.item_name || '').toLowerCase().includes(searchVal);
+      if (!matchNum && !matchCust && !matchPhone && !matchItem) return false;
+    }
+    const oDate = ord.order_date || (ord.created_at ? ord.created_at.split('T')[0] : '');
+    if (preset === 'today') return oDate === todayStr;
+    if (preset === 'this_month') return oDate.startsWith(thisMonthStr);
+    return true;
+  });
+
+  renderOrdersList(filtered);
+}
+
+async function exportOrdersCSV() {
+  if (!allOrdersRecords || allOrdersRecords.length === 0) {
+    allOrdersRecords = await dbGetOrders() || [];
+  }
+
+  const headers = ['Order #', 'Order Date', 'Customer Name', 'Customer Phone', 'Item / Product', 'Category', 'Quantity', 'Unit', 'Unit Price (INR)', 'Total Amount (INR)', 'Payment Status', 'Order Status', 'Delivery Address', 'Notes'];
+  const rows = allOrdersRecords.map(ord => [
+    ord.order_number || `ORD-${ord.id}`,
+    ord.order_date || '',
+    ord.customer_name || '',
+    ord.customer_phone || '',
+    ord.item_name || '',
+    ord.category || '',
+    ord.quantity || 1,
+    ord.unit || 'Units',
+    ord.unit_price || 0,
+    ord.total_amount || 0,
+    ord.payment_status || 'Pending',
+    ord.order_status || 'Confirmed',
+    ord.delivery_address || '',
+    ord.notes || ''
+  ]);
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(`SASI_Steels_Orders_${dateStr}.csv`, headers, rows);
+}
+
+function onOrderItemSelect(itemId) {
+  if (!itemId) return;
+  const match = allInventoryRecords.find(i => String(i.id) === String(itemId));
+  if (match) {
+    const itemNameInput = document.querySelector('#crud-form-fields input[name="item_name"]');
+    const categoryInput = document.querySelector('#crud-form-fields input[name="category"]');
+    const unitSelect = document.querySelector('#crud-form-fields select[name="unit"]');
+    const priceInput = document.querySelector('#crud-form-fields input[name="unit_price"]');
+    const stockBadge = document.getElementById('order-stock-available');
+
+    if (itemNameInput) itemNameInput.value = match.item_name;
+    if (categoryInput) categoryInput.value = match.category;
+    if (unitSelect && match.unit) unitSelect.value = match.unit;
+    if (priceInput && match.unit_price) priceInput.value = match.unit_price;
+    if (stockBadge) {
+      stockBadge.textContent = `Available in Inventory: ${match.quantity} ${match.unit} (Location: ${match.storage_location || 'Main Yard'})`;
+      stockBadge.classList.remove('hidden');
+    }
+    calculateOrderTotal();
+  }
+}
+
+function calculateOrderTotal() {
+  const qtyInput = document.querySelector('#crud-form-fields input[name="quantity"]');
+  const priceInput = document.querySelector('#crud-form-fields input[name="unit_price"]');
+  const totalInput = document.querySelector('#crud-form-fields input[name="total_amount"]');
+
+  if (qtyInput && priceInput && totalInput) {
+    const q = parseFloat(qtyInput.value) || 0;
+    const p = parseFloat(priceInput.value) || 0;
+    totalInput.value = (q * p).toFixed(0);
+  }
+}
+
+async function openOrderModal(id = null) {
+  activeModalType = 'order';
+  editingItemId = id;
+
+  if (!allInventoryRecords || allInventoryRecords.length === 0) {
+    allInventoryRecords = await dbGetInventory();
+  }
+
+  let existing = null;
+  if (id) {
+    existing = allOrdersRecords.find(o => String(o.id) === String(id));
+  }
+
+  document.getElementById('crud-modal-title').textContent = existing ? `Edit Order #${existing.order_number || existing.id}` : 'Create Manual Customer Order';
+  document.getElementById('crud-modal-subtitle').textContent = 'Order quantity will automatically adjust & synchronize with your steel inventory.';
+
+  const inventoryOptions = allInventoryRecords.map(item => `
+    <option value="${item.id}" ${existing && String(existing.inventory_item_id) === String(item.id) ? 'selected' : ''}>
+      ${item.item_name} (Stock: ${item.quantity} ${item.unit} - ₹${item.unit_price}/${item.unit})
+    </option>
+  `).join('');
+
+  document.getElementById('crud-form-fields').innerHTML = `
+    <!-- Inventory Item Picker -->
+    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-700 space-y-2">
+      <label class="block text-slate-300 font-bold text-xs">
+        <i class="fa-solid fa-boxes-stacked text-amber-400 mr-1"></i> Select Material / Product from Inventory:
+      </label>
+      <select onchange="onOrderItemSelect(this.value)" name="inventory_item_id" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-semibold focus:outline-none focus:border-orange-500 text-xs">
+        <option value="">-- Choose Stock Item --</option>
+        ${inventoryOptions}
+      </select>
+      <div id="order-stock-available" class="text-[11px] text-emerald-400 font-semibold ${existing ? '' : 'hidden'}">
+        ${existing ? `Linked Stock Item ID: ${existing.inventory_item_id || 'Direct Entry'}` : ''}
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Item / Product Name</label>
+      <input type="text" name="item_name" required value="${existing ? existing.item_name : ''}" placeholder="e.g. ISMB 200 Heavy I-Beams" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      <input type="hidden" name="category" value="${existing ? existing.category : 'Structural Steel'}" />
+    </div>
+
+    <!-- Customer Details -->
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Customer Name</label>
+        <input type="text" name="customer_name" required value="${existing ? existing.customer_name : ''}" placeholder="e.g. Sri Balaji Builders" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Customer Phone / WhatsApp</label>
+        <input type="text" name="customer_phone" required value="${existing ? existing.customer_phone : ''}" placeholder="+91 98480 12345" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
+    </div>
+
+    <!-- Quantity & Price & Auto-Total -->
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Quantity</label>
+        <input type="number" step="0.1" name="quantity" required oninput="calculateOrderTotal()" value="${existing ? existing.quantity : '1'}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-orange-400" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Unit</label>
+        <select name="unit" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          <option value="Tons" ${existing && existing.unit === 'Tons' ? 'selected' : ''}>Tons</option>
+          <option value="Sheets" ${existing && existing.unit === 'Sheets' ? 'selected' : ''}>Sheets</option>
+          <option value="Meters" ${existing && existing.unit === 'Meters' ? 'selected' : ''}>Meters</option>
+          <option value="Kgs" ${existing && existing.unit === 'Kgs' ? 'selected' : ''}>Kgs</option>
+          <option value="Units" ${existing && existing.unit === 'Units' ? 'selected' : ''}>Units</option>
+          <option value="Boxes" ${existing && existing.unit === 'Boxes' ? 'selected' : ''}>Boxes</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Unit Price (₹)</label>
+        <input type="number" step="0.5" name="unit_price" required oninput="calculateOrderTotal()" value="${existing ? existing.unit_price : '0'}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Total Amount (₹)</label>
+        <input type="number" name="total_amount" required value="${existing ? existing.total_amount : '0'}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500 text-emerald-400 font-black focus:outline-none" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Payment Status</label>
+        <select name="payment_status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          <option value="Paid" ${existing && existing.payment_status === 'Paid' ? 'selected' : ''}>Paid</option>
+          <option value="Partial" ${existing && existing.payment_status === 'Partial' ? 'selected' : ''}>Partial</option>
+          <option value="Pending" ${!existing || existing.payment_status === 'Pending' ? 'selected' : ''}>Pending</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Order Status</label>
+        <select name="order_status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          <option value="Confirmed" ${!existing || existing.order_status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
+          <option value="Processing" ${existing && existing.order_status === 'Processing' ? 'selected' : ''}>Processing</option>
+          <option value="Delivered" ${existing && existing.order_status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+          <option value="Pending" ${existing && existing.order_status === 'Pending' ? 'selected' : ''}>Pending</option>
+          <option value="Cancelled" ${existing && existing.order_status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Order Date</label>
+        <input type="date" name="order_date" value="${existing && existing.order_date ? existing.order_date : new Date().toISOString().split('T')[0]}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Expected Delivery</label>
+        <input type="date" name="expected_delivery" value="${existing && existing.expected_delivery ? existing.expected_delivery : ''}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Delivery Address & Site Notes</label>
+      <input type="text" name="delivery_address" value="${existing && existing.delivery_address ? existing.delivery_address : ''}" placeholder="Site location, crane access, gate entry notes..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+    </div>
+  `;
+  document.getElementById('crud-modal').classList.remove('hidden');
+}
+
+async function deleteOrderItem(id) {
+  if (confirm("Are you sure you want to delete this order? Active stock will be restored automatically to Inventory.")) {
+    await dbDeleteOrder(id);
+    loadOrders();
+    loadInventory();
+  }
+}
+
+// ================= 3. EMPLOYEES & STAFF DIRECTORY =================
 async function loadEmployees() {
   const tbody = document.getElementById('table-employees');
   if (!tbody) return;
@@ -1108,7 +1513,33 @@ async function handleCrudSubmit(e) {
   btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving to Supabase & Cloudinary...`;
 
   try {
-    if (activeModalType === 'employee') {
+    if (activeModalType === 'order') {
+      const orderData = {
+        inventory_item_id: formData.get('inventory_item_id') ? parseInt(formData.get('inventory_item_id')) : null,
+        item_name: formData.get('item_name'),
+        category: formData.get('category') || 'Structural Steel',
+        customer_name: formData.get('customer_name'),
+        customer_phone: formData.get('customer_phone'),
+        quantity: parseFloat(formData.get('quantity')) || 1,
+        unit: formData.get('unit') || 'Units',
+        unit_price: parseFloat(formData.get('unit_price')) || 0,
+        total_amount: parseFloat(formData.get('total_amount')) || 0,
+        payment_status: formData.get('payment_status') || 'Pending',
+        order_status: formData.get('order_status') || 'Confirmed',
+        order_date: formData.get('order_date') || new Date().toISOString().split('T')[0],
+        expected_delivery: formData.get('expected_delivery') || null,
+        delivery_address: formData.get('delivery_address') || ''
+      };
+
+      if (editingItemId) {
+        await dbUpdateOrder(editingItemId, orderData);
+      } else {
+        await dbAddOrder(orderData);
+      }
+      await loadOrders();
+      await loadInventory();
+    }
+    else if (activeModalType === 'employee') {
       const empData = {
         name: formData.get('name'),
         role: formData.get('role'),

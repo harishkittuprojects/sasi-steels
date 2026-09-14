@@ -607,3 +607,247 @@ async function dbDeleteEmployee(id) {
   return true;
 }
 
+// =========================================================
+// 9. ORDERS & INVENTORY INTEGRATION ENGINE
+// =========================================================
+
+// Helper: Adjust Inventory Stock by quantity delta (+delta adds stock, -delta reduces stock)
+async function adjustInventoryStock(inventoryItemId, itemName, deltaQty) {
+  if (!deltaQty || isNaN(deltaQty) || deltaQty === 0) return;
+  const client = getSupabaseClient();
+  let localInventory = getLocalCollection('sasi_inventory') || [];
+  
+  let targetItem = null;
+  if (inventoryItemId) {
+    targetItem = localInventory.find(x => String(x.id) === String(inventoryItemId));
+  }
+  if (!targetItem && itemName) {
+    targetItem = localInventory.find(x => x.item_name && x.item_name.toLowerCase().trim() === itemName.toLowerCase().trim());
+  }
+
+  if (targetItem) {
+    const currentQty = parseFloat(targetItem.quantity) || 0;
+    const newQty = Math.max(0, currentQty + parseFloat(deltaQty));
+    targetItem.quantity = newQty;
+    
+    // Auto-update stock status
+    const minLevel = parseFloat(targetItem.min_reorder_level) || 5;
+    targetItem.status = newQty <= 0 ? 'Out of Stock' : (newQty <= minLevel ? 'Low Stock' : 'In Stock');
+
+    saveLocalCollection('sasi_inventory', localInventory);
+
+    if (client && targetItem.id) {
+      try {
+        await client.from('inventory').update({
+          quantity: newQty,
+          status: targetItem.status
+        }).eq('id', targetItem.id);
+      } catch (e) {
+        console.warn("Supabase stock update error:", e);
+      }
+    }
+  }
+}
+
+const DEFAULT_ORDERS = [
+  {
+    id: 1,
+    order_number: 'ORD-1001',
+    customer_name: 'Kavitha Infra Projects',
+    customer_phone: '+91 98480 88990',
+    item_name: 'Galvalume Corrugated Roofing Sheets',
+    category: 'Plates & Sheets',
+    quantity: 50,
+    unit: 'Sheets',
+    unit_price: 380,
+    total_amount: 19000,
+    payment_status: 'Paid',
+    order_status: 'Processing',
+    order_date: new Date().toISOString().split('T')[0],
+    notes: 'Urgent delivery for factory roof repair'
+  },
+  {
+    id: 2,
+    order_number: 'ORD-1002',
+    customer_name: 'Sri Balaji Engineering',
+    customer_phone: '+91 98480 77665',
+    item_name: 'Heavy-Duty Warehouse Pallet Racks',
+    category: 'Structural Steel',
+    quantity: 4,
+    unit: 'Tons',
+    unit_price: 4200,
+    total_amount: 16800,
+    payment_status: 'Partial',
+    order_status: 'Confirmed',
+    order_date: new Date().toISOString().split('T')[0],
+    notes: 'Guntur bypass site delivery'
+  }
+];
+
+async function dbGetOrders() {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from('orders').select('*').order('created_at', { ascending: false });
+      if (!error && data && data.length > 0) {
+        saveLocalCollection('sasi_orders', data);
+        return data;
+      }
+    } catch (e) {
+      console.warn("Supabase fetch orders error:", e);
+    }
+  }
+
+  let local = getLocalCollection('sasi_orders');
+  if (!local || local.length === 0) {
+    saveLocalCollection('sasi_orders', DEFAULT_ORDERS);
+    local = DEFAULT_ORDERS;
+  }
+  return local;
+}
+
+async function dbAddOrder(order) {
+  const client = getSupabaseClient();
+  const orderNum = order.order_number || `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+  const qty = parseFloat(order.quantity) || 1;
+  const unitPrice = parseFloat(order.unit_price) || 0;
+  const total = parseFloat(order.total_amount) || (qty * unitPrice);
+
+  const newRow = {
+    order_number: orderNum,
+    customer_name: order.customer_name,
+    customer_phone: order.customer_phone || 'N/A',
+    customer_email: order.customer_email || null,
+    delivery_address: order.delivery_address || null,
+    inventory_item_id: order.inventory_item_id ? parseInt(order.inventory_item_id) : null,
+    item_name: order.item_name,
+    category: order.category || 'General',
+    quantity: qty,
+    unit: order.unit || 'Units',
+    unit_price: unitPrice,
+    total_amount: total,
+    payment_status: order.payment_status || 'Pending',
+    order_status: order.order_status || 'Confirmed',
+    order_date: order.order_date || new Date().toISOString().split('T')[0],
+    expected_delivery: order.expected_delivery || null,
+    notes: order.notes || ''
+  };
+
+  // Auto-deduct stock if order is active
+  if (newRow.order_status !== 'Cancelled') {
+    await adjustInventoryStock(newRow.inventory_item_id, newRow.item_name, -qty);
+  }
+
+  if (client) {
+    try {
+      const { data, error } = await client.from('orders').insert([newRow]).select();
+      if (!error && data && data.length > 0) {
+        return { success: true, data };
+      }
+    } catch (e) {
+      console.warn("Supabase add order error:", e);
+    }
+  }
+
+  newRow.id = Date.now();
+  newRow.created_at = new Date().toISOString();
+  const localList = getLocalCollection('sasi_orders');
+  localList.unshift(newRow);
+  saveLocalCollection('sasi_orders', localList);
+  return { success: true, data: [newRow] };
+}
+
+async function dbUpdateOrderStatus(id, newStatus) {
+  const client = getSupabaseClient();
+  let localList = getLocalCollection('sasi_orders') || [];
+  const existing = localList.find(x => String(x.id) === String(id));
+
+  if (existing) {
+    const oldStatus = existing.order_status;
+    const qty = parseFloat(existing.quantity) || 0;
+
+    // Automatic stock restoration / deduction on status transition
+    if (oldStatus !== 'Cancelled' && newStatus === 'Cancelled') {
+      // Order cancelled: RESTORE stock (+qty)
+      await adjustInventoryStock(existing.inventory_item_id, existing.item_name, qty);
+    } else if (oldStatus === 'Cancelled' && newStatus !== 'Cancelled') {
+      // Re-activated: DEDUCT stock (-qty)
+      await adjustInventoryStock(existing.inventory_item_id, existing.item_name, -qty);
+    }
+
+    existing.order_status = newStatus;
+    saveLocalCollection('sasi_orders', localList);
+  }
+
+  if (client) {
+    try {
+      await client.from('orders').update({ order_status: newStatus }).eq('id', id);
+    } catch (e) {
+      console.warn("Supabase update order status error:", e);
+    }
+  }
+  return true;
+}
+
+async function dbUpdateOrder(id, updatedData) {
+  const client = getSupabaseClient();
+  let localList = getLocalCollection('sasi_orders') || [];
+  const existingIndex = localList.findIndex(x => String(x.id) === String(id));
+
+  if (existingIndex !== -1) {
+    const oldOrder = localList[existingIndex];
+    const oldQty = parseFloat(oldOrder.quantity) || 0;
+    const newQty = parseFloat(updatedData.quantity) || oldQty;
+    const oldStatus = oldOrder.order_status;
+    const newStatus = updatedData.order_status || oldStatus;
+
+    // Handle stock quantity adjustments
+    if (oldStatus !== 'Cancelled' && newStatus === 'Cancelled') {
+      await adjustInventoryStock(oldOrder.inventory_item_id, oldOrder.item_name, oldQty);
+    } else if (oldStatus === 'Cancelled' && newStatus !== 'Cancelled') {
+      await adjustInventoryStock(updatedData.inventory_item_id || oldOrder.inventory_item_id, updatedData.item_name || oldOrder.item_name, -newQty);
+    } else if (oldStatus !== 'Cancelled' && newStatus !== 'Cancelled') {
+      // Adjust difference
+      const diff = oldQty - newQty; // If newQty > oldQty, diff is negative, stock reduces
+      await adjustInventoryStock(updatedData.inventory_item_id || oldOrder.inventory_item_id, updatedData.item_name || oldOrder.item_name, diff);
+    }
+
+    localList[existingIndex] = { ...oldOrder, ...updatedData };
+    saveLocalCollection('sasi_orders', localList);
+  }
+
+  if (client) {
+    try {
+      await client.from('orders').update(updatedData).eq('id', id);
+    } catch (e) {
+      console.warn("Supabase update order error:", e);
+    }
+  }
+  return true;
+}
+
+async function dbDeleteOrder(id) {
+  const client = getSupabaseClient();
+  let localList = getLocalCollection('sasi_orders') || [];
+  const target = localList.find(x => String(x.id) === String(id));
+
+  if (target) {
+    // If deleted order was active (not cancelled), restore the stock (+qty)
+    if (target.order_status !== 'Cancelled') {
+      const qty = parseFloat(target.quantity) || 0;
+      await adjustInventoryStock(target.inventory_item_id, target.item_name, qty);
+    }
+  }
+
+  if (client) {
+    try {
+      await client.from('orders').delete().eq('id', id);
+    } catch (e) {}
+  }
+
+  localList = localList.filter(x => String(x.id) !== String(id));
+  saveLocalCollection('sasi_orders', localList);
+  return true;
+}
+
+
