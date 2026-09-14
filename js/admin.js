@@ -321,11 +321,11 @@ function renderOrdersList(list) {
           <div class="text-[10px] text-slate-400">${ord.category || 'Standard Stock'}</div>
         </td>
         <td class="py-3 px-4 font-bold text-cyan-400">
-          ${ord.quantity} ${ord.unit || 'Units'}
+          ${ord.quantity}
         </td>
         <td class="py-3 px-4">
           <div class="font-bold text-emerald-400 font-mono">₹${(parseFloat(ord.total_amount) || 0).toLocaleString('en-IN')}</div>
-          <div class="text-[10px] text-slate-400">@ ₹${(parseFloat(ord.unit_price) || 0).toLocaleString('en-IN')}/${ord.unit || 'unit'}</div>
+          <div class="text-[10px] text-slate-400">@ ₹${(parseFloat(ord.unit_price) || 0).toLocaleString('en-IN')}</div>
         </td>
         <td class="py-3 px-4">
           <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
@@ -516,39 +516,15 @@ async function openOrderModal(id = null) {
   activeModalType = 'order';
   editingItemId = id;
 
-  if (!allInventoryRecords || allInventoryRecords.length === 0) {
-    allInventoryRecords = await dbGetInventory();
-  }
-
   let existing = null;
   if (id) {
     existing = allOrdersRecords.find(o => String(o.id) === String(id));
   }
 
   document.getElementById('crud-modal-title').textContent = existing ? `Edit Order #${existing.order_number || existing.id}` : 'Create Manual Customer Order';
-  document.getElementById('crud-modal-subtitle').textContent = 'Order quantity will automatically adjust & synchronize with your steel inventory.';
-
-  const inventoryOptions = allInventoryRecords.map(item => `
-    <option value="${item.id}" ${existing && String(existing.inventory_item_id) === String(item.id) ? 'selected' : ''}>
-      ${item.item_name} (Stock: ${item.quantity} ${item.unit} - ₹${item.unit_price}/${item.unit})
-    </option>
-  `).join('');
+  document.getElementById('crud-modal-subtitle').textContent = 'Fill in order details to record customer booking.';
 
   document.getElementById('crud-form-fields').innerHTML = `
-    <!-- Inventory Item Picker -->
-    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-700 space-y-2">
-      <label class="block text-slate-300 font-bold text-xs">
-        <i class="fa-solid fa-boxes-stacked text-amber-400 mr-1"></i> Select Material / Product from Inventory:
-      </label>
-      <select onchange="onOrderItemSelect(this.value)" name="inventory_item_id" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-semibold focus:outline-none focus:border-orange-500 text-xs">
-        <option value="">-- Choose Stock Item --</option>
-        ${inventoryOptions}
-      </select>
-      <div id="order-stock-available" class="text-[11px] text-emerald-400 font-semibold ${existing ? '' : 'hidden'}">
-        ${existing ? `Linked Stock Item ID: ${existing.inventory_item_id || 'Direct Entry'}` : ''}
-      </div>
-    </div>
-
     <div>
       <label class="block text-slate-300 font-bold mb-1">Item / Product Name</label>
       <input type="text" name="item_name" required value="${existing ? existing.item_name : ''}" placeholder="e.g. ISMB 200 Heavy I-Beams" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
@@ -568,21 +544,10 @@ async function openOrderModal(id = null) {
     </div>
 
     <!-- Quantity & Price & Auto-Total -->
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Quantity</label>
         <input type="number" step="0.1" name="quantity" required oninput="calculateOrderTotal()" value="${existing ? existing.quantity : '1'}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-orange-400" />
-      </div>
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Unit</label>
-        <select name="unit" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
-          <option value="Tons" ${existing && existing.unit === 'Tons' ? 'selected' : ''}>Tons</option>
-          <option value="Sheets" ${existing && existing.unit === 'Sheets' ? 'selected' : ''}>Sheets</option>
-          <option value="Meters" ${existing && existing.unit === 'Meters' ? 'selected' : ''}>Meters</option>
-          <option value="Kgs" ${existing && existing.unit === 'Kgs' ? 'selected' : ''}>Kgs</option>
-          <option value="Units" ${existing && existing.unit === 'Units' ? 'selected' : ''}>Units</option>
-          <option value="Boxes" ${existing && existing.unit === 'Boxes' ? 'selected' : ''}>Boxes</option>
-        </select>
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Unit Price (₹)</label>
