@@ -264,6 +264,81 @@ async function handleDeleteInquiry(id) {
   }
 }
 
+function openNewInquiryModal() {
+  activeModalType = 'inquiry';
+  editingItemId = null;
+
+  document.getElementById('crud-modal-title').textContent = 'Add Manual Quotation Lead';
+  document.getElementById('crud-modal-subtitle').textContent = 'Record a direct phone inquiry, email lead, or workshop walk-in client RFQ.';
+
+  document.getElementById('crud-form-fields').innerHTML = `
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Client / Company Name *</label>
+        <input type="text" name="client_name" required placeholder="e.g. Anil Construction Pvt Ltd" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Phone / WhatsApp *</label>
+        <input type="text" name="client_phone" required placeholder="+91 98480 12345" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Project Type *</label>
+        <select name="project_type" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          <option value="PEB & Roofing Shed">PEB & Roofing Shed</option>
+          <option value="Heavy Structural Steel">Heavy Structural Steel</option>
+          <option value="Storage Racks & Pallets">Storage Racks & Pallets</option>
+          <option value="Mezzanine Floor">Mezzanine Floor</option>
+          <option value="Custom Interiors & SS">Custom Interiors & SS</option>
+          <option value="Welding & Fabrication">Welding & Fabrication</option>
+          <option value="General Fabrication">General Fabrication</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Status</label>
+        <select name="status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          <option value="New">New</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Quoted">Quoted</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Project Scope / Dimensions</label>
+        <input type="text" name="project_scope" placeholder="e.g. 40x80 ft Warehouse Industrial Shed" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Estimated Rate / Budget (₹)</label>
+        <input type="text" name="estimated_cost" placeholder="e.g. ₹4,50,000 or 15L - 18L" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-emerald-400" />
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Email Address (Optional)</label>
+      <input type="email" name="client_email" placeholder="client@company.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+    </div>
+
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Upload Drawing / Blueprint (Optional)</label>
+      <input type="file" id="inquiry-blueprint-file" accept="image/*,application/pdf" class="w-full text-slate-400 text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-500 mb-1" />
+      <input type="text" name="blueprint_url" placeholder="Or paste drawing link / URL" class="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 text-xs focus:outline-none focus:border-orange-500 font-mono" />
+    </div>
+
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Client Notes / Requirement Details</label>
+      <textarea name="message" rows="2" placeholder="Site location, crane access, delivery timeline, specific steel grade..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500"></textarea>
+    </div>
+  `;
+
+  document.getElementById('crud-modal').classList.remove('hidden');
+}
+
 // ================= 2. CUSTOMER ORDERS & BOOKINGS (AUTO-INVENTORY SYNC) =================
 async function loadOrders() {
   const tbody = document.getElementById('table-orders');
@@ -1738,7 +1813,37 @@ async function handleCrudSubmit(e) {
   btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving to Supabase & Cloudinary...`;
 
   try {
-    if (activeModalType === 'order') {
+    if (activeModalType === 'inquiry') {
+      let blueprintUrl = formData.get('blueprint_url') || null;
+      const fileInput = document.getElementById('inquiry-blueprint-file');
+      if (fileInput && fileInput.files[0]) {
+        try {
+          const uploaded = await uploadToCloudinary(fileInput.files[0]);
+          if (uploaded) blueprintUrl = uploaded;
+        } catch (e) {}
+
+        if (!blueprintUrl && typeof fileToOptimizedDataUrl === 'function') {
+          const directDataUrl = await fileToOptimizedDataUrl(fileInput.files[0], 1200, 0.85);
+          if (directDataUrl) blueprintUrl = directDataUrl;
+        }
+      }
+
+      const inqData = {
+        client_name: formData.get('client_name'),
+        client_phone: formData.get('client_phone'),
+        client_email: formData.get('client_email') || null,
+        project_type: formData.get('project_type') || 'General Fabrication',
+        project_scope: formData.get('project_scope') || 'Direct Inquiry',
+        estimated_cost: formData.get('estimated_cost') || 'Contact for Quote',
+        blueprint_url: blueprintUrl,
+        message: formData.get('message') || '',
+        status: formData.get('status') || 'New'
+      };
+
+      await dbSubmitInquiry(inqData);
+      loadQuotations();
+    }
+    else if (activeModalType === 'order') {
       const orderData = {
         inventory_item_id: formData.get('inventory_item_id') ? parseInt(formData.get('inventory_item_id')) : null,
         item_name: formData.get('item_name'),

@@ -139,7 +139,7 @@ async function dbSubmitInquiry(inquiryData) {
     estimated_cost: inquiryData.estimatedCost || inquiryData.estimated_cost || 'Contact for Quote',
     blueprint_url: inquiryData.blueprintUrl || inquiryData.blueprint_url || null,
     message: inquiryData.message || null,
-    status: 'New'
+    status: inquiryData.status || 'New'
   };
 
   if (client) {
