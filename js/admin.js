@@ -63,7 +63,6 @@ function loadCurrentTab() {
     case 'attendance': loadAttendance(); break;
     case 'inventory': loadInventory(); break;
     case 'finance': loadFinance(); break;
-    case 'products': loadProducts(); break;
     case 'gallery': loadGallery(); break;
   }
 }
@@ -192,7 +191,7 @@ async function loadAttendance() {
         <td class="py-3 px-4 text-slate-300">${r.hours_worked || 8} hrs</td>
         <td class="py-3 px-4 text-amber-400 font-bold">${r.overtime_hours || 0} hrs</td>
         <td class="py-3 px-4 text-right space-x-2">
-          <button onclick="deleteAttendanceItem(${r.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+          <button onclick="deleteAttendanceItem('${r.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
         </td>
       </tr>
     `).join('');
@@ -293,7 +292,7 @@ async function loadInventory() {
           }">${item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'}</span>
         </td>
         <td class="py-3 px-4 text-right space-x-2">
-          <button onclick="deleteInventoryItem(${item.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+          <button onclick="deleteInventoryItem('${item.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
         </td>
       </tr>
     `).join('');
@@ -413,7 +412,7 @@ async function loadFinance() {
           ${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="text-blue-400 hover:underline"><i class="fa-solid fa-receipt"></i> Receipt</a>` : '<span class="text-slate-600">-</span>'}
         </td>
         <td class="py-3 px-4 text-right">
-          <button onclick="deleteFinanceItem(${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+          <button onclick="deleteFinanceItem('${e.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
         </td>
       </tr>
     `).join('');
@@ -477,109 +476,6 @@ async function deleteFinanceItem(id) {
   }
 }
 
-// ================= 5. PRODUCTS =================
-async function loadProducts() {
-  const grid = document.getElementById('grid-products');
-  if (!grid) return;
-  grid.innerHTML = `<div class="col-span-3 py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading products from Supabase...</div>`;
-
-  try {
-    const products = await dbGetProducts();
-    if (!products || products.length === 0) {
-      grid.innerHTML = `
-        <div class="col-span-3 py-12 text-center text-slate-400">
-          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-purple-400">
-            <i class="fa-solid fa-cube"></i>
-          </div>
-          <p class="text-sm font-bold text-slate-300">No products uploaded yet.</p>
-          <p class="text-xs text-slate-500 mt-1 mb-4">Add products to display on the live catalog.</p>
-          <button onclick="openProductModal()" class="btn-orange-pill text-xs px-4 py-2">
-            <i class="fa-solid fa-plus mr-1"></i> Add First Product
-          </button>
-        </div>`;
-      return;
-    }
-
-    grid.innerHTML = products.map(p => `
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group flex flex-col justify-between">
-        <div class="relative h-44 w-full bg-slate-950 overflow-hidden">
-          <img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-          <span class="absolute top-2 left-2 bg-orange-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${p.badge || p.category}</span>
-          <span class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">${p.price_formatted}</span>
-        </div>
-        <div class="p-4 flex-1 flex flex-col justify-between">
-          <div>
-            <h4 class="font-bold text-white text-sm leading-snug">${p.name}</h4>
-            <p class="text-xs text-slate-400 mt-1 line-clamp-2">${p.description}</p>
-          </div>
-          <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
-            <span class="text-[10px] text-slate-500">${p.category}</span>
-            <button onclick="deleteProductItem(${p.id})" class="text-red-400 hover:text-red-300 text-xs font-bold"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
-          </div>
-        </div>
-      </div>
-    `).join('');
-  } catch (err) {
-    console.error("Error in loadProducts:", err);
-    grid.innerHTML = `<div class="col-span-3 py-8 text-center text-slate-400">No products found.</div>`;
-  }
-}
-
-function openProductModal() {
-  activeModalType = 'products';
-  editingItemId = null;
-  document.getElementById('crud-modal-title').textContent = 'Add New Product to Website';
-  document.getElementById('crud-modal-subtitle').textContent = 'Upload product image to Cloudinary and display on live catalog.';
-
-  document.getElementById('crud-form-fields').innerHTML = `
-    <div>
-      <label class="block text-slate-300 font-bold mb-1">Product Title</label>
-      <input type="text" name="name" required placeholder="e.g. Modern Stainless Steel Trial Mirror" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
-    </div>
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Category</label>
-        <select name="category" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
-          <option value="Custom Fabrication">Custom Fabrication</option>
-          <option value="Storage Systems">Storage Systems</option>
-          <option value="PEB & Roofing">PEB & Roofing</option>
-          <option value="Structural Steel">Structural Steel</option>
-          <option value="Walkways & Flooring">Walkways & Flooring</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Price Display</label>
-        <input type="text" name="price_formatted" required placeholder="e.g. ₹12,500 / unit" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
-      </div>
-    </div>
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Badge Tag</label>
-        <input type="text" name="badge" placeholder="e.g. SS 304 Polished" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
-      </div>
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Image (Upload to Cloudinary)</label>
-        <input type="file" id="product-img-file" accept="image/*" class="w-full text-slate-400 text-[11px] file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white" />
-      </div>
-    </div>
-    <div>
-      <label class="block text-slate-300 font-bold mb-1">Technical Specs</label>
-      <input type="text" name="specs" placeholder="Material Grade | Dimensions | Coating" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
-    </div>
-    <div>
-      <label class="block text-slate-300 font-bold mb-1">Product Description</label>
-      <textarea name="description" rows="2" placeholder="Full product description for catalog..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500"></textarea>
-    </div>
-  `;
-  document.getElementById('crud-modal').classList.remove('hidden');
-}
-
-async function deleteProductItem(id) {
-  if (confirm("Delete this product from catalog?")) {
-    await dbDeleteProduct(id);
-    loadProducts();
-  }
-}
 
 // ================= 6. GALLERY =================
 async function loadGallery() {
@@ -611,7 +507,7 @@ async function loadGallery() {
           <span class="text-[10px] font-bold text-orange-400 uppercase">${item.category}</span>
           <h4 class="text-xs font-bold text-white leading-tight">${item.title}</h4>
         </div>
-        <button onclick="deleteGalleryItem(${item.id})" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow">
+        <button onclick="deleteGalleryItem('${item.id}')" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow">
           <i class="fa-solid fa-trash text-[10px]"></i>
         </button>
       </div>
@@ -699,7 +595,12 @@ async function handleCrudSubmit(e) {
       let receiptUrl = null;
       const fileInput = document.getElementById('finance-receipt-file');
       if (fileInput && fileInput.files[0]) {
-        receiptUrl = await uploadToCloudinary(fileInput.files[0]);
+        try {
+          receiptUrl = await uploadToCloudinary(fileInput.files[0]);
+        } catch (e) {}
+        if (!receiptUrl && typeof fileToOptimizedDataUrl === 'function') {
+          receiptUrl = await fileToOptimizedDataUrl(fileInput.files[0], 1000, 0.7);
+        }
       }
 
       const entry = {
@@ -713,41 +614,26 @@ async function handleCrudSubmit(e) {
       await dbAddFinance(entry);
       loadFinance();
     }
-    else if (activeModalType === 'products') {
-      let imgUrl = 'product-racks.jpg';
-      const fileInput = document.getElementById('product-img-file');
-      if (fileInput && fileInput.files[0]) {
-        const uploaded = await uploadToCloudinary(fileInput.files[0]);
-        if (uploaded) imgUrl = uploaded;
-      }
-
-      const category = formData.get('category');
-      const prod = {
-        name: formData.get('name'),
-        category: category,
-        category_slug: category.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-        price_formatted: formData.get('price_formatted'),
-        badge: formData.get('badge') || 'Standard',
-        specs: formData.get('specs') || 'Standard Specifications',
-        description: formData.get('description') || '',
-        image_url: imgUrl,
-        is_featured: true
-      };
-      await dbAddProduct(prod);
-      loadProducts();
-    }
     else if (activeModalType === 'gallery') {
-      let imgUrl = 'welding-works.jpg';
+      let imgUrl = 'steel-fabrication.jpg';
       const fileInput = document.getElementById('gallery-img-file');
       if (fileInput && fileInput.files[0]) {
-        const uploaded = await uploadToCloudinary(fileInput.files[0]);
-        if (uploaded) imgUrl = uploaded;
+        try {
+          const uploaded = await uploadToCloudinary(fileInput.files[0]);
+          if (uploaded) imgUrl = uploaded;
+        } catch (e) {}
+
+        // 100% Reliable Fallback: Convert to optimized WebP/JPEG data URL if Cloudinary fails
+        if ((!imgUrl || imgUrl === 'steel-fabrication.jpg') && typeof fileToOptimizedDataUrl === 'function') {
+          const directDataUrl = await fileToOptimizedDataUrl(fileInput.files[0], 1200, 0.85);
+          if (directDataUrl) imgUrl = directDataUrl;
+        }
       }
 
       const galleryItem = {
         title: formData.get('title'),
         category: formData.get('category'),
-        location: formData.get('location'),
+        location: formData.get('location') || 'Site Project',
         image_url: imgUrl,
         is_featured: true
       };
