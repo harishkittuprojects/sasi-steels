@@ -417,152 +417,87 @@
     </div>
   </section>
 
-  <!-- Interactive Quotation Estimator & Calculator Section -->
+  <!-- Customer Quotation & Inquiry Section -->
   <section id="quote-estimator" class="py-16 sm:py-20 bg-slate-100 border-t border-slate-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="text-center max-w-2xl mx-auto mb-12" data-aos="fade-up">
-        <span class="section-tag mb-2">INSTANT ESTIMATOR</span>
+      <div class="text-center max-w-2xl mx-auto mb-10" data-aos="fade-up">
+        <span class="section-tag mb-2">REQUEST A QUOTE</span>
         <h2 class="text-3xl sm:text-4xl font-black font-heading text-slate-900 tracking-tight mt-1">
-          Instant Steel Project Quotation
+          Get a Custom Project Quotation
         </h2>
         <p class="mt-2 text-xs sm:text-sm text-slate-600">
-          Configure your structural specifications below for an instant ballpark calculation and download/submit your Request for Quote (RFQ).
+          Submit your requirements and structural details below. Our fabrication engineers will review your project and provide a detailed quotation.
         </p>
       </div>
 
-      <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden" data-aos="fade-up">
-        <div class="grid grid-cols-1 lg:grid-cols-12">
+      <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-10" data-aos="fade-up">
+        <form id="customer-inquiry-form" onsubmit="handleDirectInquirySubmit(event)" class="space-y-5">
           
-          <!-- Left: Calculator Controls Form -->
-          <div class="lg:col-span-7 p-6 sm:p-10 border-b lg:border-b-0 lg:border-r border-slate-200">
-            <h3 class="text-lg font-extrabold text-slate-900 mb-6 flex items-center gap-2">
-              <span class="w-7 h-7 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center text-xs">1</span>
-              Configure Project Parameters
-            </h3>
-
-            <div class="space-y-6">
-              
-              <!-- Structure Type -->
-              <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. Select Structure Type</label>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  <button type="button" onclick="selectType('peb', 320, 0.0035, this)" class="type-btn p-3 rounded-xl border-2 border-orange-500 bg-orange-50/50 text-slate-900 text-left transition-all text-xs font-bold">
-                    <i class="fa-solid fa-warehouse text-orange-600 mb-1.5 block text-sm"></i>
-                    PEB Shed
-                  </button>
-                  <button type="button" onclick="selectType('mezzanine', 480, 0.0055, this)" class="type-btn p-3 rounded-xl border border-slate-200 hover:border-orange-400 bg-white text-slate-900 text-left transition-all text-xs font-bold">
-                    <i class="fa-solid fa-layer-group text-orange-600 mb-1.5 block text-sm"></i>
-                    Mezzanine
-                  </button>
-                  <button type="button" onclick="selectType('welding', 550, 0.0065, this)" class="type-btn p-3 rounded-xl border border-slate-200 hover:border-orange-400 bg-white text-slate-900 text-left transition-all text-xs font-bold">
-                    <i class="fa-solid fa-fire-burner text-orange-600 mb-1.5 block text-sm"></i>
-                    Heavy Steel
-                  </button>
-                  <button type="button" onclick="selectType('racks', 280, 0.0028, this)" class="type-btn p-3 rounded-xl border border-slate-200 hover:border-orange-400 bg-white text-slate-900 text-left transition-all text-xs font-bold">
-                    <i class="fa-solid fa-cubes-stacked text-orange-600 mb-1.5 block text-sm"></i>
-                    Pallet Racks
-                  </button>
-                </div>
-              </div>
-
-              <!-- Area / Size Slider -->
-              <div>
-                <div class="flex justify-between items-center mb-2">
-                  <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">2. Project Floor Area (Sq.Ft)</label>
-                  <span id="area-val-badge" class="text-xs font-black text-orange-600 bg-orange-100 px-3 py-1 rounded-full">5,000 Sq.Ft</span>
-                </div>
-                <input id="area-slider" type="range" min="500" max="50000" step="500" value="5000" oninput="updateCalculator()" class="w-full accent-orange-600 cursor-pointer" />
-                <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-semibold">
-                  <span>500 sq.ft</span>
-                  <span>10,000 sq.ft</span>
-                  <span>25,000 sq.ft</span>
-                  <span>50,000+ sq.ft</span>
-                </div>
-              </div>
-
-              <!-- Surface Treatment & Steel Grade -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">3. Steel Grade</label>
-                  <select id="calc-grade" onchange="updateCalculator()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50">
-                    <option value="1.0">IS 2062 Grade E250 (Standard Structural)</option>
-                    <option value="1.15">ASTM A36 / E350 High Tensile (+15%)</option>
-                    <option value="1.85">SS 304 / 316 Stainless Steel Heavy</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">4. Protective Coating</label>
-                  <select id="calc-coating" onchange="updateCalculator()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50">
-                    <option value="1.0">Epoxy Zinc Phosphate Primer (Standard)</option>
-                    <option value="1.12">Hot-Dip Galvanized Coating (+12%)</option>
-                    <option value="1.20">Polyurethane (PU) Marine Grade Paint (+20%)</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Erection / Onsite Assembly Toggle -->
-              <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                <div>
-                  <span class="text-xs font-bold text-slate-800 block">Include On-Site Turnkey Erection & Cranage</span>
-                  <span class="text-[11px] text-slate-500">Includes foundation bolting, crane rigging & safety certs</span>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="calc-erection" type="checkbox" checked onchange="updateCalculator()" class="sr-only peer">
-                  <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                </label>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Right: Live Breakdown & Direct Inquiry Submission -->
-          <div class="lg:col-span-5 p-6 sm:p-10 bg-slate-900 text-white flex flex-col justify-between">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <div class="flex items-center justify-between pb-4 border-b border-slate-800">
-                <span class="text-xs font-bold uppercase tracking-wider text-orange-400">Live Estimated Range</span>
-              </div>
-
-              <div class="mt-6 space-y-4">
-                <div class="p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
-                  <span class="text-xs text-slate-400 block font-medium">Estimated Project Budget</span>
-                  <div class="flex items-baseline gap-2 mt-1">
-                    <span id="calc-price-min" class="text-2xl sm:text-3xl font-black text-white">₹16.0L</span>
-                    <span class="text-sm text-slate-400">to</span>
-                    <span id="calc-price-max" class="text-2xl sm:text-3xl font-black text-orange-400">₹19.2L</span>
-                  </div>
-                  <span class="text-[10px] text-slate-400 mt-1 block">*Excludes applicable GST & site ground clearance.</span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                  <div class="p-3.5 rounded-xl bg-slate-800/50 border border-slate-800">
-                    <span class="text-[10px] text-slate-400 block">Est. Steel Tonnage</span>
-                    <span id="calc-tonnage" class="text-base font-extrabold text-white mt-0.5 block">17.5 Tons</span>
-                  </div>
-                  <div class="p-3.5 rounded-xl bg-slate-800/50 border border-slate-800">
-                    <span class="text-[10px] text-slate-400 block">Fab & Erection Time</span>
-                    <span id="calc-duration" class="text-base font-extrabold text-white mt-0.5 block">3 - 4 Weeks</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Quick Client Submission Form -->
-              <form id="calculator-inquiry-form" onsubmit="handleCalculatorSubmit(event)" class="mt-6 space-y-3">
-                <input id="calc-client-name" type="text" required placeholder="Your Name" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-orange-500" />
-                <input id="calc-client-phone" type="tel" required placeholder="Phone / WhatsApp (+91)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-orange-500" />
-                <button type="submit" class="w-full btn-orange-pill text-xs py-3 justify-center shadow-lg shadow-orange-600/30">
-                  <i class="fa-solid fa-paper-plane mr-2"></i> Submit RFQ with This Estimate
-                </button>
-              </form>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <i class="fa-solid fa-user text-orange-500 mr-1"></i> Customer Name *
+              </label>
+              <input id="inq-client-name" type="text" required placeholder="e.g. Ramesh Kumar / Sri Balaji Infra" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900" />
             </div>
 
-            <div class="pt-4 border-t border-slate-800 mt-6 flex items-center justify-between text-[11px] text-slate-400">
-              <span><i class="fa-solid fa-shield-halved text-orange-500 mr-1"></i> ISO 9001 Certified Fab</span>
-              <span><i class="fa-solid fa-phone text-orange-500 mr-1"></i> +91 83339 91114</span>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <i class="fa-solid fa-phone text-orange-500 mr-1"></i> Phone / WhatsApp Number *
+              </label>
+              <input id="inq-client-phone" type="tel" required placeholder="+91 98480 12345" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900" />
             </div>
           </div>
 
-        </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <i class="fa-solid fa-envelope text-orange-500 mr-1"></i> Email Address (Optional)
+              </label>
+              <input id="inq-client-email" type="email" placeholder="ramesh@company.com" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <i class="fa-solid fa-shapes text-orange-500 mr-1"></i> Project / Structure Type *
+              </label>
+              <select id="inq-project-type" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900">
+                <option value="PEB Industrial Shed">PEB Industrial Shed & Warehouse</option>
+                <option value="Heavy Structural Steel">Heavy Structural Steel Fabrication</option>
+                <option value="Mezzanine Floor">Heavy-Duty Mezzanine Floor</option>
+                <option value="Storage Racks & Pallets">Warehouse Pallet & Storage Racks</option>
+                <option value="Roofing Sheets & Trusses">Roofing Sheets & Trusses</option>
+                <option value="Stainless Steel / Gates & Railings">Stainless Steel / Gates & Railings</option>
+                <option value="Custom Fabrication Works">Custom Fabrication Works</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <i class="fa-solid fa-ruler-combined text-orange-500 mr-1"></i> Approx. Dimensions / Area (Optional)
+            </label>
+            <input id="inq-dimensions" type="text" placeholder="e.g. 100ft x 50ft / 5,000 Sq.Ft / 20 Tons" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <i class="fa-solid fa-comment-dots text-orange-500 mr-1"></i> Project Requirements & Notes
+            </label>
+            <textarea id="inq-message" rows="3" placeholder="Tell us about your site location, crane requirement, material grade or delivery timeline..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900"></textarea>
+          </div>
+
+          <button type="submit" id="inq-submit-btn" class="w-full btn-orange-pill text-xs py-3.5 justify-center shadow-lg shadow-orange-600/20 font-bold uppercase tracking-wider">
+            <i class="fa-solid fa-paper-plane mr-2"></i> Submit Quotation Request
+          </button>
+
+          <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-500">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-orange-500"></i> Direct Quotation from Factory Workshop</span>
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-phone text-emerald-600"></i> Immediate Support: +91 83339 91114</span>
+          </div>
+
+        </form>
       </div>
 
     </div>
@@ -672,80 +607,42 @@
   <script src="js/main.js?v=7"></script>
   
   <script>
-    // Calculator State & Computation
-    let calcState = {
-      baseRatePerSqFt: 320,
-      tonnageFactor: 0.0035,
-      typeName: "PEB Shed"
-    };
+    async function handleDirectInquirySubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('inq-submit-btn');
+      const name = document.getElementById('inq-client-name').value.trim();
+      const phone = document.getElementById('inq-client-phone').value.trim();
+      const email = document.getElementById('inq-client-email').value.trim();
+      const projectType = document.getElementById('inq-project-type').value;
+      const dimensions = document.getElementById('inq-dimensions').value.trim();
+      const message = document.getElementById('inq-message').value.trim();
 
-    function selectType(type, rate, tonFactor, btn) {
-      document.querySelectorAll('.type-btn').forEach(b => {
-        b.className = 'type-btn p-3 rounded-xl border border-slate-200 hover:border-orange-400 bg-white text-slate-900 text-left transition-all text-xs font-bold';
-      });
-      btn.className = 'type-btn p-3 rounded-xl border-2 border-orange-500 bg-orange-50/50 text-slate-900 text-left transition-all text-xs font-bold';
-
-      calcState.baseRatePerSqFt = rate;
-      calcState.tonnageFactor = tonFactor;
-      calcState.typeName = btn.innerText.trim();
-      updateCalculator();
-    }
-
-    function updateCalculator() {
-      const area = parseInt(document.getElementById('area-slider').value, 10);
-      const gradeMult = parseFloat(document.getElementById('calc-grade').value);
-      const coatingMult = parseFloat(document.getElementById('calc-coating').value);
-      const hasErection = document.getElementById('calc-erection').checked;
-
-      // Update badge
-      document.getElementById('area-val-badge').textContent = area.toLocaleString() + ' Sq.Ft';
-
-      // Base Calculation
-      let cost = area * calcState.baseRatePerSqFt * gradeMult * coatingMult;
-      if (hasErection) {
-        cost *= 1.15; // 15% erection/cranage
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting Request...`;
       }
 
-      // Tonnage
-      const tons = (area * calcState.tonnageFactor * (gradeMult > 1 ? 1.1 : 1.0)).toFixed(1);
-      document.getElementById('calc-tonnage').textContent = tons + ' Tons';
-
-      // Duration
-      let weeks = "2 - 3 Weeks";
-      if (area > 20000) weeks = "6 - 8 Weeks";
-      else if (area > 8000) weeks = "4 - 5 Weeks";
-      else if (area > 3000) weeks = "3 - 4 Weeks";
-      document.getElementById('calc-duration').textContent = weeks;
-
-      // Min & Max in Lakhs
-      const minLakhs = (cost * 0.95 / 100000).toFixed(1);
-      const maxLakhs = (cost * 1.15 / 100000).toFixed(1);
-
-      document.getElementById('calc-price-min').textContent = '₹' + minLakhs + 'L';
-      document.getElementById('calc-price-max').textContent = '₹' + maxLakhs + 'L';
-    }
-
-    async function handleCalculatorSubmit(e) {
-      e.preventDefault();
-      const name = document.getElementById('calc-client-name').value;
-      const phone = document.getElementById('calc-client-phone').value;
-      const area = document.getElementById('area-slider').value;
-      const minP = document.getElementById('calc-price-min').textContent;
-      const maxP = document.getElementById('calc-price-max').textContent;
+      const scopeText = dimensions ? `Area/Dimensions: ${dimensions}` : 'Direct Client Quotation Request';
 
       if (typeof dbSubmitInquiry === 'function') {
         await dbSubmitInquiry({
           name: name,
           phone: phone,
-          projectType: calcState.typeName,
-          scope: `${area} Sq.Ft Project Area`,
-          estimatedCost: `${minP} - ${maxP}`,
-          message: `Calculated Estimate: ${minP} - ${maxP} for ${area} sq.ft ${calcState.typeName}`
+          email: email || null,
+          projectType: projectType,
+          scope: scopeText,
+          estimatedCost: 'Custom Quotation Requested',
+          message: message || `Quotation requested for ${projectType}. ${scopeText}`
         });
       }
 
-      alert(`Thank you, ${name}! Your quotation inquiry for a ${area} sq.ft ${calcState.typeName} (${minP} - ${maxP}) has been saved. Our engineering manager will contact you at ${phone} promptly.`);
-      document.getElementById('calculator-inquiry-form').reset();
+      alert(`Thank you, ${name}! Your quotation inquiry for "${projectType}" has been received. Our fabrication team will contact you at ${phone} with a detailed proposal.`);
+      document.getElementById('customer-inquiry-form').reset();
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i> Submit Quotation Request`;
+      }
     }
 
     async function loadLiveSiteGallery() {
