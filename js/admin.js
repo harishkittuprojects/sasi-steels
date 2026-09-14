@@ -198,17 +198,22 @@ function resetInquiriesFilter() {
 }
 
 function exportInquiriesCSV() {
-  const headers = ['Date', 'Client Name', 'Phone', 'Project Type', 'Scope', 'Estimated Rate', 'Status', 'Blueprint URL'];
-  const rows = allInquiriesRecords.map(item => [
-    item.created_at || '',
-    item.client_name || '',
-    item.client_phone || '',
-    item.project_type || '',
-    item.project_scope || '',
-    item.estimated_cost || '',
-    item.status || '',
-    item.blueprint_url || ''
-  ]);
+  const headers = ['Date & Time', 'Client Name', 'Phone', 'Project Type', 'Scope', 'Estimated Rate', 'Status', 'Blueprint URL'];
+  const rows = allInquiriesRecords.map(item => {
+    const formattedDate = item.created_at 
+      ? new Date(item.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : 'Recent';
+    return [
+      formattedDate,
+      item.client_name || '',
+      item.client_phone || '',
+      item.project_type || '',
+      item.project_scope || '',
+      item.estimated_cost || '',
+      item.status || '',
+      item.blueprint_url || ''
+    ];
+  });
   const dateStr = new Date().toISOString().split('T')[0];
   downloadCSV(`SASI_Steels_Quotations_${dateStr}.csv`, headers, rows);
 }
