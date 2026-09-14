@@ -285,16 +285,19 @@ function openNewInquiryModal() {
 
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Project Type *</label>
-        <select name="project_type" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
-          <option value="PEB & Roofing Shed">PEB & Roofing Shed</option>
-          <option value="Heavy Structural Steel">Heavy Structural Steel</option>
-          <option value="Storage Racks & Pallets">Storage Racks & Pallets</option>
-          <option value="Mezzanine Floor">Mezzanine Floor</option>
-          <option value="Custom Interiors & SS">Custom Interiors & SS</option>
-          <option value="Welding & Fabrication">Welding & Fabrication</option>
-          <option value="General Fabrication">General Fabrication</option>
-        </select>
+        <label class="block text-slate-300 font-bold mb-1">Project Scope / Dimensions</label>
+        <input type="text" name="project_scope" placeholder="e.g. 40x80 ft Warehouse Industrial Shed" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Estimated Rate / Budget (₹)</label>
+        <input type="text" name="estimated_cost" placeholder="e.g. ₹4,50,000 or 15L - 18L" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-emerald-400" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Email Address (Optional)</label>
+        <input type="email" name="client_email" placeholder="client@company.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Status</label>
@@ -306,22 +309,6 @@ function openNewInquiryModal() {
           <option value="Cancelled">Cancelled</option>
         </select>
       </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Project Scope / Dimensions</label>
-        <input type="text" name="project_scope" placeholder="e.g. 40x80 ft Warehouse Industrial Shed" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
-      </div>
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Estimated Rate / Budget (₹)</label>
-        <input type="text" name="estimated_cost" placeholder="e.g. ₹4,50,000 or 15L - 18L" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-emerald-400" />
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-slate-300 font-bold mb-1">Email Address (Optional)</label>
-      <input type="email" name="client_email" placeholder="client@company.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
     </div>
 
     <div>
