@@ -441,6 +441,41 @@ async function dbAddProduct(prod) {
   return { success: true, data: [newRow] };
 }
 
+async function dbUpdateProduct(id, updatedData) {
+  const client = getSupabaseClient();
+  let localList = getLocalCollection('sasi_products') || [];
+  const existingIndex = localList.findIndex(x => String(x.id) === String(id));
+
+  const payload = {
+    name: updatedData.name,
+    category: updatedData.category,
+    category_slug: updatedData.category_slug || (updatedData.category || '').toLowerCase().replace(/[^a-z0-9]/g, '-'),
+    price_formatted: updatedData.price_formatted,
+    badge: updatedData.badge || 'Standard',
+    specs: updatedData.specs || 'Custom Dimensions Available',
+    description: updatedData.description || '',
+    is_featured: updatedData.is_featured !== undefined ? updatedData.is_featured : true
+  };
+
+  if (updatedData.image_url) {
+    payload.image_url = updatedData.image_url;
+  }
+
+  if (existingIndex !== -1) {
+    localList[existingIndex] = { ...localList[existingIndex], ...payload };
+    saveLocalCollection('sasi_products', localList);
+  }
+
+  if (client) {
+    try {
+      await client.from('products').update(payload).eq('id', id);
+    } catch (e) {
+      console.warn("Supabase update product error:", e);
+    }
+  }
+  return true;
+}
+
 async function dbDeleteProduct(id) {
   const client = getSupabaseClient();
   if (client) {

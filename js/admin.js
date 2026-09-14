@@ -27,6 +27,12 @@ async function loadInitialCounts() {
       const b = document.getElementById('badge-employees-count');
       if (b) b.textContent = emp.length;
     }
+    const prods = await dbGetProducts();
+    if (prods) {
+      allProductsRecords = prods;
+      const b = document.getElementById('badge-products-count');
+      if (b) b.textContent = prods.length;
+    }
   } catch (e) {}
 }
 
@@ -90,6 +96,7 @@ function loadCurrentTab() {
     case 'attendance': loadAttendance(); break;
     case 'inventory': loadInventory(); break;
     case 'finance': loadFinance(); break;
+    case 'products': loadProducts(); break;
     case 'gallery': loadGallery(); break;
   }
 }
@@ -101,6 +108,7 @@ let allEmployeesRecords = [];
 let allAttendanceRecords = [];
 let allInventoryRecords = [];
 let allFinanceRecords = [];
+let allProductsRecords = [];
 
 // ================= CSV EXPORT ENGINE =================
 function downloadCSV(filename, headers, rows) {
@@ -1422,6 +1430,258 @@ async function deleteFinanceItem(id) {
 }
 
 
+// ================= 5. PRODUCTS CATALOG MANAGEMENT =================
+async function loadProducts() {
+  const tbody = document.getElementById('table-products');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading catalog products...</td></tr>`;
+
+  try {
+    const prods = await dbGetProducts();
+    allProductsRecords = prods || [];
+    filterProductsData();
+  } catch (err) {
+    console.error("Error in loadProducts:", err);
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Failed to load products.</td></tr>`;
+  }
+}
+
+function updateProductsMetrics() {
+  const totalCount = allProductsRecords.length;
+  const categoriesCount = new Set(allProductsRecords.map(p => p.category).filter(Boolean)).size;
+  const featuredCount = allProductsRecords.filter(p => p.is_featured).length;
+  const inStockCount = allProductsRecords.filter(p => {
+    const b = (p.badge || '').toLowerCase();
+    return b.includes('in stock') || b.includes('demand') || b.includes('seller') || b.includes('bulk');
+  }).length;
+
+  const badgeEl = document.getElementById('badge-products-count');
+  if (badgeEl) badgeEl.textContent = totalCount;
+
+  const totalEl = document.getElementById('products-total-count');
+  if (totalEl) totalEl.textContent = totalCount;
+
+  const catEl = document.getElementById('products-categories-count');
+  if (catEl) catEl.textContent = categoriesCount;
+
+  const featEl = document.getElementById('products-featured-count');
+  if (featEl) featEl.textContent = featuredCount;
+
+  const instockEl = document.getElementById('products-instock-count');
+  if (instockEl) instockEl.textContent = inStockCount;
+}
+
+function renderProductsList(list) {
+  const tbody = document.getElementById('table-products');
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-purple-400">
+            <i class="fa-solid fa-boxes-packing"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No products match your filter.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Add a new steel product or reset your search filters.</p>
+          <button onclick="openProductModal()" class="btn-orange-pill text-xs px-4 py-2">
+            <i class="fa-solid fa-plus mr-1"></i> Add New Product
+          </button>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(p => {
+    const badgeColor = 
+      (p.badge || '').toLowerCase().includes('in stock') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+      (p.badge || '').toLowerCase().includes('demand') ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+      (p.badge || '').toLowerCase().includes('seller') ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+      (p.badge || '').toLowerCase().includes('out') ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+      'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30';
+
+    return `
+      <tr class="hover:bg-slate-800/50 transition-colors">
+        <td class="py-3 px-4">
+          <div class="w-12 h-12 rounded-xl overflow-hidden bg-slate-800 border border-slate-700 flex items-center justify-center">
+            <img src="${p.image_url || 'steel-fabrication.jpg'}" alt="${p.name}" onerror="this.onerror=null;this.src='steel-fabrication.jpg'" class="w-full h-full object-cover" />
+          </div>
+        </td>
+        <td class="py-3 px-4 max-w-xs">
+          <div class="font-bold text-white text-xs">${p.name}</div>
+          <div class="text-[11px] text-slate-400 truncate mt-0.5"><i class="fa-solid fa-screwdriver-wrench text-orange-400 mr-1"></i>${p.specs || 'Standard Spec'}</div>
+        </td>
+        <td class="py-3 px-4">
+          <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">${p.category}</span>
+        </td>
+        <td class="py-3 px-4">
+          <div class="font-bold text-emerald-400 font-mono text-xs">${p.price_formatted}</div>
+        </td>
+        <td class="py-3 px-4">
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">
+            ${p.badge || 'Available'}
+          </span>
+        </td>
+        <td class="py-3 px-4">
+          ${p.is_featured ? 
+            '<span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400"><i class="fa-solid fa-star text-xs"></i> Yes</span>' : 
+            '<span class="text-slate-500 text-[11px]">No</span>'}
+        </td>
+        <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+          <a href="products.html" target="_blank" class="px-2 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-[11px]" title="View on Live Site">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </a>
+          <button onclick="openProductModal('${p.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px]" title="Edit Product">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button onclick="deleteProductItem('${p.id}')" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]" title="Delete Product">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterProductsData() {
+  updateProductsMetrics();
+
+  const searchVal = (document.getElementById('product-filter-search')?.value || '').toLowerCase().trim();
+  const categoryVal = document.getElementById('product-filter-category')?.value || 'ALL';
+  const badgeVal = document.getElementById('product-filter-badge')?.value || 'ALL';
+
+  const filtered = allProductsRecords.filter(prod => {
+    if (categoryVal !== 'ALL' && prod.category !== categoryVal) return false;
+    if (badgeVal !== 'ALL' && prod.badge !== badgeVal) return false;
+    if (searchVal) {
+      const matchName = (prod.name || '').toLowerCase().includes(searchVal);
+      const matchSpecs = (prod.specs || '').toLowerCase().includes(searchVal);
+      const matchDesc = (prod.description || '').toLowerCase().includes(searchVal);
+      const matchCat = (prod.category || '').toLowerCase().includes(searchVal);
+      if (!matchName && !matchSpecs && !matchDesc && !matchCat) return false;
+    }
+    return true;
+  });
+
+  renderProductsList(filtered);
+}
+
+function resetProductsFilter() {
+  const searchInput = document.getElementById('product-filter-search');
+  const catSelect = document.getElementById('product-filter-category');
+  const badgeSelect = document.getElementById('product-filter-badge');
+  if (searchInput) searchInput.value = '';
+  if (catSelect) catSelect.value = 'ALL';
+  if (badgeSelect) badgeSelect.value = 'ALL';
+  filterProductsData();
+}
+
+async function exportProductsCSV() {
+  if (!allProductsRecords || allProductsRecords.length === 0) {
+    allProductsRecords = await dbGetProducts() || [];
+  }
+
+  const headers = ['Product ID', 'Name', 'Category', 'Price Formatted', 'Stock Badge', 'Specifications', 'Description', 'Image URL', 'Featured On Website'];
+  const rows = allProductsRecords.map(p => [
+    p.id || '',
+    p.name || '',
+    p.category || '',
+    p.price_formatted || '',
+    p.badge || '',
+    p.specs || '',
+    p.description || '',
+    p.image_url || '',
+    p.is_featured ? 'Yes' : 'No'
+  ]);
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(`SASI_Steels_Products_Catalog_${dateStr}.csv`, headers, rows);
+}
+
+function openProductModal(id = null) {
+  activeModalType = 'product';
+  editingItemId = id;
+
+  let existing = null;
+  if (id) {
+    existing = allProductsRecords.find(p => String(p.id) === String(id));
+  }
+
+  document.getElementById('crud-modal-title').textContent = existing ? `Edit Product: ${existing.name}` : 'Add New Website Product';
+  document.getElementById('crud-modal-subtitle').textContent = 'Products added or modified here will immediately reflect on the live website catalog.';
+
+  document.getElementById('crud-form-fields').innerHTML = `
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Product Name</label>
+      <input type="text" name="name" required value="${existing ? existing.name : ''}" placeholder="e.g. Heavy-Duty Warehouse Pallet Racks" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Product Category</label>
+        <select name="category" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          <option value="Storage & Racks" ${existing && existing.category === 'Storage & Racks' ? 'selected' : ''}>Storage & Racks</option>
+          <option value="Roofing Sheets & Sheds" ${existing && existing.category === 'Roofing Sheets & Sheds' ? 'selected' : ''}>Roofing Sheets & Sheds</option>
+          <option value="Structural Steel" ${existing && existing.category === 'Structural Steel' ? 'selected' : ''}>Structural Steel</option>
+          <option value="Gates, Grills & Railings" ${existing && existing.category === 'Gates, Grills & Railings' ? 'selected' : ''}>Gates, Grills & Railings</option>
+          <option value="Industrial Mezzanines" ${existing && existing.category === 'Industrial Mezzanines' ? 'selected' : ''}>Industrial Mezzanines</option>
+          <option value="Fabrication Consumables" ${existing && existing.category === 'Fabrication Consumables' ? 'selected' : ''}>Fabrication Consumables</option>
+          <option value="Custom Fabrication" ${existing && existing.category === 'Custom Fabrication' ? 'selected' : ''}>Custom Fabrication</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Catalog Pricing / Rate Display</label>
+        <input type="text" name="price_formatted" required value="${existing ? existing.price_formatted : '₹4,200 / Ton'}" placeholder="e.g. ₹4,200 / Ton or ₹380 / Sheet" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-emerald-400" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Stock / Availability Badge</label>
+        <select name="badge" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold">
+          <option value="In Stock" ${!existing || existing.badge === 'In Stock' ? 'selected' : ''}>In Stock</option>
+          <option value="High Demand" ${existing && existing.badge === 'High Demand' ? 'selected' : ''}>High Demand</option>
+          <option value="Best Seller" ${existing && existing.badge === 'Best Seller' ? 'selected' : ''}>Best Seller</option>
+          <option value="Custom Made" ${existing && existing.badge === 'Custom Made' ? 'selected' : ''}>Custom Made</option>
+          <option value="Bulk Supply" ${existing && existing.badge === 'Bulk Supply' ? 'selected' : ''}>Bulk Supply</option>
+          <option value="Low Stock" ${existing && existing.badge === 'Low Stock' ? 'selected' : ''}>Low Stock</option>
+          <option value="Out of Stock" ${existing && existing.badge === 'Out of Stock' ? 'selected' : ''}>Out of Stock</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Feature on Web Homepage?</label>
+        <select name="is_featured" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          <option value="true" ${!existing || existing.is_featured ? 'selected' : ''}>Yes - Featured (Star)</option>
+          <option value="false" ${existing && !existing.is_featured ? 'selected' : ''}>No - Catalog Only</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Technical Specifications / Key Features</label>
+      <input type="text" name="specs" value="${existing && existing.specs ? existing.specs : 'Heavy Load Capacity / IS 2062 Grade Steel / Custom Heights'}" placeholder="e.g. 0.50mm TCT / AZ150 Zinc Coating / Custom Lengths" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+    </div>
+
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Product Photo (Upload to Cloudinary)</label>
+      <input type="file" id="product-img-file" accept="image/*" class="w-full text-slate-400 text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-500 mb-2" />
+      <input type="text" name="image_url" value="${existing ? existing.image_url : ''}" placeholder="Or paste Image URL / leave blank for default" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 text-xs focus:outline-none focus:border-orange-500 font-mono" />
+    </div>
+
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Detailed Description</label>
+      <textarea name="description" rows="3" placeholder="Engineered structural steel product designed for heavy industrial warehouses, factories, and commercial installations..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">${existing && existing.description ? existing.description : ''}</textarea>
+    </div>
+  `;
+  document.getElementById('crud-modal').classList.remove('hidden');
+}
+
+async function deleteProductItem(id) {
+  if (confirm("Are you sure you want to delete this product from the website catalog?")) {
+    await dbDeleteProduct(id);
+    loadProducts();
+  }
+}
+
 // ================= 6. GALLERY =================
 async function loadGallery() {
   const grid = document.getElementById('grid-gallery');
@@ -1602,6 +1862,40 @@ async function handleCrudSubmit(e) {
       };
       await dbAddFinance(entry);
       loadFinance();
+    }
+    else if (activeModalType === 'product') {
+      let imgUrl = formData.get('image_url') || 'product-racks.jpg';
+      const fileInput = document.getElementById('product-img-file');
+      if (fileInput && fileInput.files[0]) {
+        try {
+          const uploaded = await uploadToCloudinary(fileInput.files[0]);
+          if (uploaded) imgUrl = uploaded;
+        } catch (e) {}
+
+        if ((!imgUrl || imgUrl === 'product-racks.jpg') && typeof fileToOptimizedDataUrl === 'function') {
+          const directDataUrl = await fileToOptimizedDataUrl(fileInput.files[0], 1200, 0.85);
+          if (directDataUrl) imgUrl = directDataUrl;
+        }
+      }
+
+      const prodData = {
+        name: formData.get('name'),
+        category: formData.get('category'),
+        category_slug: (formData.get('category') || '').toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        price_formatted: formData.get('price_formatted'),
+        badge: formData.get('badge') || 'In Stock',
+        specs: formData.get('specs') || '',
+        description: formData.get('description') || '',
+        image_url: imgUrl,
+        is_featured: formData.get('is_featured') === 'true'
+      };
+
+      if (editingItemId) {
+        await dbUpdateProduct(editingItemId, prodData);
+      } else {
+        await dbAddProduct(prodData);
+      }
+      loadProducts();
     }
     else if (activeModalType === 'gallery') {
       let imgUrl = 'steel-fabrication.jpg';

@@ -302,7 +302,13 @@
         }
       }
 
-      const filtered = sourceProducts.filter(p => activeProductCategory === 'all' || p.categorySlug === activeProductCategory);
+      const filtered = sourceProducts.filter(p => {
+        if (activeProductCategory === 'all') return true;
+        const pSlug = (p.categorySlug || '').toLowerCase();
+        const pCat = (p.category || '').toLowerCase();
+        const active = activeProductCategory.toLowerCase();
+        return pSlug === active || pSlug.includes(active) || active.includes(pSlug) || pCat.includes(active.replace(/-/g, ' '));
+      });
       if (countText) countText.textContent = `Showing ${filtered.length} products`;
 
       grid.innerHTML = filtered.map((p, idx) => `

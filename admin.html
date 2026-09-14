@@ -154,6 +154,12 @@
 
         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 pt-4 pb-2">Website Catalog</p>
 
+        <button onclick="switchTab('products')" id="tab-btn-products" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+          <i class="fa-solid fa-boxes-packing text-purple-400 w-4 text-center"></i>
+          <span>Products Catalog</span>
+          <span id="badge-products-count" class="ml-auto bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
+        </button>
+
         <button onclick="switchTab('gallery')" id="tab-btn-gallery" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
           <i class="fa-solid fa-images text-pink-400 w-4 text-center"></i>
           <span>Project Gallery</span>
@@ -630,6 +636,105 @@
         </div>
       </section>
 
+
+      <!-- ================= SECTION 5: PRODUCTS CATALOG MANAGEMENT ================= -->
+      <section id="section-products" class="tab-section hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Website Products Catalog</h2>
+            <p class="text-xs text-slate-400">Manage steel products, pricing, specifications, and images shown on your live website.</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="exportProductsCSV()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-2 transition-all shadow-sm">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i> Export Products CSV
+            </button>
+            <button onclick="openProductModal()" class="btn-orange-pill text-xs px-4 py-2.5">
+              <i class="fa-solid fa-plus"></i> Add New Product
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Products</span>
+            <div class="text-2xl font-black text-white mt-1 font-heading" id="products-total-count">0</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Categories</span>
+            <div class="text-2xl font-black text-purple-400 mt-1 font-heading" id="products-categories-count">0</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Featured On Web</span>
+            <div class="text-2xl font-black text-orange-400 mt-1 font-heading" id="products-featured-count">0</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">In Stock / Available</span>
+            <div class="text-2xl font-black text-emerald-400 mt-1 font-heading" id="products-instock-count">0</div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-magnifying-glass text-purple-400"></i> Search:</span>
+              <input type="text" id="product-filter-search" placeholder="Search product / specs..." class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-purple-500 outline-none w-44" oninput="filterProductsData()" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Category:</span>
+              <select id="product-filter-category" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-purple-500 outline-none" onchange="filterProductsData()">
+                <option value="ALL">All Categories</option>
+                <option value="Storage & Racks">Storage & Racks</option>
+                <option value="Roofing Sheets & Sheds">Roofing Sheets & Sheds</option>
+                <option value="Structural Steel">Structural Steel</option>
+                <option value="Gates, Grills & Railings">Gates, Grills & Railings</option>
+                <option value="Industrial Mezzanines">Industrial Mezzanines</option>
+                <option value="Fabrication Consumables">Fabrication Consumables</option>
+                <option value="Custom Fabrication">Custom Fabrication</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Stock / Badge:</span>
+              <select id="product-filter-badge" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-purple-500 outline-none" onchange="filterProductsData()">
+                <option value="ALL">All Badges</option>
+                <option value="In Stock">In Stock</option>
+                <option value="High Demand">High Demand</option>
+                <option value="Best Seller">Best Seller</option>
+                <option value="Custom Made">Custom Made</option>
+                <option value="Bulk Supply">Bulk Supply</option>
+                <option value="Low Stock">Low Stock</option>
+                <option value="Out of Stock">Out of Stock</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="resetProductsFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1">
+            <i class="fa-solid fa-rotate-right"></i> Reset
+          </button>
+        </div>
+
+        <!-- Products Table Container -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+                  <th class="py-3.5 px-4">Photo</th>
+                  <th class="py-3.5 px-4">Product Name & Specs</th>
+                  <th class="py-3.5 px-4">Category</th>
+                  <th class="py-3.5 px-4">Catalog Pricing</th>
+                  <th class="py-3.5 px-4">Stock Badge</th>
+                  <th class="py-3.5 px-4">Featured</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-products" class="divide-y divide-slate-800 text-slate-200">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       <!-- ================= SECTION 6: GALLERY ================= -->
       <section id="section-gallery" class="tab-section hidden">
