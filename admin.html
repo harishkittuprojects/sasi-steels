@@ -165,8 +165,37 @@
             <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Quotations & Inquiries</h2>
             <p class="text-xs text-slate-400">Incoming RFQ calculator submissions and direct client inquiries.</p>
           </div>
-          <button onclick="openNewInquiryModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
-            <i class="fa-solid fa-plus"></i> Add Manual Lead
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="exportInquiriesCSV()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-2 transition-all shadow-sm">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i> Export Leads CSV
+            </button>
+            <button onclick="openNewInquiryModal()" class="btn-orange-pill text-xs px-4 py-2.5">
+              <i class="fa-solid fa-plus"></i> Add Manual Lead
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-magnifying-glass text-orange-400"></i> Search:</span>
+              <input type="text" id="inquiry-filter-search" placeholder="Search client / phone..." class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none w-44" oninput="filterInquiriesData()" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Status:</span>
+              <select id="inquiry-filter-status" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none" onchange="filterInquiriesData()">
+                <option value="ALL">All Statuses</option>
+                <option value="New">New</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Quoted">Quoted</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="resetInquiriesFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1">
+            <i class="fa-solid fa-rotate-right"></i> Reset
           </button>
         </div>
 
@@ -200,9 +229,43 @@
             <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Workshop Worker Attendance</h2>
             <p class="text-xs text-slate-400">Track daily presence, overtime hours, and daily wage records.</p>
           </div>
-          <button onclick="openAttendanceModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
-            <i class="fa-solid fa-user-plus"></i> Mark Attendance
-          </button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="exportAttendanceCSV()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-2 transition-all shadow-sm">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i> Export Attendance CSV
+            </button>
+            <button onclick="openAttendanceModal()" class="btn-orange-pill text-xs px-4 py-2.5">
+              <i class="fa-solid fa-user-plus"></i> Mark Attendance
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold"><i class="fa-regular fa-calendar text-orange-400"></i> From:</span>
+              <input type="date" id="attendance-filter-from" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none" onchange="filterAttendanceData()" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">To:</span>
+              <input type="date" id="attendance-filter-to" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none" onchange="filterAttendanceData()" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Status:</span>
+              <select id="attendance-filter-status" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none" onchange="filterAttendanceData()">
+                <option value="ALL">All Statuses</option>
+                <option value="Present">Present</option>
+                <option value="Overtime">Overtime</option>
+                <option value="Half Day">Half Day</option>
+                <option value="Absent">Absent</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="setAttendanceDatePreset('today')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 font-medium">Today</button>
+            <button onclick="setAttendanceDatePreset('this_month')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 font-medium">This Month</button>
+            <button onclick="resetAttendanceFilter()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-orange-400 font-medium"><i class="fa-solid fa-rotate-right mr-1"></i> Reset</button>
+          </div>
         </div>
 
         <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
@@ -234,8 +297,37 @@
             <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Raw Steel & Stock Inventory</h2>
             <p class="text-xs text-slate-400">Manage steel coils, I-beams, pipes, sheets, and welding consumables.</p>
           </div>
-          <button onclick="openInventoryModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
-            <i class="fa-solid fa-box-open"></i> Add Stock Item
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="exportInventoryCSV()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-2 transition-all shadow-sm">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i> Export Stock CSV
+            </button>
+            <button onclick="openInventoryModal()" class="btn-orange-pill text-xs px-4 py-2.5">
+              <i class="fa-solid fa-box-open"></i> Add Stock Item
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-magnifying-glass text-orange-400"></i> Search:</span>
+              <input type="text" id="inventory-filter-search" placeholder="Search item / location..." class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none w-44" oninput="filterInventoryData()" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Category:</span>
+              <select id="inventory-filter-category" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none" onchange="filterInventoryData()">
+                <option value="ALL">All Categories</option>
+                <option value="Structural Steel">Structural Steel</option>
+                <option value="Stainless Steel">Stainless Steel</option>
+                <option value="Pipes & Tubes">Pipes & Tubes</option>
+                <option value="Plates & Sheets">Plates & Sheets</option>
+                <option value="Consumables">Consumables</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="resetInventoryFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1">
+            <i class="fa-solid fa-rotate-right"></i> Reset
           </button>
         </div>
 
@@ -268,12 +360,44 @@
             <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Income & Expenses Book</h2>
             <p class="text-xs text-slate-400">Track client payments, steel purchase invoices, wages, and receipts.</p>
           </div>
-          <button onclick="openFinanceModal()" class="btn-orange-pill text-xs px-4 py-2.5 self-start">
-            <i class="fa-solid fa-plus-minus"></i> Add Income / Expense
-          </button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="exportFinanceCSV()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-2 transition-all shadow-sm">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i> Export Excel/CSV
+            </button>
+            <button onclick="openFinanceModal()" class="btn-orange-pill text-xs px-4 py-2.5">
+              <i class="fa-solid fa-plus-minus"></i> Add Income / Expense
+            </button>
+          </div>
         </div>
 
-        <!-- Summary Cards -->
+        <!-- Date & Type Filter Toolbar -->
+        <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-6 flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold"><i class="fa-regular fa-calendar text-orange-400"></i> From:</span>
+              <input type="date" id="finance-filter-from" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none" onchange="filterFinanceData()" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">To:</span>
+              <input type="date" id="finance-filter-to" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none" onchange="filterFinanceData()" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Type:</span>
+              <select id="finance-filter-type" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none" onchange="filterFinanceData()">
+                <option value="ALL">All (Income + Expense)</option>
+                <option value="Income">Income Only</option>
+                <option value="Expense">Expense Only</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="setFinanceDatePreset('this_month')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 font-medium">This Month</button>
+            <button onclick="setFinanceDatePreset('last_30')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 font-medium">Last 30 Days</button>
+            <button onclick="resetFinanceFilter()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-orange-400 font-medium"><i class="fa-solid fa-rotate-right mr-1"></i> Reset</button>
+          </div>
+        </div>
+
+        <!-- Summary Cards (Dynamically Calculated from Filtered Data) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Income</span>

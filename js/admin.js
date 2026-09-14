@@ -67,6 +67,31 @@ function loadCurrentTab() {
   }
 }
 
+// Global State for Filtering & Exports
+let allInquiriesRecords = [];
+let allAttendanceRecords = [];
+let allInventoryRecords = [];
+let allFinanceRecords = [];
+
+// ================= CSV EXPORT ENGINE =================
+function downloadCSV(filename, headers, rows) {
+  let csvContent = "\uFEFF"; // UTF-8 BOM for Microsoft Excel compatibility
+  csvContent += headers.map(h => `"${String(h || '').replace(/"/g, '""')}"`).join(",") + "\r\n";
+  
+  rows.forEach(row => {
+    csvContent += row.map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(",") + "\r\n";
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 // ================= 1. QUOTATIONS & LEADS =================
 async function loadQuotations() {
   const tbody = document.getElementById('table-inquiries');
@@ -75,69 +100,115 @@ async function loadQuotations() {
 
   try {
     const inquiries = await dbGetInquiries();
-    const countBadge = document.getElementById('badge-inquiries-count');
-    if (countBadge) countBadge.textContent = inquiries.length;
-
-    if (!inquiries || inquiries.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="py-12 text-center text-slate-400">
-            <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-slate-400">
-              <i class="fa-solid fa-inbox"></i>
-            </div>
-            <p class="text-sm font-bold text-slate-300">No quotation inquiries yet.</p>
-            <p class="text-xs text-slate-500 mt-1">Make sure you ran the SQL setup in Supabase SQL Editor. When users submit RFQ forms, they will show here.</p>
-          </td>
-        </tr>`;
-      return;
-    }
-
-    tbody.innerHTML = inquiries.map(item => {
-      const rawPhone = (item.client_phone || '').replace(/[^0-9]/g, '');
-      const phoneLink = rawPhone.startsWith('91') ? rawPhone : '91' + rawPhone;
-      const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recent';
-
-      const fileBtn = item.blueprint_url 
-        ? `<a href="${item.blueprint_url}" target="_blank" class="px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white text-[11px] font-bold inline-flex items-center gap-1"><i class="fa-solid fa-file-pdf"></i> CAD/File</a>`
-        : `<span class="text-slate-600 text-[11px]">None</span>`;
-
-      return `
-        <tr class="hover:bg-slate-800/50 transition-colors">
-          <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${dateStr}</td>
-          <td class="py-3 px-4 font-bold text-white">
-            <div>${item.client_name}</div>
-            <div class="text-[11px] font-normal text-orange-400">${item.client_phone}</div>
-          </td>
-          <td class="py-3 px-4">
-            <div class="font-bold text-slate-200">${item.project_type}</div>
-            <div class="text-[11px] text-slate-400">${item.project_scope || 'Standard'}</div>
-          </td>
-          <td class="py-3 px-4 font-bold text-emerald-400">${item.estimated_cost || 'N/A'}</td>
-          <td class="py-3 px-4">${fileBtn}</td>
-          <td class="py-3 px-4">
-            <select onchange="handleInquiryStatusChange(${item.id}, this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-semibold">
-              <option value="New" ${item.status === 'New' ? 'selected' : ''}>New</option>
-              <option value="Contacted" ${item.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
-              <option value="Quoted" ${item.status === 'Quoted' ? 'selected' : ''}>Quoted</option>
-              <option value="Completed" ${item.status === 'Completed' ? 'selected' : ''}>Completed</option>
-              <option value="Cancelled" ${item.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
-            </select>
-          </td>
-          <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-            <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(item.client_name)},%20this%20is%20SASI%20Steel%20Engineering%20regarding%20your%20quotation." target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold inline-flex items-center gap-1">
-              <i class="fa-brands fa-whatsapp"></i> Chat
-            </a>
-            <button onclick="handleDeleteInquiry(${item.id})" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    allInquiriesRecords = inquiries || [];
+    filterInquiriesData();
   } catch (err) {
     console.error("Error in loadQuotations:", err);
     tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No quotation inquiries found.</td></tr>`;
   }
+}
+
+function filterInquiriesData() {
+  const tbody = document.getElementById('table-inquiries');
+  if (!tbody) return;
+
+  const searchVal = (document.getElementById('inquiry-filter-search')?.value || '').toLowerCase().trim();
+  const statusVal = document.getElementById('inquiry-filter-status')?.value || 'ALL';
+
+  const filtered = allInquiriesRecords.filter(item => {
+    if (statusVal !== 'ALL' && item.status !== statusVal) return false;
+    if (searchVal) {
+      const matchName = (item.client_name || '').toLowerCase().includes(searchVal);
+      const matchPhone = (item.client_phone || '').toLowerCase().includes(searchVal);
+      const matchProject = (item.project_type || '').toLowerCase().includes(searchVal);
+      if (!matchName && !matchPhone && !matchProject) return false;
+    }
+    return true;
+  });
+
+  const countBadge = document.getElementById('badge-inquiries-count');
+  if (countBadge) countBadge.textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-slate-400">
+            <i class="fa-solid fa-inbox"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No matching quotation inquiries.</p>
+          <p class="text-xs text-slate-500 mt-1">Try resetting the search or status filter.</p>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(item => {
+    const rawPhone = (item.client_phone || '').replace(/[^0-9]/g, '');
+    const phoneLink = rawPhone.startsWith('91') ? rawPhone : '91' + rawPhone;
+    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+
+    const fileBtn = item.blueprint_url 
+      ? `<a href="${item.blueprint_url}" target="_blank" class="px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white text-[11px] font-bold inline-flex items-center gap-1"><i class="fa-solid fa-file-pdf"></i> CAD/File</a>`
+      : `<span class="text-slate-600 text-[11px]">None</span>`;
+
+    return `
+      <tr class="hover:bg-slate-800/50 transition-colors">
+        <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${dateStr}</td>
+        <td class="py-3 px-4 font-bold text-white">
+          <div>${item.client_name}</div>
+          <div class="text-[11px] font-normal text-orange-400">${item.client_phone}</div>
+        </td>
+        <td class="py-3 px-4">
+          <div class="font-bold text-slate-200">${item.project_type}</div>
+          <div class="text-[11px] text-slate-400">${item.project_scope || 'Standard'}</div>
+        </td>
+        <td class="py-3 px-4 font-bold text-emerald-400">${item.estimated_cost || 'N/A'}</td>
+        <td class="py-3 px-4">${fileBtn}</td>
+        <td class="py-3 px-4">
+          <select onchange="handleInquiryStatusChange(${item.id}, this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-semibold">
+            <option value="New" ${item.status === 'New' ? 'selected' : ''}>New</option>
+            <option value="Contacted" ${item.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
+            <option value="Quoted" ${item.status === 'Quoted' ? 'selected' : ''}>Quoted</option>
+            <option value="Completed" ${item.status === 'Completed' ? 'selected' : ''}>Completed</option>
+            <option value="Cancelled" ${item.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+          </select>
+        </td>
+        <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+          <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(item.client_name)},%20this%20is%20SASI%20Steel%20Engineering%20regarding%20your%20quotation." target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold inline-flex items-center gap-1">
+            <i class="fa-brands fa-whatsapp"></i> Chat
+          </a>
+          <button onclick="handleDeleteInquiry(${item.id})" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function resetInquiriesFilter() {
+  const searchInput = document.getElementById('inquiry-filter-search');
+  const statusSelect = document.getElementById('inquiry-filter-status');
+  if (searchInput) searchInput.value = '';
+  if (statusSelect) statusSelect.value = 'ALL';
+  filterInquiriesData();
+}
+
+function exportInquiriesCSV() {
+  const headers = ['Date', 'Client Name', 'Phone', 'Project Type', 'Scope', 'Estimated Rate', 'Status', 'Blueprint URL'];
+  const rows = allInquiriesRecords.map(item => [
+    item.created_at || '',
+    item.client_name || '',
+    item.client_phone || '',
+    item.project_type || '',
+    item.project_scope || '',
+    item.estimated_cost || '',
+    item.status || '',
+    item.blueprint_url || ''
+  ]);
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(`SASI_Steels_Quotations_${dateStr}.csv`, headers, rows);
 }
 
 async function handleInquiryStatusChange(id, status) {
@@ -159,46 +230,117 @@ async function loadAttendance() {
 
   try {
     const records = await dbGetAttendance();
-    if (!records || records.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="py-12 text-center text-slate-400">
-            <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-blue-400">
-              <i class="fa-solid fa-user-check"></i>
-            </div>
-            <p class="text-sm font-bold text-slate-300">No attendance records found yet.</p>
-            <p class="text-xs text-slate-500 mt-1 mb-4">Click the button below to mark today's worker attendance.</p>
-            <button onclick="openAttendanceModal()" class="btn-orange-pill text-xs px-4 py-2">
-              <i class="fa-solid fa-user-plus mr-1"></i> Mark First Attendance
-            </button>
-          </td>
-        </tr>`;
-      return;
-    }
-
-    tbody.innerHTML = records.map(r => `
-      <tr class="hover:bg-slate-800/50 transition-colors">
-        <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${r.attendance_date}</td>
-        <td class="py-3 px-4 font-bold text-white">${r.employee_name}</td>
-        <td class="py-3 px-4 text-slate-300">${r.role}</td>
-        <td class="py-3 px-4">
-          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-            r.status === 'Present' ? 'bg-emerald-500/20 text-emerald-400' :
-            r.status === 'Absent' ? 'bg-red-500/20 text-red-400' :
-            r.status === 'Overtime' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-300'
-          }">${r.status}</span>
-        </td>
-        <td class="py-3 px-4 text-slate-300">${r.hours_worked || 8} hrs</td>
-        <td class="py-3 px-4 text-amber-400 font-bold">${r.overtime_hours || 0} hrs</td>
-        <td class="py-3 px-4 text-right space-x-2">
-          <button onclick="deleteAttendanceItem('${r.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
-        </td>
-      </tr>
-    `).join('');
+    allAttendanceRecords = records || [];
+    filterAttendanceData();
   } catch (err) {
     console.error("Error in loadAttendance:", err);
     tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No attendance records found. Click 'Mark Attendance' above.</td></tr>`;
   }
+}
+
+function filterAttendanceData() {
+  const tbody = document.getElementById('table-attendance');
+  if (!tbody) return;
+
+  const fromVal = document.getElementById('attendance-filter-from')?.value || '';
+  const toVal = document.getElementById('attendance-filter-to')?.value || '';
+  const statusVal = document.getElementById('attendance-filter-status')?.value || 'ALL';
+
+  const filtered = allAttendanceRecords.filter(r => {
+    if (statusVal !== 'ALL' && r.status !== statusVal) return false;
+    if (fromVal && r.attendance_date < fromVal) return false;
+    if (toVal && r.attendance_date > toVal) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-blue-400">
+            <i class="fa-solid fa-user-check"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No attendance records found for this filter.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Click Reset to view all dates.</p>
+          <button onclick="resetAttendanceFilter()" class="btn-orange-pill text-xs px-4 py-2">
+            <i class="fa-solid fa-rotate-right mr-1"></i> Reset Date Filter
+          </button>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => `
+    <tr class="hover:bg-slate-800/50 transition-colors">
+      <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${r.attendance_date}</td>
+      <td class="py-3 px-4 font-bold text-white">${r.employee_name}</td>
+      <td class="py-3 px-4 text-slate-300">${r.role}</td>
+      <td class="py-3 px-4">
+        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+          r.status === 'Present' ? 'bg-emerald-500/20 text-emerald-400' :
+          r.status === 'Absent' ? 'bg-red-500/20 text-red-400' :
+          r.status === 'Overtime' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-300'
+        }">${r.status}</span>
+      </td>
+      <td class="py-3 px-4 text-slate-300">${r.hours_worked || 8} hrs</td>
+      <td class="py-3 px-4 text-amber-400 font-bold">${r.overtime_hours || 0} hrs</td>
+      <td class="py-3 px-4 text-right space-x-2">
+        <button onclick="deleteAttendanceItem('${r.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function setAttendanceDatePreset(preset) {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const fromInput = document.getElementById('attendance-filter-from');
+  const toInput = document.getElementById('attendance-filter-to');
+
+  if (preset === 'today') {
+    if (fromInput) fromInput.value = todayStr;
+    if (toInput) toInput.value = todayStr;
+  } else if (preset === 'this_month') {
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    if (fromInput) fromInput.value = firstDay;
+    if (toInput) toInput.value = todayStr;
+  }
+  filterAttendanceData();
+}
+
+function resetAttendanceFilter() {
+  const fromInput = document.getElementById('attendance-filter-from');
+  const toInput = document.getElementById('attendance-filter-to');
+  const statusSelect = document.getElementById('attendance-filter-status');
+  if (fromInput) fromInput.value = '';
+  if (toInput) toInput.value = '';
+  if (statusSelect) statusSelect.value = 'ALL';
+  filterAttendanceData();
+}
+
+function exportAttendanceCSV() {
+  const fromVal = document.getElementById('attendance-filter-from')?.value || '';
+  const toVal = document.getElementById('attendance-filter-to')?.value || '';
+  const statusVal = document.getElementById('attendance-filter-status')?.value || 'ALL';
+
+  const exportList = allAttendanceRecords.filter(r => {
+    if (statusVal !== 'ALL' && r.status !== statusVal) return false;
+    if (fromVal && r.attendance_date < fromVal) return false;
+    if (toVal && r.attendance_date > toVal) return false;
+    return true;
+  });
+
+  const headers = ['Date', 'Employee Name', 'Role', 'Status', 'Hours Worked', 'Overtime Hours'];
+  const rows = exportList.map(r => [
+    r.attendance_date || '',
+    r.employee_name || '',
+    r.role || '',
+    r.status || '',
+    r.hours_worked || 8,
+    r.overtime_hours || 0
+  ]);
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(`SASI_Steels_Attendance_${dateStr}.csv`, headers, rows);
 }
 
 function openAttendanceModal() {
@@ -262,44 +404,88 @@ async function loadInventory() {
 
   try {
     const items = await dbGetInventory();
-    if (!items || items.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="py-12 text-center text-slate-400">
-            <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-amber-400">
-              <i class="fa-solid fa-boxes-stacked"></i>
-            </div>
-            <p class="text-sm font-bold text-slate-300">No inventory items in stock.</p>
-            <p class="text-xs text-slate-500 mt-1 mb-4">Add your steel beams, plates, sheets, or welding rods.</p>
-            <button onclick="openInventoryModal()" class="btn-orange-pill text-xs px-4 py-2">
-              <i class="fa-solid fa-plus mr-1"></i> Add First Stock Item
-            </button>
-          </td>
-        </tr>`;
-      return;
-    }
-
-    tbody.innerHTML = items.map(item => `
-      <tr class="hover:bg-slate-800/50 transition-colors">
-        <td class="py-3 px-4 font-bold text-white">${item.item_name}</td>
-        <td class="py-3 px-4 text-slate-300">${item.category}</td>
-        <td class="py-3 px-4 font-bold text-orange-400">${item.quantity} ${item.unit}</td>
-        <td class="py-3 px-4 text-slate-300">₹${item.unit_price}</td>
-        <td class="py-3 px-4 text-slate-400">${item.storage_location || 'Main Yard'}</td>
-        <td class="py-3 px-4">
-          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-            item.quantity <= (item.min_reorder_level || 5) ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
-          }">${item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'}</span>
-        </td>
-        <td class="py-3 px-4 text-right space-x-2">
-          <button onclick="deleteInventoryItem('${item.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
-        </td>
-      </tr>
-    `).join('');
+    allInventoryRecords = items || [];
+    filterInventoryData();
   } catch (err) {
     console.error("Error in loadInventory:", err);
     tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No stock items found. Click 'Add Stock Item' above.</td></tr>`;
   }
+}
+
+function filterInventoryData() {
+  const tbody = document.getElementById('table-inventory');
+  if (!tbody) return;
+
+  const searchVal = (document.getElementById('inventory-filter-search')?.value || '').toLowerCase().trim();
+  const catVal = document.getElementById('inventory-filter-category')?.value || 'ALL';
+
+  const filtered = allInventoryRecords.filter(item => {
+    if (catVal !== 'ALL' && item.category !== catVal) return false;
+    if (searchVal) {
+      const matchName = (item.item_name || '').toLowerCase().includes(searchVal);
+      const matchLoc = (item.storage_location || '').toLowerCase().includes(searchVal);
+      if (!matchName && !matchLoc) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-amber-400">
+            <i class="fa-solid fa-boxes-stacked"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No inventory items match the filter.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Click Reset to view all stock items.</p>
+          <button onclick="resetInventoryFilter()" class="btn-orange-pill text-xs px-4 py-2">
+            <i class="fa-solid fa-rotate-right mr-1"></i> Reset Filters
+          </button>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(item => `
+    <tr class="hover:bg-slate-800/50 transition-colors">
+      <td class="py-3 px-4 font-bold text-white">${item.item_name}</td>
+      <td class="py-3 px-4 text-slate-300">${item.category}</td>
+      <td class="py-3 px-4 font-bold text-orange-400">${item.quantity} ${item.unit}</td>
+      <td class="py-3 px-4 text-slate-300">₹${item.unit_price}</td>
+      <td class="py-3 px-4 text-slate-400">${item.storage_location || 'Main Yard'}</td>
+      <td class="py-3 px-4">
+        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+          item.quantity <= (item.min_reorder_level || 5) ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+        }">${item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'}</span>
+      </td>
+      <td class="py-3 px-4 text-right space-x-2">
+        <button onclick="deleteInventoryItem('${item.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function resetInventoryFilter() {
+  const searchInput = document.getElementById('inventory-filter-search');
+  const catSelect = document.getElementById('inventory-filter-category');
+  if (searchInput) searchInput.value = '';
+  if (catSelect) catSelect.value = 'ALL';
+  filterInventoryData();
+}
+
+function exportInventoryCSV() {
+  const headers = ['Item Name', 'Category', 'Current Stock', 'Unit', 'Unit Price (INR)', 'Location', 'Status'];
+  const rows = allInventoryRecords.map(item => [
+    item.item_name || '',
+    item.category || '',
+    item.quantity || 0,
+    item.unit || '',
+    item.unit_price || 0,
+    item.storage_location || 'Main Yard',
+    item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'
+  ]);
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(`SASI_Steels_Inventory_${dateStr}.csv`, headers, rows);
 }
 
 function openInventoryModal() {
@@ -317,10 +503,11 @@ function openInventoryModal() {
       <div>
         <label class="block text-slate-300 font-bold mb-1">Category</label>
         <select name="category" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
-          <option value="Raw Steel">Raw Structural Steel</option>
-          <option value="Plates & Sheets">Plates & Sheets</option>
+          <option value="Structural Steel">Structural Steel</option>
+          <option value="Stainless Steel">Stainless Steel</option>
           <option value="Pipes & Tubes">Pipes & Tubes</option>
-          <option value="Welding Consumables">Welding Consumables</option>
+          <option value="Plates & Sheets">Plates & Sheets</option>
+          <option value="Consumables">Consumables & Rods</option>
           <option value="Hardware">Hardware & Fasteners</option>
         </select>
       </div>
@@ -356,69 +543,6 @@ async function deleteInventoryItem(id) {
   if (confirm("Delete this inventory stock record?")) {
     await dbDeleteInventory(id);
     loadInventory();
-  }
-}
-
-// ================= 4. FINANCE (INCOME & EXPENSES) =================
-async function loadFinance() {
-  const tbody = document.getElementById('table-finance');
-  if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading finance book...</td></tr>`;
-
-  try {
-    const entries = await dbGetFinance();
-    let totalIncome = 0;
-    let totalExpense = 0;
-
-    entries.forEach(e => {
-      const amt = parseFloat(e.amount) || 0;
-      if (e.entry_type === 'Income') totalIncome += amt;
-      else totalExpense += amt;
-    });
-
-    document.getElementById('finance-total-income').textContent = `₹${totalIncome.toLocaleString('en-IN')}`;
-    document.getElementById('finance-total-expense').textContent = `₹${totalExpense.toLocaleString('en-IN')}`;
-    document.getElementById('finance-net-balance').textContent = `₹${(totalIncome - totalExpense).toLocaleString('en-IN')}`;
-
-    if (!entries || entries.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="py-12 text-center text-slate-400">
-            <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-emerald-400">
-              <i class="fa-solid fa-wallet"></i>
-            </div>
-            <p class="text-sm font-bold text-slate-300">No income or expense records yet.</p>
-            <p class="text-xs text-slate-500 mt-1 mb-4">Record client payments or vendor bills.</p>
-            <button onclick="openFinanceModal()" class="btn-orange-pill text-xs px-4 py-2">
-              <i class="fa-solid fa-plus mr-1"></i> Add First Transaction
-            </button>
-          </td>
-        </tr>`;
-      return;
-    }
-
-    tbody.innerHTML = entries.map(e => `
-      <tr class="hover:bg-slate-800/50 transition-colors">
-        <td class="py-3 px-4 font-mono text-[11px] text-slate-400">${e.transaction_date}</td>
-        <td class="py-3 px-4">
-          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-            e.entry_type === 'Income' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-          }">${e.entry_type}</span>
-        </td>
-        <td class="py-3 px-4 text-slate-200 font-bold">${e.category}</td>
-        <td class="py-3 px-4 font-bold ${e.entry_type === 'Income' ? 'text-emerald-400' : 'text-red-400'}">₹${parseFloat(e.amount).toLocaleString('en-IN')}</td>
-        <td class="py-3 px-4 text-slate-400">${e.payment_mode || 'Bank'}</td>
-        <td class="py-3 px-4">
-          ${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="text-blue-400 hover:underline"><i class="fa-solid fa-receipt"></i> Receipt</a>` : '<span class="text-slate-600">-</span>'}
-        </td>
-        <td class="py-3 px-4 text-right">
-          <button onclick="deleteFinanceItem('${e.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
-        </td>
-      </tr>
-    `).join('');
-  } catch (err) {
-    console.error("Error in loadFinance:", err);
-    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No transactions found.</td></tr>`;
   }
 }
 
