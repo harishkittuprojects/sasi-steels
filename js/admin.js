@@ -263,9 +263,6 @@ function filterEmployeesData() {
   // Calculate summary counts
   const activeCount = allEmployeesRecords.filter(e => e.status === 'Active').length;
   const weldersCount = allEmployeesRecords.filter(e => e.role === 'Welder' || e.role === 'Fabricator').length;
-  const dailyBudget = allEmployeesRecords
-    .filter(e => e.status === 'Active')
-    .reduce((sum, e) => sum + (parseFloat(e.daily_wage) || 0), 0);
 
   const countBadge = document.getElementById('badge-employees-count');
   if (countBadge) countBadge.textContent = activeCount;
@@ -275,9 +272,6 @@ function filterEmployeesData() {
 
   const weldersEl = document.getElementById('employees-welders-count');
   if (weldersEl) weldersEl.textContent = weldersCount;
-
-  const budgetEl = document.getElementById('employees-daily-budget');
-  if (budgetEl) budgetEl.textContent = `₹${dailyBudget.toLocaleString('en-IN')}`;
 
   if (filtered.length === 0) {
     tbody.innerHTML = `
