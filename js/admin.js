@@ -312,12 +312,6 @@ function openNewInquiryModal() {
     </div>
 
     <div>
-      <label class="block text-slate-300 font-bold mb-1">Upload Drawing / Blueprint (Optional)</label>
-      <input type="file" id="inquiry-blueprint-file" accept="image/*,application/pdf" class="w-full text-slate-400 text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-500 mb-1" />
-      <input type="text" name="blueprint_url" placeholder="Or paste drawing link / URL" class="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-400 text-xs focus:outline-none focus:border-orange-500 font-mono" />
-    </div>
-
-    <div>
       <label class="block text-slate-300 font-bold mb-1">Client Notes / Requirement Details</label>
       <textarea name="message" rows="2" placeholder="Site location, crane access, delivery timeline, specific steel grade..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500"></textarea>
     </div>
