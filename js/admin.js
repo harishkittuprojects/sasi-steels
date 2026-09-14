@@ -535,17 +535,23 @@ function resetAttendanceFilter() {
   filterAttendanceData();
 }
 
-function exportAttendanceCSV() {
+async function exportAttendanceCSV() {
+  if (!allAttendanceRecords || allAttendanceRecords.length === 0) {
+    allAttendanceRecords = await dbGetAttendance() || [];
+  }
+
   const fromVal = document.getElementById('attendance-filter-from')?.value || '';
   const toVal = document.getElementById('attendance-filter-to')?.value || '';
   const statusVal = document.getElementById('attendance-filter-status')?.value || 'ALL';
 
-  const exportList = allAttendanceRecords.filter(r => {
+  let exportList = allAttendanceRecords.filter(r => {
     if (statusVal !== 'ALL' && r.status !== statusVal) return false;
     if (fromVal && r.attendance_date < fromVal) return false;
     if (toVal && r.attendance_date > toVal) return false;
     return true;
   });
+
+  if (exportList.length === 0) exportList = allAttendanceRecords;
 
   const headers = ['Date', 'Employee Name', 'Role', 'Status', 'Hours Worked', 'Overtime Hours'];
   const rows = exportList.map(r => [
@@ -717,9 +723,28 @@ function resetInventoryFilter() {
   filterInventoryData();
 }
 
-function exportInventoryCSV() {
+async function exportInventoryCSV() {
+  if (!allInventoryRecords || allInventoryRecords.length === 0) {
+    allInventoryRecords = await dbGetInventory() || [];
+  }
+
+  const searchVal = (document.getElementById('inventory-filter-search')?.value || '').toLowerCase().trim();
+  const catVal = document.getElementById('inventory-filter-category')?.value || 'ALL';
+
+  let exportList = allInventoryRecords.filter(item => {
+    if (catVal !== 'ALL' && item.category !== catVal) return false;
+    if (searchVal) {
+      const matchName = (item.item_name || '').toLowerCase().includes(searchVal);
+      const matchLoc = (item.storage_location || '').toLowerCase().includes(searchVal);
+      if (!matchName && !matchLoc) return false;
+    }
+    return true;
+  });
+
+  if (exportList.length === 0) exportList = allInventoryRecords;
+
   const headers = ['Item Name', 'Category', 'Current Stock', 'Unit', 'Unit Price (INR)', 'Location', 'Status'];
-  const rows = allInventoryRecords.map(item => [
+  const rows = exportList.map(item => [
     item.item_name || '',
     item.category || '',
     item.quantity || 0,
@@ -788,6 +813,153 @@ async function deleteInventoryItem(id) {
     await dbDeleteInventory(id);
     loadInventory();
   }
+}
+
+// ================= 4. FINANCE (INCOME & EXPENSES) =================
+async function loadFinance() {
+  const tbody = document.getElementById('table-finance');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading finance book...</td></tr>`;
+
+  try {
+    const entries = await dbGetFinance();
+    allFinanceRecords = entries || [];
+    filterFinanceData();
+  } catch (err) {
+    console.error("Error in loadFinance:", err);
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No transactions found.</td></tr>`;
+  }
+}
+
+function filterFinanceData() {
+  const tbody = document.getElementById('table-finance');
+  if (!tbody) return;
+
+  const fromVal = document.getElementById('finance-filter-from')?.value || '';
+  const toVal = document.getElementById('finance-filter-to')?.value || '';
+  const typeVal = document.getElementById('finance-filter-type')?.value || 'ALL';
+
+  const filtered = allFinanceRecords.filter(e => {
+    if (typeVal !== 'ALL' && e.entry_type !== typeVal) return false;
+    if (fromVal && e.transaction_date < fromVal) return false;
+    if (toVal && e.transaction_date > toVal) return false;
+    return true;
+  });
+
+  // Calculate totals from filtered records
+  let totalIncome = 0;
+  let totalExpense = 0;
+
+  filtered.forEach(e => {
+    const amt = parseFloat(e.amount) || 0;
+    if (e.entry_type === 'Income') totalIncome += amt;
+    else totalExpense += amt;
+  });
+
+  const incomeEl = document.getElementById('finance-total-income');
+  const expenseEl = document.getElementById('finance-total-expense');
+  const balanceEl = document.getElementById('finance-net-balance');
+
+  if (incomeEl) incomeEl.textContent = `₹${totalIncome.toLocaleString('en-IN')}`;
+  if (expenseEl) expenseEl.textContent = `₹${totalExpense.toLocaleString('en-IN')}`;
+  if (balanceEl) balanceEl.textContent = `₹${(totalIncome - totalExpense).toLocaleString('en-IN')}`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-emerald-400">
+            <i class="fa-solid fa-wallet"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No income or expense records found for this period.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Click Reset to view all records, or record a new transaction.</p>
+          <button onclick="resetFinanceFilter()" class="btn-orange-pill text-xs px-4 py-2">
+            <i class="fa-solid fa-rotate-right mr-1"></i> Reset Date Filter
+          </button>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(e => `
+    <tr class="hover:bg-slate-800/50 transition-colors">
+      <td class="py-3 px-4 font-mono text-[11px] text-slate-400">${e.transaction_date}</td>
+      <td class="py-3 px-4">
+        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+          e.entry_type === 'Income' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+        }">${e.entry_type}</span>
+      </td>
+      <td class="py-3 px-4 text-slate-200 font-bold">${e.category}</td>
+      <td class="py-3 px-4 font-bold ${e.entry_type === 'Income' ? 'text-emerald-400' : 'text-red-400'}">₹${parseFloat(e.amount).toLocaleString('en-IN')}</td>
+      <td class="py-3 px-4 text-slate-400">${e.payment_mode || 'Bank'}</td>
+      <td class="py-3 px-4">
+        ${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="text-blue-400 hover:underline"><i class="fa-solid fa-receipt"></i> Receipt</a>` : '<span class="text-slate-600">-</span>'}
+      </td>
+      <td class="py-3 px-4 text-right">
+        <button onclick="deleteFinanceItem('${e.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function setFinanceDatePreset(preset) {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const fromInput = document.getElementById('finance-filter-from');
+  const toInput = document.getElementById('finance-filter-to');
+
+  if (preset === 'this_month') {
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    if (fromInput) fromInput.value = firstDay;
+    if (toInput) toInput.value = todayStr;
+  } else if (preset === 'last_30') {
+    const past30 = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+    if (fromInput) fromInput.value = past30;
+    if (toInput) toInput.value = todayStr;
+  }
+  filterFinanceData();
+}
+
+function resetFinanceFilter() {
+  const fromInput = document.getElementById('finance-filter-from');
+  const toInput = document.getElementById('finance-filter-to');
+  const typeSelect = document.getElementById('finance-filter-type');
+  if (fromInput) fromInput.value = '';
+  if (toInput) toInput.value = '';
+  if (typeSelect) typeSelect.value = 'ALL';
+  filterFinanceData();
+}
+
+async function exportFinanceCSV() {
+  if (!allFinanceRecords || allFinanceRecords.length === 0) {
+    allFinanceRecords = await dbGetFinance() || [];
+  }
+
+  const fromVal = document.getElementById('finance-filter-from')?.value || '';
+  const toVal = document.getElementById('finance-filter-to')?.value || '';
+  const typeVal = document.getElementById('finance-filter-type')?.value || 'ALL';
+
+  let exportList = allFinanceRecords.filter(e => {
+    if (typeVal !== 'ALL' && e.entry_type !== typeVal) return false;
+    if (fromVal && e.transaction_date < fromVal) return false;
+    if (toVal && e.transaction_date > toVal) return false;
+    return true;
+  });
+
+  if (exportList.length === 0) exportList = allFinanceRecords;
+
+  const headers = ['Date', 'Type', 'Category', 'Amount (INR)', 'Payment Mode', 'Notes', 'Receipt URL'];
+  const rows = exportList.map(e => [
+    e.transaction_date || '',
+    e.entry_type || '',
+    e.category || '',
+    e.amount || 0,
+    e.payment_mode || 'Bank',
+    e.description || '',
+    e.receipt_url || ''
+  ]);
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(`SASI_Steels_Finance_Report_${dateStr}.csv`, headers, rows);
 }
 
 function openFinanceModal() {
