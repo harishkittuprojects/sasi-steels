@@ -99,9 +99,9 @@ CREATE TABLE IF NOT EXISTS admin_users (
   role TEXT DEFAULT 'Admin'
 );
 
--- Insert Default Admin (Username: admin, PIN: 833399)
+-- Insert Default Admin (Username: admin, Password: 123456789)
 INSERT INTO admin_users (username, password_hash, role)
-VALUES ('admin', 'sasi833399', 'Super Admin')
+VALUES ('admin', '123456789', 'Super Admin')
 ON CONFLICT (username) DO NOTHING;
 
 -- 8. EMPLOYEES / WORKSHOP WORKERS TABLE

@@ -54,13 +54,13 @@ function handleAdminLogin(e) {
   const pass = document.getElementById('admin-pass').value.trim();
 
   // Master password check
-  if ((user === 'admin' || user === 'sasisteels863@gmail.com') && (pass === 'sasi833399' || pass === '833399' || pass === 'admin')) {
+  if ((user === 'admin' || user === 'sasisteels863@gmail.com') && (pass === '123456789' || pass === 'sasi833399')) {
     sessionStorage.setItem('sasi_admin_auth', 'true');
     document.getElementById('auth-modal').classList.add('hidden');
     loadCurrentTab();
     loadInitialCounts();
   } else {
-    alert('Incorrect credentials! Password is: sasi833399');
+    alert('Incorrect credentials! Please enter the correct password.');
   }
 }
 
