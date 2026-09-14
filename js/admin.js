@@ -60,6 +60,7 @@ function switchTab(tabName) {
 function loadCurrentTab() {
   switch (currentActiveTab) {
     case 'quotations': loadQuotations(); break;
+    case 'employees': loadEmployees(); break;
     case 'attendance': loadAttendance(); break;
     case 'inventory': loadInventory(); break;
     case 'finance': loadFinance(); break;
@@ -69,6 +70,7 @@ function loadCurrentTab() {
 
 // Global State for Filtering & Exports
 let allInquiriesRecords = [];
+let allEmployeesRecords = [];
 let allAttendanceRecords = [];
 let allInventoryRecords = [];
 let allFinanceRecords = [];
@@ -222,7 +224,223 @@ async function handleDeleteInquiry(id) {
   }
 }
 
-// ================= 2. ATTENDANCE =================
+// ================= 2. EMPLOYEES & STAFF DIRECTORY =================
+async function loadEmployees() {
+  const tbody = document.getElementById('table-employees');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading staff directory...</td></tr>`;
+
+  try {
+    const employees = await dbGetEmployees();
+    allEmployeesRecords = employees || [];
+    filterEmployeesData();
+  } catch (err) {
+    console.error("Error in loadEmployees:", err);
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Failed to load staff list.</td></tr>`;
+  }
+}
+
+function filterEmployeesData() {
+  const tbody = document.getElementById('table-employees');
+  if (!tbody) return;
+
+  const searchVal = (document.getElementById('employee-filter-search')?.value || '').toLowerCase().trim();
+  const roleVal = document.getElementById('employee-filter-role')?.value || 'ALL';
+  const statusVal = document.getElementById('employee-filter-status')?.value || 'ALL';
+
+  const filtered = allEmployeesRecords.filter(emp => {
+    if (roleVal !== 'ALL' && emp.role !== roleVal) return false;
+    if (statusVal !== 'ALL' && emp.status !== statusVal) return false;
+    if (searchVal) {
+      const matchName = (emp.name || '').toLowerCase().includes(searchVal);
+      const matchPhone = (emp.phone || '').toLowerCase().includes(searchVal);
+      const matchRole = (emp.role || '').toLowerCase().includes(searchVal);
+      if (!matchName && !matchPhone && !matchRole) return false;
+    }
+    return true;
+  });
+
+  // Calculate summary counts
+  const activeCount = allEmployeesRecords.filter(e => e.status === 'Active').length;
+  const weldersCount = allEmployeesRecords.filter(e => e.role === 'Welder' || e.role === 'Fabricator').length;
+  const dailyBudget = allEmployeesRecords
+    .filter(e => e.status === 'Active')
+    .reduce((sum, e) => sum + (parseFloat(e.daily_wage) || 0), 0);
+
+  const countBadge = document.getElementById('badge-employees-count');
+  if (countBadge) countBadge.textContent = activeCount;
+
+  const countEl = document.getElementById('employees-total-count');
+  if (countEl) countEl.textContent = activeCount;
+
+  const weldersEl = document.getElementById('employees-welders-count');
+  if (weldersEl) weldersEl.textContent = weldersCount;
+
+  const budgetEl = document.getElementById('employees-daily-budget');
+  if (budgetEl) budgetEl.textContent = `₹${dailyBudget.toLocaleString('en-IN')}`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-cyan-400">
+            <i class="fa-solid fa-users-slash"></i>
+          </div>
+          <p class="text-sm font-bold text-slate-300">No employees found.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Click below to add your first worker or reset the search filters.</p>
+          <button onclick="openEmployeeModal()" class="btn-orange-pill text-xs px-4 py-2">
+            <i class="fa-solid fa-user-plus mr-1"></i> Add Employee
+          </button>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(emp => {
+    const rawPhone = (emp.phone || '').replace(/[^0-9]/g, '');
+    const phoneLink = rawPhone.startsWith('91') ? rawPhone : (rawPhone ? '91' + rawPhone : '');
+    
+    return `
+      <tr class="hover:bg-slate-800/50 transition-colors">
+        <td class="py-3 px-4">
+          <div class="font-bold text-white">${emp.name}</div>
+          <div class="text-[11px] text-slate-400">${emp.notes || 'Workshop Staff'}</div>
+        </td>
+        <td class="py-3 px-4">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+            emp.role === 'Welder' ? 'bg-orange-500/20 text-orange-400' :
+            emp.role === 'Fabricator' ? 'bg-cyan-500/20 text-cyan-400' :
+            emp.role === 'Supervisor' ? 'bg-purple-500/20 text-purple-400' :
+            emp.role === 'Site Engineer' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-300'
+          }">${emp.role}</span>
+        </td>
+        <td class="py-3 px-4 text-slate-300 font-mono text-xs">
+          ${emp.phone ? `<span>${emp.phone}</span>` : '<span class="text-slate-600">N/A</span>'}
+        </td>
+        <td class="py-3 px-4 font-bold text-emerald-400">₹${(parseFloat(emp.daily_wage) || 0).toLocaleString('en-IN')} / day</td>
+        <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${emp.join_date || 'N/A'}</td>
+        <td class="py-3 px-4">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            emp.status === 'Active' ? 'bg-emerald-500/20 text-emerald-400' :
+            emp.status === 'On Leave' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
+          }">${emp.status || 'Active'}</span>
+        </td>
+        <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+          ${phoneLink ? `
+            <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(emp.name)},%20this%20is%20SASI%20Steel%20Engineering." target="_blank" class="px-2 py-1 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white text-[11px] font-bold inline-flex items-center gap-1">
+              <i class="fa-brands fa-whatsapp"></i>
+            </a>` : ''}
+          <button onclick="openEmployeeModal('${emp.id}')" class="px-2 py-1 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px]">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button onclick="deleteEmployeeItem('${emp.id}')" class="px-2 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function resetEmployeesFilter() {
+  const searchInput = document.getElementById('employee-filter-search');
+  const roleSelect = document.getElementById('employee-filter-role');
+  const statusSelect = document.getElementById('employee-filter-status');
+  if (searchInput) searchInput.value = '';
+  if (roleSelect) roleSelect.value = 'ALL';
+  if (statusSelect) statusSelect.value = 'ALL';
+  filterEmployeesData();
+}
+
+function exportEmployeesCSV() {
+  const headers = ['Employee Name', 'Role', 'Contact Phone', 'Daily Wage (INR)', 'Join Date', 'Status', 'Notes'];
+  const rows = allEmployeesRecords.map(emp => [
+    emp.name || '',
+    emp.role || '',
+    emp.phone || '',
+    emp.daily_wage || 0,
+    emp.join_date || '',
+    emp.status || 'Active',
+    emp.notes || ''
+  ]);
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(`SASI_Steels_Staff_Directory_${dateStr}.csv`, headers, rows);
+}
+
+function openEmployeeModal(id = null) {
+  activeModalType = 'employee';
+  editingItemId = id;
+
+  let existing = null;
+  if (id) {
+    existing = allEmployeesRecords.find(e => String(e.id) === String(id));
+  }
+
+  document.getElementById('crud-modal-title').textContent = existing ? 'Edit Employee Details' : 'Add New Employee / Worker';
+  document.getElementById('crud-modal-subtitle').textContent = 'Manage workshop employee role, phone number, and daily wage rate.';
+
+  document.getElementById('crud-form-fields').innerHTML = `
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Full Name</label>
+      <input type="text" name="name" required value="${existing ? existing.name : ''}" placeholder="e.g. Ramesh Kumar" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Role / Designation</label>
+        <select name="role" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500">
+          <option value="Fabricator" ${existing && existing.role === 'Fabricator' ? 'selected' : ''}>Fabricator</option>
+          <option value="Welder" ${existing && existing.role === 'Welder' ? 'selected' : ''}>Welder</option>
+          <option value="Helper" ${existing && existing.role === 'Helper' ? 'selected' : ''}>Helper / Assistant</option>
+          <option value="Supervisor" ${existing && existing.role === 'Supervisor' ? 'selected' : ''}>Supervisor</option>
+          <option value="Site Engineer" ${existing && existing.role === 'Site Engineer' ? 'selected' : ''}>Site Engineer</option>
+          <option value="Machine Operator" ${existing && existing.role === 'Machine Operator' ? 'selected' : ''}>Machine Operator</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Daily Wage Rate (₹)</label>
+        <input type="number" name="daily_wage" required value="${existing ? existing.daily_wage : '850'}" placeholder="e.g. 850" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Phone / WhatsApp</label>
+        <input type="text" name="phone" value="${existing && existing.phone ? existing.phone : ''}" placeholder="+91 98480 12345" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Status</label>
+        <select name="status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500">
+          <option value="Active" ${!existing || existing.status === 'Active' ? 'selected' : ''}>Active</option>
+          <option value="On Leave" ${existing && existing.status === 'On Leave' ? 'selected' : ''}>On Leave</option>
+          <option value="Inactive" ${existing && existing.status === 'Inactive' ? 'selected' : ''}>Inactive / Left</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Joining Date</label>
+        <input type="date" name="join_date" value="${existing && existing.join_date ? existing.join_date : new Date().toISOString().split('T')[0]}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Emergency Contact</label>
+        <input type="text" name="emergency_contact" value="${existing && existing.emergency_contact ? existing.emergency_contact : ''}" placeholder="Contact / Relation" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
+      </div>
+    </div>
+    <div>
+      <label class="block text-slate-300 font-bold mb-1">Notes / Skill Details</label>
+      <input type="text" name="notes" value="${existing && existing.notes ? existing.notes : ''}" placeholder="e.g. Expert in SS TIG welding, heavy truss erection" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
+    </div>
+  `;
+  document.getElementById('crud-modal').classList.remove('hidden');
+}
+
+async function deleteEmployeeItem(id) {
+  if (confirm("Delete this employee record from staff directory?")) {
+    await dbDeleteEmployee(id);
+    loadEmployees();
+  }
+}
+
+// ================= 3. ATTENDANCE =================
 async function loadAttendance() {
   const tbody = document.getElementById('table-attendance');
   if (!tbody) return;
@@ -343,26 +561,53 @@ function exportAttendanceCSV() {
   downloadCSV(`SASI_Steels_Attendance_${dateStr}.csv`, headers, rows);
 }
 
-function openAttendanceModal() {
+function onAttendanceEmpSelect(empName) {
+  if (!empName) return;
+  const nameInput = document.querySelector('#crud-form-fields input[name="employee_name"]');
+  if (nameInput) nameInput.value = empName;
+
+  const match = allEmployeesRecords.find(e => e.name === empName);
+  if (match) {
+    const roleSelect = document.querySelector('#crud-form-fields select[name="role"]');
+    if (roleSelect) roleSelect.value = match.role;
+  }
+}
+
+async function openAttendanceModal() {
   activeModalType = 'attendance';
   editingItemId = null;
   document.getElementById('crud-modal-title').textContent = 'Mark Worker Attendance';
   document.getElementById('crud-modal-subtitle').textContent = 'Record daily presence & overtime hours for workshop crew.';
-  
+
+  if (!allEmployeesRecords || allEmployeesRecords.length === 0) {
+    allEmployeesRecords = await dbGetEmployees();
+  }
+
+  const empOptions = allEmployeesRecords
+    .filter(e => e.status === 'Active')
+    .map(e => `<option value="${e.name}">${e.name} (${e.role})</option>`)
+    .join('');
+
   document.getElementById('crud-form-fields').innerHTML = `
     <div>
+      <label class="block text-slate-300 font-bold mb-1">Quick Select Registered Staff</label>
+      <select onchange="onAttendanceEmpSelect(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-cyan-400 font-bold focus:outline-none focus:border-cyan-500 mb-2">
+        <option value="">-- Choose from Registered Staff --</option>
+        ${empOptions}
+      </select>
       <label class="block text-slate-300 font-bold mb-1">Employee Name</label>
-      <input type="text" name="employee_name" required placeholder="e.g. Ramesh Kumar" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      <input type="text" name="employee_name" required placeholder="e.g. Ramesh Kumar" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Role</label>
         <select name="role" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
-          <option value="Welder">Welder</option>
           <option value="Fabricator">Fabricator</option>
+          <option value="Welder">Welder</option>
           <option value="Helper">Helper / Assistant</option>
           <option value="Supervisor">Supervisor</option>
           <option value="Site Engineer">Site Engineer</option>
+          <option value="Machine Operator">Machine Operator</option>
         </select>
       </div>
       <div>
@@ -692,7 +937,25 @@ async function handleCrudSubmit(e) {
   btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving to Supabase & Cloudinary...`;
 
   try {
-    if (activeModalType === 'attendance') {
+    if (activeModalType === 'employee') {
+      const empData = {
+        name: formData.get('name'),
+        role: formData.get('role'),
+        daily_wage: parseFloat(formData.get('daily_wage')) || 800,
+        phone: formData.get('phone') || '',
+        status: formData.get('status') || 'Active',
+        join_date: formData.get('join_date') || new Date().toISOString().split('T')[0],
+        emergency_contact: formData.get('emergency_contact') || '',
+        notes: formData.get('notes') || ''
+      };
+      if (editingItemId) {
+        await dbUpdateEmployee(editingItemId, empData);
+      } else {
+        await dbAddEmployee(empData);
+      }
+      loadEmployees();
+    }
+    else if (activeModalType === 'attendance') {
       const record = {
         employee_name: formData.get('employee_name'),
         role: formData.get('role'),

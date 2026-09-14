@@ -125,6 +125,12 @@
           <span id="badge-inquiries-count" class="ml-auto bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
         </button>
 
+        <button onclick="switchTab('employees')" id="tab-btn-employees" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+          <i class="fa-solid fa-users text-cyan-400 w-4 text-center"></i>
+          <span>Employees & Staff</span>
+          <span id="badge-employees-count" class="ml-auto bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
+        </button>
+
         <button onclick="switchTab('attendance')" id="tab-btn-attendance" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
           <i class="fa-solid fa-user-clock text-blue-400 w-4 text-center"></i>
           <span>Worker Attendance</span>
@@ -215,6 +221,95 @@
                 </tr>
               </thead>
               <tbody id="table-inquiries" class="divide-y divide-slate-800 text-slate-200">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: EMPLOYEES & STAFF DIRECTORY ================= -->
+      <section id="section-employees" class="tab-section hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Employees & Staff Directory</h2>
+            <p class="text-xs text-slate-400">Manage workshop welders, fabricators, helpers, daily wage rates & contacts.</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="exportEmployeesCSV()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-2 transition-all shadow-sm">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i> Export Staff CSV
+            </button>
+            <button onclick="openEmployeeModal()" class="btn-orange-pill text-xs px-4 py-2.5">
+              <i class="fa-solid fa-user-plus"></i> Add New Employee
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Staff</span>
+            <div class="text-2xl font-black text-cyan-400 mt-1 font-heading" id="employees-total-count">0</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Welders & Fabricators</span>
+            <div class="text-2xl font-black text-orange-400 mt-1 font-heading" id="employees-welders-count">0</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Daily Wage Budget</span>
+            <div class="text-2xl font-black text-emerald-400 mt-1 font-heading" id="employees-daily-budget">₹0</div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-magnifying-glass text-cyan-400"></i> Search:</span>
+              <input type="text" id="employee-filter-search" placeholder="Search name / phone..." class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-cyan-500 outline-none w-44" oninput="filterEmployeesData()" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Role:</span>
+              <select id="employee-filter-role" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-cyan-500 outline-none" onchange="filterEmployeesData()">
+                <option value="ALL">All Roles</option>
+                <option value="Welder">Welder</option>
+                <option value="Fabricator">Fabricator</option>
+                <option value="Helper">Helper / Assistant</option>
+                <option value="Supervisor">Supervisor</option>
+                <option value="Site Engineer">Site Engineer</option>
+                <option value="Machine Operator">Machine Operator</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold">Status:</span>
+              <select id="employee-filter-status" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-cyan-500 outline-none" onchange="filterEmployeesData()">
+                <option value="ALL">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="On Leave">On Leave</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="resetEmployeesFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-cyan-400 font-medium inline-flex items-center gap-1">
+            <i class="fa-solid fa-rotate-right"></i> Reset
+          </button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+                  <th class="py-3.5 px-4">Employee Name</th>
+                  <th class="py-3.5 px-4">Role / Skill</th>
+                  <th class="py-3.5 px-4">Contact Phone</th>
+                  <th class="py-3.5 px-4">Daily Wage Rate</th>
+                  <th class="py-3.5 px-4">Join Date</th>
+                  <th class="py-3.5 px-4">Status</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-employees" class="divide-y divide-slate-800 text-slate-200">
                 <!-- JS populated -->
               </tbody>
             </table>

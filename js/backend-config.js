@@ -510,3 +510,100 @@ async function dbDeleteGalleryItem(id) {
   saveLocalCollection('sasi_gallery', localList);
   return true;
 }
+
+// 8. EMPLOYEES & STAFF CRUD (Cloud-First Sync)
+const DEFAULT_EMPLOYEES = [
+  { id: 1, name: 'Ramesh Kumar', phone: '+91 98480 12345', role: 'Fabricator', daily_wage: 950, status: 'Active', join_date: '2025-01-10', notes: 'Lead Structural Fabricator' },
+  { id: 2, name: 'Suresh Rao', phone: '+91 98480 23456', role: 'Welder', daily_wage: 850, status: 'Active', join_date: '2025-02-15', notes: 'TIG / MIG Specialist' },
+  { id: 3, name: 'Venkatesh M', phone: '+91 98480 34567', role: 'Supervisor', daily_wage: 1200, status: 'Active', join_date: '2024-11-01', notes: 'Shop Floor Master' },
+  { id: 4, name: 'Rajesh V', phone: '+91 98480 45678', role: 'Helper', daily_wage: 600, status: 'Active', join_date: '2025-03-01', notes: 'Workshop Assistant' }
+];
+
+async function dbGetEmployees() {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from('employees').select('*').order('name', { ascending: true });
+      if (!error && data && data.length > 0) {
+        saveLocalCollection('sasi_employees', data);
+        return data;
+      }
+    } catch (e) {
+      console.warn("Supabase fetch employees error:", e);
+    }
+  }
+
+  let local = getLocalCollection('sasi_employees');
+  if (!local || local.length === 0) {
+    saveLocalCollection('sasi_employees', DEFAULT_EMPLOYEES);
+    local = DEFAULT_EMPLOYEES;
+  }
+  return local;
+}
+
+async function dbAddEmployee(emp) {
+  const client = getSupabaseClient();
+  const newRow = {
+    name: emp.name,
+    phone: emp.phone || '',
+    role: emp.role || 'Fabricator',
+    daily_wage: parseFloat(emp.daily_wage) || 800,
+    join_date: emp.join_date || new Date().toISOString().split('T')[0],
+    status: emp.status || 'Active',
+    emergency_contact: emp.emergency_contact || '',
+    notes: emp.notes || ''
+  };
+
+  if (client) {
+    try {
+      const { data, error } = await client.from('employees').insert([newRow]).select();
+      if (!error && data && data.length > 0) {
+        return { success: true, data };
+      }
+    } catch (e) {
+      console.warn("Supabase add employee error:", e);
+    }
+  }
+
+  newRow.id = Date.now();
+  newRow.created_at = new Date().toISOString();
+  const localList = getLocalCollection('sasi_employees');
+  localList.push(newRow);
+  saveLocalCollection('sasi_employees', localList);
+  return { success: true, data: [newRow] };
+}
+
+async function dbUpdateEmployee(id, empData) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      await client.from('employees').update(empData).eq('id', id);
+    } catch (e) {
+      console.warn("Supabase update employee error:", e);
+    }
+  }
+
+  let localList = getLocalCollection('sasi_employees');
+  localList = localList.map(emp => {
+    if (String(emp.id) === String(id)) {
+      return { ...emp, ...empData };
+    }
+    return emp;
+  });
+  saveLocalCollection('sasi_employees', localList);
+  return true;
+}
+
+async function dbDeleteEmployee(id) {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      await client.from('employees').delete().eq('id', id);
+    } catch (e) {}
+  }
+  let localList = getLocalCollection('sasi_employees');
+  localList = localList.filter(x => String(x.id) !== String(id));
+  saveLocalCollection('sasi_employees', localList);
+  return true;
+}
+
