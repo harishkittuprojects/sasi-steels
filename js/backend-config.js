@@ -265,7 +265,7 @@ const DEFAULT_INQUIRIES = [
 
 async function dbGetInquiries() {
   let local = getLocalCollection('sasi_inquiries');
-  if (local === null || !Array.isArray(local) || local.length === 0) {
+  if (local === null) {
     saveLocalCollection('sasi_inquiries', DEFAULT_INQUIRIES);
     local = DEFAULT_INQUIRIES;
   }
@@ -273,7 +273,7 @@ async function dbGetInquiries() {
   if (client) {
     try {
       const { data, error } = await client.from('inquiries').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         const merged = mergeCollections(data, local);
         saveLocalCollection('sasi_inquiries', merged);
         return merged;
@@ -282,7 +282,7 @@ async function dbGetInquiries() {
       console.warn("Supabase fetch inquiries error:", e);
     }
   }
-  return local || DEFAULT_INQUIRIES;
+  return local || [];
 }
 
 async function dbUpdateInquiryStatus(id, newStatus) {
@@ -296,7 +296,8 @@ async function dbUpdateInquiryStatus(id, newStatus) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      await client.from('inquiries').update({ status: newStatus }).eq('id', id);
+      const isNum = /^\d+$/.test(String(id));
+      await client.from('inquiries').update({ status: newStatus }).eq('id', isNum ? parseInt(id, 10) : id);
     } catch (e) {}
   }
   return true;
@@ -310,8 +311,11 @@ async function dbDeleteInquiry(id) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      await client.from('inquiries').delete().eq('id', id);
-    } catch (e) {}
+      const isNum = /^\d+$/.test(String(id));
+      await client.from('inquiries').delete().eq('id', isNum ? parseInt(id, 10) : id);
+    } catch (e) {
+      console.warn("Supabase delete inquiry error:", e);
+    }
   }
   return true;
 }
@@ -1189,8 +1193,15 @@ async function dbDeleteOrder(id) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      await client.from('orders').delete().or(`id.eq.${id},order_number.eq.${id}`);
-    } catch (e) {}
+      const isNum = /^\d+$/.test(String(id));
+      if (isNum) {
+        await client.from('orders').delete().eq('id', parseInt(id, 10));
+      } else {
+        await client.from('orders').delete().eq('order_number', String(id));
+      }
+    } catch (e) {
+      console.warn("Supabase delete order error:", e);
+    }
   }
   return true;
 }
@@ -1522,33 +1533,55 @@ async function dbSaveQuotationSettings(settings) {
 // Quotations List CRUD (Cloud-First Sync)
 async function dbGetQuotations() {
   let local = getLocalCollection('sasi_quotations');
-  if (local === null || !Array.isArray(local) || local.length === 0) {
+  if (local === null) {
     saveLocalCollection('sasi_quotations', DEFAULT_QUOTATIONS);
     local = DEFAULT_QUOTATIONS;
-  } else {
-    // Ensure default reference quote 1 is always up to date with full customer details
-    const hasQuote1 = local.some(q => q.quote_number === 'SS/QTN/2026/001');
-    if (!hasQuote1) {
-      local = [...DEFAULT_QUOTATIONS, ...local];
-      saveLocalCollection('sasi_quotations', local);
-    }
   }
 
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from('quotations').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        const merged = mergeCollections(data, local, 'quote_number');
-        saveLocalCollection('sasi_quotations', merged);
-        return merged;
+      if (!error && data) {
+        // De-duplicate remote items
+        const cleanRemote = [];
+        const seenRemote = new Set();
+        for (const item of data) {
+          const key = item.quote_number || String(item.id);
+          if (!seenRemote.has(key)) {
+            seenRemote.add(key);
+            cleanRemote.push(item);
+          }
+        }
+        const merged = mergeCollections(cleanRemote, local, 'quote_number');
+        const finalQuotes = [];
+        const finalSeen = new Set();
+        for (const q of merged) {
+          const key = q.quote_number || String(q.id);
+          if (!finalSeen.has(key)) {
+            finalSeen.add(key);
+            finalQuotes.push(q);
+          }
+        }
+        saveLocalCollection('sasi_quotations', finalQuotes);
+        return finalQuotes;
       }
     } catch (e) {
       console.warn("Supabase fetch quotations error:", e);
     }
   }
 
-  return local || DEFAULT_QUOTATIONS;
+  // Deduplicate local
+  const finalLocal = [];
+  const seenL = new Set();
+  (local || []).forEach(q => {
+    const key = q.quote_number || String(q.id);
+    if (!seenL.has(key)) {
+      seenL.add(key);
+      finalLocal.push(q);
+    }
+  });
+  return finalLocal;
 }
 
 async function dbAddQuotation(quote) {
@@ -1620,7 +1653,12 @@ async function dbUpdateQuotation(id, updatedData) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      await client.from('quotations').update(updatedData).or(`id.eq.${id},quote_number.eq.${id}`);
+      const isNum = /^\d+$/.test(String(id));
+      if (isNum) {
+        await client.from('quotations').update(updatedData).eq('id', parseInt(id, 10));
+      } else {
+        await client.from('quotations').update(updatedData).eq('quote_number', String(id));
+      }
     } catch (e) {
       console.warn("Supabase update quotation error:", e);
     }
@@ -1636,7 +1674,12 @@ async function dbDeleteQuotation(id) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      await client.from('quotations').delete().or(`id.eq.${id},quote_number.eq.${id}`);
+      const isNum = /^\d+$/.test(String(id));
+      if (isNum) {
+        await client.from('quotations').delete().eq('id', parseInt(id, 10));
+      } else {
+        await client.from('quotations').delete().eq('quote_number', String(id));
+      }
     } catch (e) {
       console.warn("Supabase delete quotation error:", e);
     }

@@ -530,7 +530,7 @@ async function handleQuotationStatusChange(id, newStatus) {
 async function handleDeleteQuotation(id) {
   if (confirm("Are you sure you want to delete this quotation record?")) {
     await dbDeleteQuotation(id);
-    loadQuotations();
+    await loadQuotations();
   }
 }
 
@@ -683,13 +683,13 @@ function resetInquiriesFilter() {
 
 async function handleInquiryStatusChange(id, newStatus) {
   await dbUpdateInquiryStatus(id, newStatus);
-  loadQuotations();
+  await loadQuotations();
 }
 
 async function handleDeleteInquiry(id) {
   if (confirm("Are you sure you want to delete this customer inquiry?")) {
     await dbDeleteInquiry(id);
-    loadQuotations();
+    await loadQuotations();
   }
 }
 
