@@ -269,11 +269,9 @@ function downloadCSV(filename, headers, rows) {
   document.body.removeChild(link);
 }
 
-// Global Quotations & Inquiries Engine State
+// Global Quotations Engine State
 let allQuotationsRecords = [];
-let allInquiriesRecords = [];
 let currentQuoteDatePreset = 'all';
-let currentInquiryDatePreset = 'all';
 let currentQuotationSubTab = 'official';
 let activeQuotationEditingId = null;
 let activeQuotationItems = [];
@@ -721,9 +719,6 @@ async function convertInquiryToQuotation(inquiryId) {
   }
 }
 
-function openNewInquiryModal() {
-  openCrudModal('inquiry', null);
-}
 
 function exportInquiriesCSV() {
   if (!allInquiriesRecords || allInquiriesRecords.length === 0) {
