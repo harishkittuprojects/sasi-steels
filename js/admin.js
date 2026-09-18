@@ -218,6 +218,16 @@ async function handlePinUnlockSubmit(e) {
     const isCorrect = await dbVerifySecurityPin(enteredPin);
     if (isCorrect) {
       const targetTab = pendingUnlockTab || currentActiveTab;
+      
+      // Auto-relock all other protected sections
+      PROTECTED_SECTIONS.forEach(sec => {
+        if (sec !== targetTab) {
+          sectionLockState[sec] = true;
+          updateSectionLockIcon(sec, true);
+        }
+      });
+
+      // Unlock only the selected target section
       sectionLockState[targetTab] = false;
       updateSectionLockIcon(targetTab, false);
       closePinLockModal();
@@ -374,9 +384,15 @@ async function handleChangePinSubmit(e) {
   }
 }
 
-// Tab Switching Interceptor
+// Tab Switching Interceptor with Auto-Relock on navigation
 function switchTab(tabName) {
-  // If target section is protected and currently locked, intercept and show PIN modal
+  // Whenever navigating away from any protected section, automatically re-lock it immediately!
+  if (PROTECTED_SECTIONS.includes(currentActiveTab) && currentActiveTab !== tabName) {
+    sectionLockState[currentActiveTab] = true;
+    updateSectionLockIcon(currentActiveTab, true);
+  }
+
+  // If target section is protected and locked, intercept and show PIN modal
   if (PROTECTED_SECTIONS.includes(tabName) && sectionLockState[tabName] === true) {
     openPinLockModal(tabName);
     return;
