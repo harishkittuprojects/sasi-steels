@@ -1243,131 +1243,131 @@ function generateQuotationPaperHTML(quote, settings) {
     const amt = parseFloat(it.amount) || (q * r);
 
     const imgTag = it.image_url
-      ? `<img src="${it.image_url}" alt="Product" style="max-height: 110px; max-width: 95px; object-fit: contain; margin: 0 auto; display: block;" onerror="this.style.display='none'" />`
-      : `<div style="height: 60px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 10px;"></div>`;
+      ? `<img src="${it.image_url}" alt="Product" style="max-height: 65px; max-width: 80px; object-fit: contain; margin: 0 auto; display: block;" onerror="this.style.display='none'" />`
+      : `<div style="height: 40px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 10px;"></div>`;
 
     return `
-      <tr style="border: 1px solid #333333; vertical-align: middle;">
-        <td style="border: 1px solid #333333; padding: 10px 4px; text-align: center; font-weight: 500; font-size: 11px;">${idx + 1}</td>
-        <td style="border: 1px solid #333333; padding: 6px 4px; text-align: center; width: 110px; background: #fafafa;">${imgTag}</td>
-        <td style="border: 1px solid #333333; padding: 10px 8px; text-align: center; font-weight: 700; font-size: 11px; text-transform: uppercase;">${it.description || ''}</td>
-        <td style="border: 1px solid #333333; padding: 10px 8px; text-align: center; font-weight: 600; font-size: 11px; text-transform: uppercase;">${it.finish || 'POWDER COATING'}</td>
-        <td style="border: 1px solid #333333; padding: 10px 4px; text-align: center; font-weight: 600; font-size: 11px;">${q}</td>
-        <td style="border: 1px solid #333333; padding: 10px 6px; text-align: center; font-weight: 600; font-size: 11px;">${r.toLocaleString('en-IN')}</td>
-        <td style="border: 1px solid #333333; padding: 10px 8px; text-align: right; font-weight: 700; font-size: 11px; white-space: nowrap;">₹ ${amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <tr style="border: 1px solid #333333; vertical-align: middle; page-break-inside: avoid;">
+        <td style="border: 1px solid #333333; padding: 6px 3px; text-align: center; font-weight: 500; font-size: 10.5px;">${idx + 1}</td>
+        <td style="border: 1px solid #333333; padding: 4px 3px; text-align: center; width: 95px; background: #fafafa;">${imgTag}</td>
+        <td style="border: 1px solid #333333; padding: 6px 6px; text-align: center; font-weight: 700; font-size: 10.5px; text-transform: uppercase;">${it.description || ''}</td>
+        <td style="border: 1px solid #333333; padding: 6px 6px; text-align: center; font-weight: 600; font-size: 10px; text-transform: uppercase;">${it.finish || 'POWDER COATING'}</td>
+        <td style="border: 1px solid #333333; padding: 6px 3px; text-align: center; font-weight: 600; font-size: 10.5px;">${q}</td>
+        <td style="border: 1px solid #333333; padding: 6px 4px; text-align: center; font-weight: 600; font-size: 10.5px;">${r.toLocaleString('en-IN')}</td>
+        <td style="border: 1px solid #333333; padding: 6px 6px; text-align: right; font-weight: 700; font-size: 10.5px; white-space: nowrap;">₹ ${amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
       </tr>
     `;
   }).join('');
 
   return `
-    <div style="max-width: 820px; margin: 0 auto; background: #ffffff; color: #000000; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 11px; border: 1px solid #333333; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+    <div style="width: 100%; max-width: 740px; margin: 0 auto; background: #ffffff; color: #000000; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 10.5px; border: 1px solid #333333; box-sizing: border-box;">
       
       <!-- 1. TOP HEADER BANNER (STEEL SLATE BLUE WITH OFFICIAL BRAND LOGO) -->
-      <div style="background: #8EA9DB; color: #000000; padding: 10px 16px; border-bottom: 1px solid #333333; display: flex; align-items: center; justify-content: center; gap: 14px;">
-        <img src="${companyLogo}" alt="SASI Steels Logo" style="height: 60px; max-width: 80px; object-fit: contain; border-radius: 8px; background: #ffffff; padding: 3px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-shrink: 0;" onerror="this.style.display='none'" />
+      <div style="background: #8EA9DB; color: #000000; padding: 8px 14px; border-bottom: 1px solid #333333; display: flex; align-items: center; justify-content: center; gap: 12px; page-break-inside: avoid;">
+        <img src="${companyLogo}" alt="SASI Steels Logo" style="height: 52px; max-width: 75px; object-fit: contain; border-radius: 6px; background: #ffffff; padding: 2px; box-shadow: 0 1px 4px rgba(0,0,0,0.2); flex-shrink: 0;" onerror="this.style.display='none'" />
         <div style="text-align: center; flex: 1;">
-          <div style="font-size: 14px; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase;">${companyName}</div>
-          <div style="font-size: 11px; font-weight: 600; margin-top: 2px;">${companyAddress}</div>
-          <div style="font-size: 11px; font-weight: 700; margin-top: 1px;">GSTIN/UIN : ${companyGstin}</div>
+          <div style="font-size: 13.5px; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase;">${companyName}</div>
+          <div style="font-size: 10.5px; font-weight: 600; margin-top: 1px;">${companyAddress}</div>
+          <div style="font-size: 10.5px; font-weight: 700; margin-top: 1px;">GSTIN/UIN : ${companyGstin}</div>
         </div>
       </div>
 
       <!-- 2. DATE & CLIENT DETAILS BAR -->
-      <div style="display: grid; grid-template-columns: 2fr 1.2fr 2.8fr; border-bottom: 1px solid #333333; background: #FCE4D6; font-size: 11px; line-height: 1.35;">
-        <div style="padding: 6px 10px; font-weight: 700; border-right: 1px solid #333333; display: flex; align-items: center;">
+      <div style="display: grid; grid-template-columns: 2fr 1.2fr 2.8fr; border-bottom: 1px solid #333333; background: #FCE4D6; font-size: 10.5px; line-height: 1.3; page-break-inside: avoid;">
+        <div style="padding: 5px 8px; font-weight: 700; border-right: 1px solid #333333; display: flex; align-items: center;">
           Date : ${displayDate}
         </div>
         <div style="border-right: 1px solid #333333; background: #FCE4D6;"></div>
-        <div style="padding: 6px 10px; font-weight: 700; font-size: 10.5px;">
+        <div style="padding: 5px 8px; font-weight: 700; font-size: 10px;">
           <div>Client : ${quote.customer_name}${quote.company_name ? ' (' + quote.company_name + ')' : ''}</div>
           <div style="font-weight: 600; text-transform: uppercase;">${quote.customer_address || 'KHAMMAM'}</div>
         </div>
       </div>
 
       <!-- 3. PRODUCT TABLE -->
-      <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 11px;">
+      <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 10.5px;">
         <thead>
-          <tr style="background: #E2E8F0; font-weight: 800; font-size: 11px; text-transform: uppercase;">
-            <th style="border: 1px solid #333333; padding: 7px 4px; width: 45px;">S.No</th>
-            <th style="border: 1px solid #333333; padding: 7px 4px; width: 115px;">IMAGES</th>
-            <th style="border: 1px solid #333333; padding: 7px 6px;">DESCRIPTION</th>
-            <th style="border: 1px solid #333333; padding: 7px 6px; width: 140px;">FINISH</th>
-            <th style="border: 1px solid #333333; padding: 7px 4px; width: 50px;">QTY</th>
-            <th style="border: 1px solid #333333; padding: 7px 6px; width: 95px;">RATE/UNIT</th>
-            <th style="border: 1px solid #333333; padding: 7px 8px; width: 115px; text-align: center;">AMOUNT</th>
+          <tr style="background: #E2E8F0; font-weight: 800; font-size: 10.5px; text-transform: uppercase; page-break-inside: avoid;">
+            <th style="border: 1px solid #333333; padding: 5px 3px; width: 40px;">S.No</th>
+            <th style="border: 1px solid #333333; padding: 5px 3px; width: 100px;">IMAGES</th>
+            <th style="border: 1px solid #333333; padding: 5px 5px;">DESCRIPTION</th>
+            <th style="border: 1px solid #333333; padding: 5px 5px; width: 130px;">FINISH</th>
+            <th style="border: 1px solid #333333; padding: 5px 3px; width: 45px;">QTY</th>
+            <th style="border: 1px solid #333333; padding: 5px 5px; width: 85px;">RATE/UNIT</th>
+            <th style="border: 1px solid #333333; padding: 5px 6px; width: 105px; text-align: center;">AMOUNT</th>
           </tr>
         </thead>
         <tbody>
           ${itemsHtml}
 
           <!-- BANK DETAILS ROW 1 + TOTAL -->
-          <tr style="border: 1px solid #333333;">
-            <td colspan="5" style="border: 1px solid #333333; padding: 6px 10px; text-align: center; font-weight: 800; text-transform: uppercase; background: #E2E8F0;">
+          <tr style="border: 1px solid #333333; page-break-inside: avoid;">
+            <td colspan="5" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 800; text-transform: uppercase; background: #E2E8F0;">
               COMPANY BANK DETAILS
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 800; text-align: center; text-transform: uppercase;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 800; text-align: center; text-transform: uppercase;">
               TOTAL
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 800; text-align: right; white-space: nowrap;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 800; text-align: right; white-space: nowrap;">
               ₹ ${subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
 
           <!-- BANK DETAILS ROW 2 + PACKING CHARGES -->
-          <tr style="border: 1px solid #333333;">
-            <td colspan="3" style="border: 1px solid #333333; padding: 6px 10px; text-align: center; font-weight: 700; font-size: 10.5px;">
+          <tr style="border: 1px solid #333333; page-break-inside: avoid;">
+            <td colspan="3" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 700; font-size: 10px;">
               Bank Name : ${bank.bank_name || 'STATE BANK OF INDIA, Arundalpet'}
             </td>
-            <td colspan="2" style="border: 1px solid #333333; padding: 6px 10px; text-align: center; font-weight: 700; font-size: 10px;">
+            <td colspan="2" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 700; font-size: 9.5px;">
               ${bank.company_phone || settings.company_phone || 'PH: 9949321664, OFFICE: 8333991114(OR)5'}
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 700; text-align: center; background: #FCE4D6; font-size: 10px; text-transform: uppercase;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 700; text-align: center; background: #FCE4D6; font-size: 9.5px; text-transform: uppercase;">
               PACKING CHARGES ${packingCharges > 0 ? (Math.round((packingCharges / subTotal) * 100) || 2) + '%' : '2%'}
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 600; text-align: right; white-space: nowrap;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 600; text-align: right; white-space: nowrap;">
               ₹ ${packingCharges.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
 
           <!-- BANK DETAILS ROW 3 + AFTER PACKING TOTAL -->
-          <tr style="border: 1px solid #333333;">
-            <td colspan="3" style="border: 1px solid #333333; padding: 6px 10px; text-align: center; font-weight: 800; font-size: 11px;">
+          <tr style="border: 1px solid #333333; page-break-inside: avoid;">
+            <td colspan="3" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 800; font-size: 10.5px;">
               A/C NO: ${bank.account_number || '42384233004'}
             </td>
-            <td colspan="2" style="border: 1px solid #333333; padding: 6px 10px; text-align: center; font-weight: 600; font-size: 10px;">
+            <td colspan="2" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 600; font-size: 9.5px;">
               ${bank.ifsc_code ? 'IFSC: ' + bank.ifsc_code : ''} ${bank.upi_id ? '• UPI: ' + bank.upi_id : ''}
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 800; text-align: center; background: #FCE4D6; font-size: 9.5px; text-transform: uppercase; line-height: 1.2;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 800; text-align: center; background: #FCE4D6; font-size: 9px; text-transform: uppercase; line-height: 1.2;">
               AFTER PACKING CHARGES TOTAL
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 800; text-align: right; white-space: nowrap;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 800; text-align: right; white-space: nowrap;">
               ₹ ${afterPacking.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
 
           <!-- TERMS HEADER + GST -->
-          <tr style="border: 1px solid #333333;">
-            <td colspan="5" style="border: 1px solid #333333; padding: 5px 10px; text-align: left; font-weight: 800; text-transform: uppercase; background: #C6EFCE; font-size: 10.5px; color: #276A3C;">
+          <tr style="border: 1px solid #333333; page-break-inside: avoid;">
+            <td colspan="5" style="border: 1px solid #333333; padding: 4px 8px; text-align: left; font-weight: 800; text-transform: uppercase; background: #C6EFCE; font-size: 10px; color: #276A3C;">
               TERMS & CONDITIONS
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 700; text-align: center; text-transform: uppercase;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 700; text-align: center; text-transform: uppercase;">
               GST ${gstRate}%
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 700; text-align: right; white-space: nowrap;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 700; text-align: right; white-space: nowrap;">
               ₹ ${gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
 
           <!-- TERMS ROW 1 + GRAND TOTAL -->
-          <tr style="border: 1px solid #333333; vertical-align: middle;">
-            <td style="border: 1px solid #333333; padding: 4px 4px; text-align: center; font-weight: 600;">1</td>
-            <td colspan="4" style="border: 1px solid #333333; padding: 4px 8px; text-align: left; font-size: 10px; line-height: 1.3;">
+          <tr style="border: 1px solid #333333; vertical-align: middle; page-break-inside: avoid;">
+            <td style="border: 1px solid #333333; padding: 3px 3px; text-align: center; font-weight: 600;">1</td>
+            <td colspan="4" style="border: 1px solid #333333; padding: 3px 6px; text-align: left; font-size: 9.5px; line-height: 1.25;">
               ${termsList[0] || 'Items will be ready within 30-45 working days form the date of Approval.'}
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 900; text-align: center; background: #FCE4D6; text-transform: uppercase; font-size: 11px;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 900; text-align: center; background: #FCE4D6; text-transform: uppercase; font-size: 10.5px;">
               GRAND TOTAL
             </td>
-            <td style="border: 1px solid #333333; padding: 6px 8px; font-weight: 900; text-align: right; white-space: nowrap; font-size: 11px;">
+            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 900; text-align: right; white-space: nowrap; font-size: 10.5px;">
               ₹ ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
@@ -1376,16 +1376,16 @@ function generateQuotationPaperHTML(quote, settings) {
           ${termsList.slice(1).map((t, idx) => {
             const isLast = idx === termsList.length - 2;
             return `
-              <tr style="border: 1px solid #333333; vertical-align: middle;">
-                <td style="border: 1px solid #333333; padding: 4px 4px; text-align: center; font-weight: 600;">${idx + 2}</td>
-                <td colspan="4" style="border: 1px solid #333333; padding: 4px 8px; text-align: left; font-size: 10px; line-height: 1.3;">
+              <tr style="border: 1px solid #333333; vertical-align: middle; page-break-inside: avoid;">
+                <td style="border: 1px solid #333333; padding: 3px 3px; text-align: center; font-weight: 600;">${idx + 2}</td>
+                <td colspan="4" style="border: 1px solid #333333; padding: 3px 6px; text-align: left; font-size: 9.5px; line-height: 1.25;">
                   ${t}
                 </td>
                 ${isLast ? `
-                  <td style="border: 1px solid #333333; padding: 4px 8px; font-weight: 800; text-align: center; font-size: 10px; text-transform: uppercase;">
+                  <td style="border: 1px solid #333333; padding: 4px 6px; font-weight: 800; text-align: center; font-size: 9.5px; text-transform: uppercase;">
                     GRAND TOTAL
                   </td>
-                  <td style="border: 1px solid #333333; padding: 4px 8px; font-weight: 800; text-align: right; white-space: nowrap; font-size: 10.5px;">
+                  <td style="border: 1px solid #333333; padding: 4px 6px; font-weight: 800; text-align: right; white-space: nowrap; font-size: 10px;">
                     ₹ ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 ` : `
@@ -1904,25 +1904,113 @@ async function downloadPreviewPDF() {
   }
 }
 
+// Helper: Convert Image URL or local file path to Base64 Data URL for html2canvas
+async function urlToBase64(url) {
+  if (!url) return '';
+  if (typeof url === 'string' && url.startsWith('data:image/')) return url;
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result || url);
+      reader.onerror = () => resolve(url);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = function() {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || img.width || 120;
+          canvas.height = img.naturalHeight || img.height || 120;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.92));
+        } catch (err) {
+          resolve(url);
+        }
+      };
+      img.onerror = function() {
+        resolve(url);
+      };
+      img.src = url;
+    });
+  }
+}
+
 async function generatePdfDocument(quote, settings) {
   if (typeof html2pdf === 'undefined') {
     printQuotationDocument();
     return;
   }
 
+  // Clone and pre-convert image URLs to Base64 to ensure immediate synchronous render in html2canvas
+  const clonedQuote = JSON.parse(JSON.stringify(quote));
+  if (clonedQuote.items && Array.isArray(clonedQuote.items)) {
+    for (let it of clonedQuote.items) {
+      if (it.image_url) {
+        try {
+          const b64 = await urlToBase64(it.image_url);
+          if (b64) it.image_url = b64;
+        } catch (e) {}
+      }
+    }
+  }
+
+  const clonedSettings = { ...settings };
+  if (clonedSettings.company_logo) {
+    try {
+      const logoB64 = await urlToBase64(clonedSettings.company_logo);
+      if (logoB64) clonedSettings.company_logo = logoB64;
+    } catch (e) {}
+  }
+
+  // Create isolated container positioned absolutely (NOT fixed to avoid viewport clipping)
   const container = document.createElement('div');
-  container.innerHTML = generateQuotationPaperHTML(quote, settings);
-  container.style.padding = '15px';
+  container.id = 'sasi-pdf-export-temp-container';
+  container.innerHTML = generateQuotationPaperHTML(clonedQuote, clonedSettings);
+  container.style.position = 'absolute';
+  container.style.top = '0';
+  container.style.left = '0';
+  container.style.width = '780px';
+  container.style.zIndex = '999999';
   container.style.background = '#ffffff';
+  container.style.boxSizing = 'border-box';
+  container.style.margin = '0';
+  container.style.padding = '0';
   document.body.appendChild(container);
+
+  // Wait for all images in container to load completely
+  const imgEls = container.querySelectorAll('img');
+  await Promise.all(Array.from(imgEls).map(img => {
+    if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+    return new Promise(res => {
+      img.onload = res;
+      img.onerror = res;
+      setTimeout(res, 800);
+    });
+  }));
+  await new Promise(r => setTimeout(r, 200));
 
   const cleanNum = (quote.quote_number || 'Quotation').replace(/[^a-zA-Z0-9_-]/g, '_');
   const opt = {
     margin: [6, 6, 6, 6],
     filename: `${cleanNum}_${getLocalDateStr()}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 780,
+      logging: false
+    },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'] }
   };
 
   try {
@@ -1931,7 +2019,9 @@ async function generatePdfDocument(quote, settings) {
     console.error("html2pdf failed, falling back to print:", err);
     printQuotationDocument();
   } finally {
-    document.body.removeChild(container);
+    if (container && container.parentNode) {
+      container.parentNode.removeChild(container);
+    }
   }
 }
 
