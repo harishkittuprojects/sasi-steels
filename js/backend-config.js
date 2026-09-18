@@ -746,8 +746,35 @@ async function dbDeleteProduct(id) {
 }
 
 // 7. GALLERY CRUD (Cloud-First Sync)
+const DEFAULT_GALLERY = [
+  { id: 1, tag_number: '1', title: '100,000 Sq.Ft Pre-Engineered Logistics Warehouse', category: 'Steel Fabrication', location: 'Guntur, Andhra Pradesh', image_url: 'gallery-peb-1.jpg', is_featured: true },
+  { id: 2, tag_number: '2', title: 'High-Pressure Pipe Welding & NDT Testing', category: 'Welding Works', location: 'Industrial Unit, Andhra Pradesh', image_url: 'gallery-welding-1.jpg', is_featured: true },
+  { id: 3, tag_number: '3', title: '4-Tier High-Density Pallet Racking Hub', category: 'Storage & Racks', location: 'E-Commerce Fulfillment Center', image_url: 'gallery-racks-1.jpg', is_featured: true },
+  { id: 4, tag_number: '4', title: 'Structural Mezzanine Floor with Office Platform', category: 'Mezzanine Floors', location: 'Manufacturing Plant, Chennai', image_url: 'gallery-mezzanine-1.jpg', is_featured: true },
+  { id: 5, tag_number: '5', title: 'CNC Fiber Laser Structural Plate Processing', category: 'Steel Fabrication', location: 'SASI Fabrication Yard', image_url: 'gallery-laser-1.jpg', is_featured: true },
+  { id: 6, tag_number: '6', title: 'Multi-Level Industrial Fire Exit Stair Tower', category: 'Steel Fabrication', location: 'Commercial Technology Park', image_url: 'gallery-stairs-1.jpg', is_featured: true }
+];
+
 async function dbGetGallery() {
-  const local = getLocalCollection('sasi_gallery') || [];
+  let local = getLocalCollection('sasi_gallery');
+  if (local === null) {
+    saveLocalCollection('sasi_gallery', DEFAULT_GALLERY);
+    local = DEFAULT_GALLERY;
+  }
+  
+  // Ensure every item has a tag_number if missing from older data
+  let updatedLocal = false;
+  local = (local || []).map((item, idx) => {
+    if (!item.tag_number) {
+      item.tag_number = String(idx + 1);
+      updatedLocal = true;
+    }
+    return item;
+  });
+  if (updatedLocal) {
+    saveLocalCollection('sasi_gallery', local);
+  }
+
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -761,17 +788,18 @@ async function dbGetGallery() {
       console.warn("Supabase fetch gallery error:", e);
     }
   }
-  return local;
+  return local || [];
 }
 
 async function dbAddGalleryItem(item) {
   const newRow = {
     id: Date.now(),
     created_at: new Date().toISOString(),
+    tag_number: String(item.tag_number || '').trim(),
     title: item.title,
     category: item.category,
-    location: item.location,
-    image_url: item.image_url || 'welding-works.jpg',
+    location: item.location || 'Site Project',
+    image_url: item.image_url || 'steel-fabrication.jpg',
     is_featured: true
   };
 
@@ -791,10 +819,31 @@ async function dbAddGalleryItem(item) {
         saveLocalCollection('sasi_gallery', curList);
         return { success: true, data };
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Supabase insert gallery error:", e);
+    }
   }
 
   return { success: true, data: [newRow] };
+}
+
+async function dbUpdateGalleryItem(id, updatedFields) {
+  let localList = getLocalCollection('sasi_gallery') || [];
+  const index = localList.findIndex(x => String(x.id) === String(id));
+  if (index !== -1) {
+    localList[index] = { ...localList[index], ...updatedFields };
+    saveLocalCollection('sasi_gallery', localList);
+  }
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      await client.from('gallery').update(updatedFields).eq('id', id);
+    } catch (e) {
+      console.warn("Supabase update gallery error:", e);
+    }
+  }
+  return true;
 }
 
 async function dbDeleteGalleryItem(id) {
@@ -806,7 +855,9 @@ async function dbDeleteGalleryItem(id) {
   if (client) {
     try {
       await client.from('gallery').delete().eq('id', id);
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Supabase delete gallery error:", e);
+    }
   }
   return true;
 }

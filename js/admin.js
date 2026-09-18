@@ -4184,6 +4184,8 @@ async function deleteProductItem(id) {
 }
 
 // ================= 6. GALLERY =================
+let allGalleryRecords = [];
+
 async function loadGallery() {
   const grid = document.getElementById('grid-gallery');
   if (!grid) return;
@@ -4191,14 +4193,16 @@ async function loadGallery() {
 
   try {
     const items = await dbGetGallery();
-    if (!items || items.length === 0) {
+    allGalleryRecords = items || [];
+
+    if (!allGalleryRecords || allGalleryRecords.length === 0) {
       grid.innerHTML = `
         <div class="col-span-4 py-12 text-center text-slate-400">
-          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-pink-400">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-orange-400">
             <i class="fa-solid fa-images"></i>
           </div>
           <p class="text-sm font-bold text-slate-300">No project photos in gallery yet.</p>
-          <p class="text-xs text-slate-500 mt-1 mb-4">Upload site fabrication photos.</p>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Upload site fabrication photos with Tag Numbers.</p>
           <button onclick="openGalleryModal()" class="btn-orange-pill text-xs px-4 py-2">
             <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Upload First Photo
           </button>
@@ -4206,16 +4210,31 @@ async function loadGallery() {
       return;
     }
 
-    grid.innerHTML = items.map(item => `
-      <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group aspect-square">
-        <img src="${item.image_url}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent flex flex-col justify-end p-3">
-          <span class="text-[10px] font-bold text-orange-400 uppercase">${item.category}</span>
-          <h4 class="text-xs font-bold text-white leading-tight">${item.title}</h4>
+    grid.innerHTML = allGalleryRecords.map(item => `
+      <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group aspect-square shadow-lg flex flex-col justify-end">
+        <img src="${item.image_url}" alt="${item.title}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent"></div>
+        
+        <!-- Tag Number Badge on top left -->
+        <div class="absolute top-2.5 left-2.5 z-10 px-2.5 py-1 rounded-xl bg-orange-600 text-white font-black text-xs shadow-md border border-orange-400/40 flex items-center gap-1">
+          <i class="fa-solid fa-tag text-[10px]"></i> Tag No: ${item.tag_number || item.id}
         </div>
-        <button onclick="deleteGalleryItem('${item.id}')" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow">
-          <i class="fa-solid fa-trash text-[10px]"></i>
-        </button>
+
+        <!-- Action buttons on top right -->
+        <div class="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
+          <button onclick="openGalleryModal('${item.id}')" title="Edit Photo & Tag No" class="w-7 h-7 rounded-full bg-slate-800/90 hover:bg-cyan-500 text-cyan-400 hover:text-white flex items-center justify-center text-xs shadow backdrop-blur-sm transition-colors">
+            <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+          </button>
+          <button onclick="deleteGalleryItem('${item.id}')" title="Delete Photo" class="w-7 h-7 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow backdrop-blur-sm transition-colors">
+            <i class="fa-solid fa-trash text-[10px]"></i>
+          </button>
+        </div>
+
+        <div class="relative z-10 p-3">
+          <span class="text-[10px] font-bold text-orange-400 uppercase tracking-wider">${item.category}</span>
+          <h4 class="text-xs font-bold text-white leading-tight mt-0.5">${item.title}</h4>
+          ${item.location ? `<p class="text-[10px] text-slate-300 mt-1 flex items-center gap-1"><i class="fa-solid fa-location-dot text-orange-400"></i> ${item.location}</p>` : ''}
+        </div>
       </div>
     `).join('');
   } catch (err) {
@@ -4224,34 +4243,68 @@ async function loadGallery() {
   }
 }
 
-function openGalleryModal() {
+function openGalleryModal(id = null) {
   activeModalType = 'gallery';
-  editingItemId = null;
-  document.getElementById('crud-modal-title').textContent = 'Upload Project Photo (Cloudinary)';
-  document.getElementById('crud-modal-subtitle').textContent = 'Add real site fabrication photos to the company showcase.';
+  editingItemId = id;
+
+  let existing = null;
+  if (id) {
+    existing = allGalleryRecords.find(g => String(g.id) === String(id));
+  }
+
+  // Calculate next suggested Tag Number if adding new
+  let nextTag = '1';
+  if (!existing && allGalleryRecords.length > 0) {
+    const numericTags = allGalleryRecords
+      .map(g => parseInt(g.tag_number, 10))
+      .filter(n => !isNaN(n));
+    if (numericTags.length > 0) {
+      nextTag = String(Math.max(...numericTags) + 1);
+    } else {
+      nextTag = String(allGalleryRecords.length + 1);
+    }
+  }
+
+  document.getElementById('crud-modal-title').textContent = existing ? `Edit Gallery Photo (Tag No: ${existing.tag_number || existing.id})` : 'Upload New Project Photo';
+  document.getElementById('crud-modal-subtitle').textContent = 'Assign a unique Tag Number, title, category, and site fabrication photo.';
 
   document.getElementById('crud-form-fields').innerHTML = `
-    <div>
-      <label class="block text-slate-300 font-bold mb-1">Project Title</label>
-      <input type="text" name="title" required placeholder="e.g. 50-Ton Heavy PEB Warehouse Truss Erection" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="sm:col-span-1">
+        <label class="block text-slate-300 font-bold mb-1"><i class="fa-solid fa-tag text-orange-400 mr-1"></i> Tag No. <span class="text-orange-500">*</span></label>
+        <input type="text" name="tag_number" required value="${existing ? (existing.tag_number || '') : nextTag}" placeholder="e.g. 1, 2, 3..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-orange-500/70 text-orange-400 font-bold text-sm focus:outline-none focus:border-orange-400" />
+        <p class="text-[10px] text-slate-400 mt-1">Must be unique (e.g. 1, 2, 3...)</p>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-slate-300 font-bold mb-1">Project Title <span class="text-orange-500">*</span></label>
+        <input type="text" name="title" required value="${existing ? existing.title : ''}" placeholder="e.g. 50-Ton Heavy PEB Warehouse Truss Erection" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Division / Category</label>
+        <select name="category" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          <option value="Steel Fabrication" ${existing && existing.category === 'Steel Fabrication' ? 'selected' : ''}>Steel Fabrication</option>
+          <option value="Welding Works" ${existing && existing.category === 'Welding Works' ? 'selected' : ''}>Welding Works</option>
+          <option value="Storage & Racks" ${existing && existing.category === 'Storage & Racks' ? 'selected' : ''}>Storage & Racks</option>
+          <option value="Mezzanine Floors" ${existing && existing.category === 'Mezzanine Floors' ? 'selected' : ''}>Mezzanine Floors</option>
+          <option value="Custom Interiors" ${existing && existing.category === 'Custom Interiors' ? 'selected' : ''}>Custom Interiors & Dividers</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Site Location</label>
+        <input type="text" name="location" value="${existing && existing.location ? existing.location : ''}" placeholder="e.g. Guntur Industrial Area" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
     </div>
     <div>
-      <label class="block text-slate-300 font-bold mb-1">Division / Category</label>
-      <select name="category" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
-        <option value="Steel Fabrication">Steel Fabrication</option>
-        <option value="Welding Works">Welding Works</option>
-        <option value="Storage & Racks">Storage & Racks</option>
-        <option value="Mezzanine Floors">Mezzanine Floors</option>
-        <option value="Custom Interiors">Custom Interiors & Dividers</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-slate-300 font-bold mb-1">Project Photo (Cloudinary)</label>
-      <input type="file" id="gallery-img-file" required accept="image/*" class="w-full text-slate-400 text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-600 file:text-white" />
-    </div>
-    <div>
-      <label class="block text-slate-300 font-bold mb-1">Site Location</label>
-      <input type="text" name="location" placeholder="e.g. Guntur Industrial Area" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      <label class="block text-slate-300 font-bold mb-1">${existing ? 'Replace Photo (Leave empty to keep current)' : 'Project Photo (Cloudinary / Local) <span class="text-orange-500">*</span>'}</label>
+      ${existing && existing.image_url ? `
+        <div class="flex items-center gap-3 mb-2 p-2 bg-slate-900 rounded-xl border border-slate-800">
+          <img src="${existing.image_url}" alt="Current preview" class="w-12 h-12 rounded-lg object-cover border border-slate-700" />
+          <div class="text-xs text-slate-400">Current photo: <span class="text-slate-200 font-mono">${existing.image_url.split('/').pop().slice(0, 30)}</span></div>
+        </div>
+      ` : ''}
+      <input type="file" id="gallery-img-file" ${existing ? '' : 'required'} accept="image/*" class="w-full text-slate-400 text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-600 file:text-white cursor-pointer" />
     </div>
   `;
   document.getElementById('crud-modal').classList.remove('hidden');
@@ -4453,7 +4506,29 @@ async function handleCrudSubmit(e) {
       loadProducts();
     }
     else if (activeModalType === 'gallery') {
-      let imgUrl = 'steel-fabrication.jpg';
+      const tagNumber = (formData.get('tag_number') || '').trim();
+      if (!tagNumber) {
+        alert("Please enter a Tag Number for this photo.");
+        btn.disabled = false;
+        btn.innerHTML = `Save Details`;
+        return;
+      }
+
+      // Check unique tag number validation (must not duplicate existing photo's tag)
+      const duplicate = allGalleryRecords.find(g => 
+        String(g.tag_number || '').trim().toLowerCase() === tagNumber.toLowerCase() &&
+        String(g.id) !== String(editingItemId)
+      );
+      if (duplicate) {
+        alert(`⚠️ Tag Number "${tagNumber}" is already assigned to photo: "${duplicate.title}". Please enter a unique Tag Number.`);
+        btn.disabled = false;
+        btn.innerHTML = `Save Details`;
+        return;
+      }
+
+      let existing = editingItemId ? allGalleryRecords.find(g => String(g.id) === String(editingItemId)) : null;
+      let imgUrl = existing ? existing.image_url : 'steel-fabrication.jpg';
+
       const fileInput = document.getElementById('gallery-img-file');
       if (fileInput && fileInput.files[0]) {
         try {
@@ -4462,20 +4537,26 @@ async function handleCrudSubmit(e) {
         } catch (e) {}
 
         // 100% Reliable Fallback: Convert to optimized WebP/JPEG data URL if Cloudinary fails
-        if ((!imgUrl || imgUrl === 'steel-fabrication.jpg') && typeof fileToOptimizedDataUrl === 'function') {
+        if ((!imgUrl || imgUrl === 'steel-fabrication.jpg' || fileInput.files[0]) && typeof fileToOptimizedDataUrl === 'function') {
           const directDataUrl = await fileToOptimizedDataUrl(fileInput.files[0], 1200, 0.85);
           if (directDataUrl) imgUrl = directDataUrl;
         }
       }
 
       const galleryItem = {
+        tag_number: tagNumber,
         title: formData.get('title'),
         category: formData.get('category'),
         location: formData.get('location') || 'Site Project',
         image_url: imgUrl,
         is_featured: true
       };
-      await dbAddGalleryItem(galleryItem);
+
+      if (editingItemId) {
+        await dbUpdateGalleryItem(editingItemId, galleryItem);
+      } else {
+        await dbAddGalleryItem(galleryItem);
+      }
       loadGallery();
     }
 
