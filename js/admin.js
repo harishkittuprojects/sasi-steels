@@ -595,6 +595,45 @@ const OFFICIAL_COMPANY_TERMS = [
   'This Quotation is valid for 15days from the date of issue.'
 ];
 
+function sanitizeQuotationTerms(terms) {
+  if (!Array.isArray(terms) || terms.length === 0) {
+    return [...OFFICIAL_COMPANY_TERMS];
+  }
+  const isOldOutdated = terms.some(t => typeof t === 'string' && (
+    t.includes('Prices are valid for 15 days from the date of quotation') ||
+    t.includes('drawing approval') ||
+    t.includes('Guntur jurisdiction only')
+  ));
+  if (isOldOutdated || terms.length < 7) {
+    return [...OFFICIAL_COMPANY_TERMS];
+  }
+  return terms.filter(t => t && String(t).trim().length > 0);
+}
+
+function sanitizeQuotationSettings(settings) {
+  const s = { ...DEFAULT_QUOTATION_SETTINGS, ...(settings || {}) };
+  if (!s.company_address || s.company_address.includes('Hosanna Church') || s.company_address.includes('522034')) {
+    s.company_address = DEFAULT_QUOTATION_SETTINGS.company_address;
+  }
+  if (!s.company_phone || s.company_phone.includes('83339 99912')) {
+    s.company_phone = DEFAULT_QUOTATION_SETTINGS.company_phone;
+  }
+  if (!s.company_gstin || s.company_gstin.includes('37AAAAA0000A1Z5')) {
+    s.company_gstin = DEFAULT_QUOTATION_SETTINGS.company_gstin;
+  }
+  if (!s.bank_name || s.bank_name === 'State Bank of India') {
+    s.bank_name = DEFAULT_QUOTATION_SETTINGS.bank_name;
+  }
+  if (!s.account_number || s.account_number === '39824567123') {
+    s.account_number = DEFAULT_QUOTATION_SETTINGS.account_number;
+  }
+  if (!s.company_logo) {
+    s.company_logo = DEFAULT_QUOTATION_SETTINGS.company_logo;
+  }
+  s.default_terms = sanitizeQuotationTerms(s.default_terms);
+  return s;
+}
+
 // Helper: Convert Image URL or File to Base64 for ExcelJS & PDF
 async function urlToBase64(url) {
   if (!url) return null;
@@ -1106,9 +1145,7 @@ async function openQuotationModal(editId = null, isDuplicate = false) {
         ? JSON.parse(JSON.stringify(existing.items))
         : [{ sno: 1, image_url: '', description: '', finish: 'POWDER COATING', quantity: 1, rate: 0, amount: 0 }];
 
-      activeQuotationTerms = (existing.terms && Array.isArray(existing.terms) && existing.terms.length > 0 && existing.terms.some(t => t && String(t).trim().length > 0))
-        ? JSON.parse(JSON.stringify(existing.terms.filter(t => t && String(t).trim().length > 0)))
-        : (settings.default_terms && settings.default_terms.length > 0 ? [...settings.default_terms] : [...OFFICIAL_COMPANY_TERMS]);
+      activeQuotationTerms = sanitizeQuotationTerms(existing.terms || settings.default_terms);
     }
   } else {
     // New Quotation
@@ -1143,9 +1180,7 @@ async function openQuotationModal(editId = null, isDuplicate = false) {
       { sno: 2, image_url: 'product-sheets.jpg', description: 'Galvalume Corrugated Roofing Sheets (0.50mm AZ-150 Coating)', finish: 'COLOR COATED', quantity: 50, rate: 380, amount: 19000 }
     ];
 
-    activeQuotationTerms = (settings.default_terms && settings.default_terms.length > 0 && settings.default_terms.some(t => t && String(t).trim().length > 0))
-      ? [...settings.default_terms.filter(t => t && String(t).trim().length > 0)]
-      : [...OFFICIAL_COMPANY_TERMS];
+    activeQuotationTerms = sanitizeQuotationTerms(settings.default_terms);
   }
 
   renderQuotationItemRows();
@@ -1533,23 +1568,13 @@ async function saveQuotationFormData() {
 // ================= 5. CORPORATE LIVE A4 PREVIEW ENGINE (MATCHING REFERENCE IMAGE) =================
 
 function generateQuotationPaperHTML(quote, settings) {
-  const companyName = settings.company_name || 'SASI STEEL ENGINEERING & WELDING WORKS';
-  const companyAddress = settings.company_address || '128-56/4, guntur amaravathi road, gorantla,guntur,a.p';
-  const companyGstin = settings.company_gstin || '37AUCPA2925Q1ZG,CODE :37.';
-  const companyLogo = settings.company_logo || 'img/sasi-logo.png';
-  const bank = quote.bank_details || settings;
-  
-  let termsList = [];
-  if (Array.isArray(quote.terms) && quote.terms.length > 0 && quote.terms.some(t => t && String(t).trim().length > 0)) {
-    termsList = quote.terms.filter(t => t && String(t).trim().length > 0);
-  } else if (settings && Array.isArray(settings.default_terms) && settings.default_terms.length > 0 && settings.default_terms.some(t => t && String(t).trim().length > 0)) {
-    termsList = settings.default_terms.filter(t => t && String(t).trim().length > 0);
-  } else {
-    termsList = [...OFFICIAL_COMPANY_TERMS];
-  }
-  if (!termsList || termsList.length === 0) {
-    termsList = [...OFFICIAL_COMPANY_TERMS];
-  }
+  const safeSettings = sanitizeQuotationSettings(settings);
+  const companyName = safeSettings.company_name || 'SASI STEEL ENGINEERING & WELDING WORKS';
+  const companyAddress = safeSettings.company_address || '128-56/4, guntur amaravathi road, gorantla,guntur,a.p';
+  const companyGstin = safeSettings.company_gstin || '37AUCPA2925Q1ZG,CODE :37.';
+  const companyLogo = safeSettings.company_logo || 'img/sasi-logo.png';
+  const bank = quote.bank_details ? sanitizeQuotationSettings(quote.bank_details) : safeSettings;
+  const termsList = sanitizeQuotationTerms(quote.terms || safeSettings.default_terms);
 
   const items = quote.items || [];
   const subTotal = parseFloat(quote.sub_total) || 0;
@@ -1571,58 +1596,58 @@ function generateQuotationPaperHTML(quote, settings) {
     const amt = parseFloat(it.amount) || (q * r);
 
     const imgTag = it.image_url
-      ? `<img src="${it.image_url}" alt="Product" style="max-height: 65px; max-width: 80px; object-fit: contain; margin: 0 auto; display: block;" onerror="this.style.display='none'" />`
-      : `<div style="height: 40px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 10px;"></div>`;
+      ? `<img src="${it.image_url}" alt="Product" style="max-height: 48px; max-width: 65px; object-fit: contain; margin: 0 auto; display: block;" onerror="this.style.display='none'" />`
+      : `<div style="height: 32px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 9px;"></div>`;
 
     return `
       <tr style="border: 1px solid #333333; vertical-align: middle; page-break-inside: avoid;">
-        <td style="border: 1px solid #333333; padding: 6px 3px; text-align: center; font-weight: 500; font-size: 10.5px;">${idx + 1}</td>
-        <td style="border: 1px solid #333333; padding: 4px 3px; text-align: center; width: 95px; background: #fafafa;">${imgTag}</td>
-        <td style="border: 1px solid #333333; padding: 6px 6px; text-align: center; font-weight: 700; font-size: 10.5px; text-transform: uppercase;">${it.description || ''}</td>
-        <td style="border: 1px solid #333333; padding: 6px 6px; text-align: center; font-weight: 600; font-size: 10px; text-transform: uppercase;">${it.finish || 'POWDER COATING'}</td>
-        <td style="border: 1px solid #333333; padding: 6px 3px; text-align: center; font-weight: 600; font-size: 10.5px;">${q}</td>
-        <td style="border: 1px solid #333333; padding: 6px 4px; text-align: center; font-weight: 600; font-size: 10.5px;">${r.toLocaleString('en-IN')}</td>
-        <td style="border: 1px solid #333333; padding: 6px 6px; text-align: right; font-weight: 700; font-size: 10.5px; white-space: nowrap;">₹ ${amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td style="border: 1px solid #333333; padding: 4px 2px; text-align: center; font-weight: 600; font-size: 9.5px;">${idx + 1}</td>
+        <td style="border: 1px solid #333333; padding: 3px 2px; text-align: center; width: 80px; background: #fafafa;">${imgTag}</td>
+        <td style="border: 1px solid #333333; padding: 4px 5px; text-align: center; font-weight: 700; font-size: 9.5px; text-transform: uppercase;">${it.description || ''}</td>
+        <td style="border: 1px solid #333333; padding: 4px 5px; text-align: center; font-weight: 600; font-size: 9px; text-transform: uppercase;">${it.finish || 'POWDER COATING'}</td>
+        <td style="border: 1px solid #333333; padding: 4px 2px; text-align: center; font-weight: 600; font-size: 9.5px;">${q}</td>
+        <td style="border: 1px solid #333333; padding: 4px 3px; text-align: center; font-weight: 600; font-size: 9.5px;">${r.toLocaleString('en-IN')}</td>
+        <td style="border: 1px solid #333333; padding: 4px 5px; text-align: right; font-weight: 700; font-size: 9.5px; white-space: nowrap;">₹ ${amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
       </tr>
     `;
   }).join('');
 
   return `
-    <div style="width: 100%; max-width: 740px; margin: 0 auto; background: #ffffff; color: #000000; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 10.5px; border: 1px solid #333333; box-sizing: border-box;">
+    <div style="width: 100%; max-width: 730px; margin: 0 auto; background: #ffffff; color: #000000; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 9.5px; border: 1px solid #333333; box-sizing: border-box;">
       
       <!-- 1. TOP HEADER BANNER (STEEL SLATE BLUE WITH OFFICIAL BRAND LOGO) -->
-      <div style="background: #8EA9DB; color: #000000; padding: 8px 14px; border-bottom: 1px solid #333333; display: flex; align-items: center; justify-content: center; gap: 12px; page-break-inside: avoid;">
-        <img src="${companyLogo}" alt="SASI Steels Logo" style="height: 52px; max-width: 75px; object-fit: contain; border-radius: 6px; background: #ffffff; padding: 2px; box-shadow: 0 1px 4px rgba(0,0,0,0.2); flex-shrink: 0;" onerror="this.style.display='none'" />
+      <div style="background: #8EA9DB; color: #000000; padding: 6px 12px; border-bottom: 1px solid #333333; display: flex; align-items: center; justify-content: center; gap: 10px; page-break-inside: avoid;">
+        <img src="${companyLogo}" alt="SASI Steels Logo" style="height: 48px; max-width: 70px; object-fit: contain; border-radius: 4px; background: #ffffff; padding: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); flex-shrink: 0;" onerror="this.style.display='none'" />
         <div style="text-align: center; flex: 1;">
-          <div style="font-size: 13.5px; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase;">${companyName}</div>
-          <div style="font-size: 10.5px; font-weight: 600; margin-top: 1px;">${companyAddress}</div>
-          <div style="font-size: 10.5px; font-weight: 700; margin-top: 1px;">GSTIN/UIN : ${companyGstin}</div>
+          <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase; line-height: 1.2;">${companyName}</div>
+          <div style="font-size: 9.5px; font-weight: 600; margin-top: 1px; line-height: 1.2;">${companyAddress}</div>
+          <div style="font-size: 9.5px; font-weight: 700; margin-top: 1px; line-height: 1.2;">GSTIN/UIN : ${companyGstin}</div>
         </div>
       </div>
 
       <!-- 2. DATE & CLIENT DETAILS BAR -->
-      <div style="display: grid; grid-template-columns: 2fr 1.2fr 2.8fr; border-bottom: 1px solid #333333; background: #FCE4D6; font-size: 10.5px; line-height: 1.3; page-break-inside: avoid;">
-        <div style="padding: 5px 8px; font-weight: 700; border-right: 1px solid #333333; display: flex; align-items: center;">
+      <div style="display: grid; grid-template-columns: 2fr 1.2fr 2.8fr; border-bottom: 1px solid #333333; background: #FCE4D6; font-size: 9.5px; line-height: 1.25; page-break-inside: avoid;">
+        <div style="padding: 4px 8px; font-weight: 700; border-right: 1px solid #333333; display: flex; align-items: center;">
           Date : ${displayDate}
         </div>
         <div style="border-right: 1px solid #333333; background: #FCE4D6;"></div>
-        <div style="padding: 5px 8px; font-weight: 700; font-size: 10px;">
+        <div style="padding: 4px 8px; font-weight: 700; font-size: 9.5px;">
           <div>Client : ${quote.customer_name}${quote.company_name ? ' (' + quote.company_name + ')' : ''}</div>
           <div style="font-weight: 600; text-transform: uppercase;">${quote.customer_address || 'KHAMMAM'}</div>
         </div>
       </div>
 
       <!-- 3. PRODUCT TABLE -->
-      <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 10.5px;">
+      <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 9.5px;">
         <thead>
-          <tr style="background: #E2E8F0; font-weight: 800; font-size: 10.5px; text-transform: uppercase; page-break-inside: avoid;">
-            <th style="border: 1px solid #333333; padding: 5px 3px; width: 40px;">S.No</th>
-            <th style="border: 1px solid #333333; padding: 5px 3px; width: 100px;">IMAGES</th>
-            <th style="border: 1px solid #333333; padding: 5px 5px;">DESCRIPTION</th>
-            <th style="border: 1px solid #333333; padding: 5px 5px; width: 130px;">FINISH</th>
-            <th style="border: 1px solid #333333; padding: 5px 3px; width: 45px;">QTY</th>
-            <th style="border: 1px solid #333333; padding: 5px 5px; width: 85px;">RATE/UNIT</th>
-            <th style="border: 1px solid #333333; padding: 5px 6px; width: 105px; text-align: center;">AMOUNT</th>
+          <tr style="background: #E2E8F0; font-weight: 800; font-size: 9.5px; text-transform: uppercase; page-break-inside: avoid;">
+            <th style="border: 1px solid #333333; padding: 4px 2px; width: 35px;">S.No</th>
+            <th style="border: 1px solid #333333; padding: 4px 2px; width: 85px;">IMAGES</th>
+            <th style="border: 1px solid #333333; padding: 4px 4px;">DESCRIPTION</th>
+            <th style="border: 1px solid #333333; padding: 4px 4px; width: 120px;">FINISH</th>
+            <th style="border: 1px solid #333333; padding: 4px 2px; width: 40px;">QTY</th>
+            <th style="border: 1px solid #333333; padding: 4px 3px; width: 80px;">RATE/UNIT</th>
+            <th style="border: 1px solid #333333; padding: 4px 5px; width: 100px; text-align: center;">AMOUNT</th>
           </tr>
         </thead>
         <tbody>
@@ -1630,72 +1655,72 @@ function generateQuotationPaperHTML(quote, settings) {
 
           <!-- BANK DETAILS ROW 1 + TOTAL -->
           <tr style="border: 1px solid #333333; page-break-inside: avoid;">
-            <td colspan="5" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 800; text-transform: uppercase; background: #E2E8F0;">
+            <td colspan="5" style="border: 1px solid #333333; padding: 4px 6px; text-align: center; font-weight: 800; text-transform: uppercase; background: #E2E8F0; font-size: 9.5px;">
               COMPANY BANK DETAILS
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 800; text-align: center; text-transform: uppercase;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 800; text-align: center; text-transform: uppercase; font-size: 9.5px;">
               TOTAL
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 800; text-align: right; white-space: nowrap;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 800; text-align: right; white-space: nowrap; font-size: 9.5px;">
               ₹ ${subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
 
           <!-- BANK DETAILS ROW 2 + PACKING CHARGES -->
           <tr style="border: 1px solid #333333; page-break-inside: avoid;">
-            <td colspan="3" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 700; font-size: 10px;">
+            <td colspan="3" style="border: 1px solid #333333; padding: 4px 6px; text-align: center; font-weight: 700; font-size: 9px;">
               Bank Name : ${bank.bank_name || 'STATE BANK OF INDIA, Arundalpet'}
             </td>
-            <td colspan="2" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 700; font-size: 9.5px;">
-              ${bank.company_phone || settings.company_phone || 'PH: 9949321664, OFFICE: 8333991114(OR)5'}
+            <td colspan="2" style="border: 1px solid #333333; padding: 4px 6px; text-align: center; font-weight: 700; font-size: 9px;">
+              ${bank.company_phone || safeSettings.company_phone || 'PH: 9949321664, OFFICE: 8333991114(OR)5'}
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 700; text-align: center; background: #FCE4D6; font-size: 9.5px; text-transform: uppercase;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 700; text-align: center; background: #FCE4D6; font-size: 9px; text-transform: uppercase;">
               PACKING CHARGES ${packingCharges > 0 ? (Math.round((packingCharges / subTotal) * 100) || 2) + '%' : '2%'}
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 600; text-align: right; white-space: nowrap;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 600; text-align: right; white-space: nowrap; font-size: 9px;">
               ₹ ${packingCharges.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
 
           <!-- BANK DETAILS ROW 3 + AFTER PACKING TOTAL -->
           <tr style="border: 1px solid #333333; page-break-inside: avoid;">
-            <td colspan="3" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 800; font-size: 10.5px;">
+            <td colspan="3" style="border: 1px solid #333333; padding: 4px 6px; text-align: center; font-weight: 800; font-size: 9.5px;">
               A/C NO: ${bank.account_number || '42384233004'}
             </td>
-            <td colspan="2" style="border: 1px solid #333333; padding: 5px 8px; text-align: center; font-weight: 600; font-size: 9.5px;">
+            <td colspan="2" style="border: 1px solid #333333; padding: 4px 6px; text-align: center; font-weight: 600; font-size: 9px;">
               ${bank.ifsc_code ? 'IFSC: ' + bank.ifsc_code : ''} ${bank.upi_id ? '• UPI: ' + bank.upi_id : ''}
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 800; text-align: center; background: #FCE4D6; font-size: 9px; text-transform: uppercase; line-height: 1.2;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 800; text-align: center; background: #FCE4D6; font-size: 8.5px; text-transform: uppercase; line-height: 1.15;">
               AFTER PACKING CHARGES TOTAL
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 800; text-align: right; white-space: nowrap;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 800; text-align: right; white-space: nowrap; font-size: 9.5px;">
               ₹ ${afterPacking.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
 
           <!-- TERMS HEADER + GST -->
           <tr style="border: 1px solid #333333; page-break-inside: avoid;">
-            <td colspan="5" style="border: 1px solid #333333; padding: 4px 8px; text-align: left; font-weight: 800; text-transform: uppercase; background: #C6EFCE; font-size: 10px; color: #276A3C;">
+            <td colspan="5" style="border: 1px solid #333333; padding: 3px 6px; text-align: left; font-weight: 800; text-transform: uppercase; background: #C6EFCE; font-size: 9.5px; color: #276A3C;">
               TERMS & CONDITIONS
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 700; text-align: center; text-transform: uppercase;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 700; text-align: center; text-transform: uppercase; font-size: 9.5px;">
               GST ${gstRate}%
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 700; text-align: right; white-space: nowrap;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 700; text-align: right; white-space: nowrap; font-size: 9.5px;">
               ₹ ${gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
 
           <!-- TERMS ROW 1 + GRAND TOTAL -->
           <tr style="border: 1px solid #333333; vertical-align: middle; page-break-inside: avoid;">
-            <td style="border: 1px solid #333333; padding: 3px 3px; text-align: center; font-weight: 600;">1</td>
-            <td colspan="4" style="border: 1px solid #333333; padding: 3px 6px; text-align: left; font-size: 9.5px; line-height: 1.25;">
+            <td style="border: 1px solid #333333; padding: 2.5px 2px; text-align: center; font-weight: 600; font-size: 9px;">1</td>
+            <td colspan="4" style="border: 1px solid #333333; padding: 2.5px 5px; text-align: left; font-size: 9px; line-height: 1.2;">
               ${termsList[0] || 'Items will be ready within 30-45 working days form the date of Approval.'}
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 900; text-align: center; background: #FCE4D6; text-transform: uppercase; font-size: 10.5px;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 900; text-align: center; background: #FCE4D6; text-transform: uppercase; font-size: 10px;">
               GRAND TOTAL
             </td>
-            <td style="border: 1px solid #333333; padding: 5px 6px; font-weight: 900; text-align: right; white-space: nowrap; font-size: 10.5px;">
+            <td style="border: 1px solid #333333; padding: 4px 5px; font-weight: 900; text-align: right; white-space: nowrap; font-size: 10px;">
               ₹ ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
           </tr>
@@ -1705,15 +1730,15 @@ function generateQuotationPaperHTML(quote, settings) {
             const isLast = idx === termsList.length - 2;
             return `
               <tr style="border: 1px solid #333333; vertical-align: middle; page-break-inside: avoid;">
-                <td style="border: 1px solid #333333; padding: 3px 3px; text-align: center; font-weight: 600;">${idx + 2}</td>
-                <td colspan="4" style="border: 1px solid #333333; padding: 3px 6px; text-align: left; font-size: 9.5px; line-height: 1.25;">
+                <td style="border: 1px solid #333333; padding: 2.5px 2px; text-align: center; font-weight: 600; font-size: 9px;">${idx + 2}</td>
+                <td colspan="4" style="border: 1px solid #333333; padding: 2.5px 5px; text-align: left; font-size: 9px; line-height: 1.2;">
                   ${t}
                 </td>
                 ${isLast ? `
-                  <td style="border: 1px solid #333333; padding: 4px 6px; font-weight: 800; text-align: center; font-size: 9.5px; text-transform: uppercase;">
+                  <td style="border: 1px solid #333333; padding: 3px 5px; font-weight: 800; text-align: center; font-size: 9px; text-transform: uppercase;">
                     GRAND TOTAL
                   </td>
-                  <td style="border: 1px solid #333333; padding: 4px 6px; font-weight: 800; text-align: right; white-space: nowrap; font-size: 10px;">
+                  <td style="border: 1px solid #333333; padding: 3px 5px; font-weight: 800; text-align: right; white-space: nowrap; font-size: 9.5px;">
                     ₹ ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 ` : `

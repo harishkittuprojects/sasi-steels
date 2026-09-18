@@ -1485,6 +1485,46 @@ function generateNextQuoteNumber(existingQuotations = []) {
   return `${prefix}${String(nextNum).padStart(3, '0')}`;
 }
 
+// Helper to ensure official 7 terms are always preserved
+function sanitizeQuotationTerms(terms) {
+  if (!Array.isArray(terms) || terms.length === 0) {
+    return [...DEFAULT_QUOTATION_SETTINGS.default_terms];
+  }
+  const isOldOutdated = terms.some(t => typeof t === 'string' && (
+    t.includes('Prices are valid for 15 days from the date of quotation') ||
+    t.includes('drawing approval') ||
+    t.includes('Guntur jurisdiction only')
+  ));
+  if (isOldOutdated || terms.length < 7) {
+    return [...DEFAULT_QUOTATION_SETTINGS.default_terms];
+  }
+  return terms.filter(t => t && String(t).trim().length > 0);
+}
+
+function sanitizeQuotationSettings(settings) {
+  const s = { ...DEFAULT_QUOTATION_SETTINGS, ...(settings || {}) };
+  if (!s.company_address || s.company_address.includes('Hosanna Church') || s.company_address.includes('522034')) {
+    s.company_address = DEFAULT_QUOTATION_SETTINGS.company_address;
+  }
+  if (!s.company_phone || s.company_phone.includes('83339 99912')) {
+    s.company_phone = DEFAULT_QUOTATION_SETTINGS.company_phone;
+  }
+  if (!s.company_gstin || s.company_gstin.includes('37AAAAA0000A1Z5')) {
+    s.company_gstin = DEFAULT_QUOTATION_SETTINGS.company_gstin;
+  }
+  if (!s.bank_name || s.bank_name === 'State Bank of India') {
+    s.bank_name = DEFAULT_QUOTATION_SETTINGS.bank_name;
+  }
+  if (!s.account_number || s.account_number === '39824567123') {
+    s.account_number = DEFAULT_QUOTATION_SETTINGS.account_number;
+  }
+  if (!s.company_logo) {
+    s.company_logo = DEFAULT_QUOTATION_SETTINGS.company_logo;
+  }
+  s.default_terms = sanitizeQuotationTerms(s.default_terms);
+  return s;
+}
+
 // Quotation Settings CRUD
 async function dbGetQuotationSettings() {
   let local = getLocalCollection('sasi_quotation_settings');
@@ -1498,7 +1538,7 @@ async function dbGetQuotationSettings() {
     try {
       const { data, error } = await client.from('quotation_settings').select('*').limit(1);
       if (!error && data && data.length > 0) {
-        const merged = { ...DEFAULT_QUOTATION_SETTINGS, ...local, ...data[0] };
+        const merged = sanitizeQuotationSettings({ ...DEFAULT_QUOTATION_SETTINGS, ...local, ...data[0] });
         saveLocalCollection('sasi_quotation_settings', merged);
         return merged;
       }
@@ -1507,12 +1547,14 @@ async function dbGetQuotationSettings() {
     }
   }
 
-  return local || DEFAULT_QUOTATION_SETTINGS;
+  const sanitized = sanitizeQuotationSettings(local || DEFAULT_QUOTATION_SETTINGS);
+  saveLocalCollection('sasi_quotation_settings', sanitized);
+  return sanitized;
 }
 
 async function dbSaveQuotationSettings(settings) {
   const current = await dbGetQuotationSettings();
-  const updated = { ...current, ...settings, updated_at: new Date().toISOString() };
+  const updated = sanitizeQuotationSettings({ ...current, ...settings, updated_at: new Date().toISOString() });
   saveLocalCollection('sasi_quotation_settings', updated);
 
   const client = getSupabaseClient();
@@ -1562,7 +1604,10 @@ async function dbGetQuotations() {
           const key = q.quote_number || String(q.id);
           if (!finalSeen.has(key)) {
             finalSeen.add(key);
-            finalQuotes.push(q);
+            finalQuotes.push({
+              ...q,
+              terms: sanitizeQuotationTerms(q.terms)
+            });
           }
         }
         saveLocalCollection('sasi_quotations', finalQuotes);
@@ -1580,7 +1625,10 @@ async function dbGetQuotations() {
     const key = q.quote_number || String(q.id);
     if (!seenL.has(key)) {
       seenL.add(key);
-      finalLocal.push(q);
+      finalLocal.push({
+        ...q,
+        terms: sanitizeQuotationTerms(q.terms)
+      });
     }
   });
   return finalLocal;
