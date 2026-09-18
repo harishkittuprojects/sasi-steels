@@ -585,6 +585,16 @@ let activeQuotationSettings = null;
 let activeCatalogPickerTargetIndex = null;
 let previewingQuotationData = null;
 
+const OFFICIAL_COMPANY_TERMS = [
+  'Items will be ready within 30-45 working days form the date of Approval.',
+  'Price ex-works, 60% Advance along with Work Order, 30% against delivery, balance 10% payment after installation',
+  'Above rates are excluding of GST, will be applicable @ 18%',
+  'Installation/Mechanic/oil of above fixtures on site is not in our scope of work, If it is then it will be charge extra 6-8% on base value for above one lakh, Rs2000 per head below one lakh.',
+  'Above rates are excluding of loading, unloading & transportation Charges, It will be charge extra at actuals, Packing charges 4% extra.',
+  'Above rates are approximately and are likely to be change, according to the (Market/Rawmaterials) conditions.',
+  'This Quotation is valid for 15days from the date of issue.'
+];
+
 // Helper: Convert Image URL or File to Base64 for ExcelJS & PDF
 async function urlToBase64(url) {
   if (!url) return null;
@@ -1096,9 +1106,9 @@ async function openQuotationModal(editId = null, isDuplicate = false) {
         ? JSON.parse(JSON.stringify(existing.items))
         : [{ sno: 1, image_url: '', description: '', finish: 'POWDER COATING', quantity: 1, rate: 0, amount: 0 }];
 
-      activeQuotationTerms = (existing.terms && Array.isArray(existing.terms) && existing.terms.length > 0)
-        ? JSON.parse(JSON.stringify(existing.terms))
-        : (settings.default_terms || [...DEFAULT_QUOTATION_SETTINGS.default_terms]);
+      activeQuotationTerms = (existing.terms && Array.isArray(existing.terms) && existing.terms.length > 0 && existing.terms.some(t => t && String(t).trim().length > 0))
+        ? JSON.parse(JSON.stringify(existing.terms.filter(t => t && String(t).trim().length > 0)))
+        : (settings.default_terms && settings.default_terms.length > 0 ? [...settings.default_terms] : [...OFFICIAL_COMPANY_TERMS]);
     }
   } else {
     // New Quotation
@@ -1133,7 +1143,9 @@ async function openQuotationModal(editId = null, isDuplicate = false) {
       { sno: 2, image_url: 'product-sheets.jpg', description: 'Galvalume Corrugated Roofing Sheets (0.50mm AZ-150 Coating)', finish: 'COLOR COATED', quantity: 50, rate: 380, amount: 19000 }
     ];
 
-    activeQuotationTerms = settings.default_terms || [...DEFAULT_QUOTATION_SETTINGS.default_terms];
+    activeQuotationTerms = (settings.default_terms && settings.default_terms.length > 0 && settings.default_terms.some(t => t && String(t).trim().length > 0))
+      ? [...settings.default_terms.filter(t => t && String(t).trim().length > 0)]
+      : [...OFFICIAL_COMPANY_TERMS];
   }
 
   renderQuotationItemRows();
@@ -1526,7 +1538,18 @@ function generateQuotationPaperHTML(quote, settings) {
   const companyGstin = settings.company_gstin || '37AUCPA2925Q1ZG,CODE :37.';
   const companyLogo = settings.company_logo || 'img/sasi-logo.png';
   const bank = quote.bank_details || settings;
-  const termsList = Array.isArray(quote.terms) && quote.terms.length > 0 ? quote.terms : (settings.default_terms || []);
+  
+  let termsList = [];
+  if (Array.isArray(quote.terms) && quote.terms.length > 0 && quote.terms.some(t => t && String(t).trim().length > 0)) {
+    termsList = quote.terms.filter(t => t && String(t).trim().length > 0);
+  } else if (settings && Array.isArray(settings.default_terms) && settings.default_terms.length > 0 && settings.default_terms.some(t => t && String(t).trim().length > 0)) {
+    termsList = settings.default_terms.filter(t => t && String(t).trim().length > 0);
+  } else {
+    termsList = [...OFFICIAL_COMPANY_TERMS];
+  }
+  if (!termsList || termsList.length === 0) {
+    termsList = [...OFFICIAL_COMPANY_TERMS];
+  }
 
   const items = quote.items || [];
   const subTotal = parseFloat(quote.sub_total) || 0;
@@ -1964,7 +1987,17 @@ async function generateExcelQuotationWorkbook(quote, settings) {
     const otherCharges = parseFloat(quote.other_charges) || 0;
     const grandTotal = parseFloat(quote.grand_total) || (afterPacking + gstAmount + otherCharges);
     const bank = quote.bank_details || settings;
-    const termsList = Array.isArray(quote.terms) && quote.terms.length > 0 ? quote.terms : (settings.default_terms || []);
+    let termsList = [];
+    if (Array.isArray(quote.terms) && quote.terms.length > 0 && quote.terms.some(t => t && String(t).trim().length > 0)) {
+      termsList = quote.terms.filter(t => t && String(t).trim().length > 0);
+    } else if (settings && Array.isArray(settings.default_terms) && settings.default_terms.length > 0 && settings.default_terms.some(t => t && String(t).trim().length > 0)) {
+      termsList = settings.default_terms.filter(t => t && String(t).trim().length > 0);
+    } else {
+      termsList = [...OFFICIAL_COMPANY_TERMS];
+    }
+    if (!termsList || termsList.length === 0) {
+      termsList = [...OFFICIAL_COMPANY_TERMS];
+    }
 
     // 5. BANK DETAILS ROW 1 + TOTAL
     sheet.mergeCells(`A${currentRow}:E${currentRow}`);
@@ -2346,7 +2379,9 @@ async function openQuotationSettingsModal() {
   document.getElementById('cfg-bank-branch').value = settings.branch_name || '';
   document.getElementById('cfg-bank-upi').value = settings.upi_id || '';
 
-  const terms = Array.isArray(settings.default_terms) ? settings.default_terms.join('\n') : '';
+  const terms = (Array.isArray(settings.default_terms) && settings.default_terms.length > 0)
+    ? settings.default_terms.join('\n')
+    : OFFICIAL_COMPANY_TERMS.join('\n');
   document.getElementById('cfg-default-terms').value = terms;
 
   modal.classList.remove('hidden');

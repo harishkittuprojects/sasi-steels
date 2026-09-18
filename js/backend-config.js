@@ -1255,8 +1255,8 @@ const DEFAULT_QUOTATION_SETTINGS = {
     'Items will be ready within 30-45 working days form the date of Approval.',
     'Price ex-works, 60% Advance along with Work Order, 30% against delivery, balance 10% payment after installation',
     'Above rates are excluding of GST, will be applicable @ 18%',
-    'Installation/Mechanic/oil of above fixtures on site is not in our scope of work,if it is then it will be charge extra 6-8% on base value for above one lakh, Rs2000 per head below one lakh.',
-    'Above rates are excluding of loading, unloading & transportation Charges, it will be charge extra at actuals. Packing charges 4% extra.',
+    'Installation/Mechanic/oil of above fixtures on site is not in our scope of work, If it is then it will be charge extra 6-8% on base value for above one lakh, Rs2000 per head below one lakh.',
+    'Above rates are excluding of loading, unloading & transportation Charges, It will be charge extra at actuals, Packing charges 4% extra.',
     'Above rates are approximately and are likely to be change, according to the (Market/Rawmaterials) conditions.',
     'This Quotation is valid for 15days from the date of issue.'
   ]
@@ -1333,8 +1333,8 @@ const DEFAULT_QUOTATIONS = [
       'Items will be ready within 30-45 working days form the date of Approval.',
       'Price ex-works, 60% Advance along with Work Order, 30% against delivery, balance 10% payment after installation',
       'Above rates are excluding of GST, will be applicable @ 18%',
-      'Installation/Mechanic/oil of above fixtures on site is not in our scope of work,if it is then it will be charge extra 6-8% on base value for above one lakh, Rs2000 per head below one lakh.',
-      'Above rates are excluding of loading, unloading & transportation Charges, it will be charge extra at actuals. Packing charges 4% extra.',
+      'Installation/Mechanic/oil of above fixtures on site is not in our scope of work, If it is then it will be charge extra 6-8% on base value for above one lakh, Rs2000 per head below one lakh.',
+      'Above rates are excluding of loading, unloading & transportation Charges, It will be charge extra at actuals, Packing charges 4% extra.',
       'Above rates are approximately and are likely to be change, according to the (Market/Rawmaterials) conditions.',
       'This Quotation is valid for 15days from the date of issue.'
     ],
@@ -1382,20 +1382,22 @@ const DEFAULT_QUOTATIONS = [
     grand_total: 51920,
     amount_in_words: 'Rupees Fifty One Thousand Nine Hundred Twenty Only',
     bank_details: {
-      bank_name: 'State Bank of India',
-      account_holder: 'SASI STEEL ENGINEERING',
-      account_number: '39824567123',
+      bank_name: 'STATE BANK OF INDIA, Arundalpet',
+      account_holder: 'SASI STEEL ENGINEERING & WELDING WORKS',
+      account_number: '42384233004',
       ifsc_code: 'SBIN0001234',
-      branch_name: 'Gorantla Main Branch, Guntur',
-      upi_id: 'sasisteels@upi'
+      branch_name: 'Arundalpet, Guntur',
+      company_phone: 'PH: 9949321664, OFFICE: 8333991114(OR)5',
+      upi_id: '9949321664@upi'
     },
     terms: [
-      'Prices are valid for 15 days from the date of quotation.',
-      'Payment Terms: 50% advance along with confirmed Purchase Order, balance 50% before material dispatch.',
-      'Delivery Schedule: 7 to 10 working days from the date of advance payment and drawing approval.',
-      'Freight, loading, unloading and transport charges extra at actuals unless specifically mentioned.',
-      'GST @ 18% and all applicable statutory taxes will be charged extra as per government norms.',
-      'Subject to Guntur jurisdiction only.'
+      'Items will be ready within 30-45 working days form the date of Approval.',
+      'Price ex-works, 60% Advance along with Work Order, 30% against delivery, balance 10% payment after installation',
+      'Above rates are excluding of GST, will be applicable @ 18%',
+      'Installation/Mechanic/oil of above fixtures on site is not in our scope of work, If it is then it will be charge extra 6-8% on base value for above one lakh, Rs2000 per head below one lakh.',
+      'Above rates are excluding of loading, unloading & transportation Charges, It will be charge extra at actuals, Packing charges 4% extra.',
+      'Above rates are approximately and are likely to be change, according to the (Market/Rawmaterials) conditions.',
+      'This Quotation is valid for 15days from the date of issue.'
     ],
     status: 'Approved',
     notes: 'Approved by client. Workshop fabrication scheduled.',

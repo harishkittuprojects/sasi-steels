@@ -177,18 +177,18 @@ CREATE TABLE IF NOT EXISTS quotation_settings (
   company_name TEXT DEFAULT 'SASI STEEL ENGINEERING & WELDING WORKS',
   company_tagline TEXT DEFAULT 'Heavy Structural Fabrication & Certified Welding Specialists',
   company_logo TEXT,
-  company_address TEXT DEFAULT 'Hosanna Church, 128-564, Guntur Amaravathi Road, Gorantla, Guntur, Andhra Pradesh 522034',
-  company_phone TEXT DEFAULT '+91 83339 99912 / +91 98480 12345',
+  company_address TEXT DEFAULT '128-56/4, guntur amaravathi road, gorantla,guntur,a.p',
+  company_phone TEXT DEFAULT 'PH: 9949321664, OFFICE: 8333991114(OR)5',
   company_email TEXT DEFAULT 'sasisteels863@gmail.com',
-  company_gstin TEXT DEFAULT '37AAAAA0000A1Z5',
-  bank_name TEXT DEFAULT 'State Bank of India',
-  account_holder TEXT DEFAULT 'SASI STEEL ENGINEERING',
-  account_number TEXT DEFAULT '39824567123',
+  company_gstin TEXT DEFAULT '37AUCPA2925Q1ZG,CODE :37.',
+  bank_name TEXT DEFAULT 'STATE BANK OF INDIA, Arundalpet',
+  account_holder TEXT DEFAULT 'SASI STEEL ENGINEERING & WELDING WORKS',
+  account_number TEXT DEFAULT '42384233004',
   ifsc_code TEXT DEFAULT 'SBIN0001234',
-  branch_name TEXT DEFAULT 'Gorantla Main Branch, Guntur',
-  upi_id TEXT DEFAULT 'sasisteels@upi',
+  branch_name TEXT DEFAULT 'Arundalpet, Guntur',
+  upi_id TEXT DEFAULT '9949321664@upi',
   security_pin_hash TEXT,
-  default_terms JSONB DEFAULT '["Prices are valid for 15 days from the date of quotation.", "Payment Terms: 50% advance along with Purchase Order, 50% before material dispatch.", "Delivery Schedule: 7 to 10 working days from advance payment and drawing approval.", "Freight, loading, unloading and transport charges extra at actuals.", "GST @ 18% and all applicable statutory taxes charged extra.", "Subject to Guntur jurisdiction only."]'::jsonb
+  default_terms JSONB DEFAULT '["Items will be ready within 30-45 working days form the date of Approval.", "Price ex-works, 60% Advance along with Work Order, 30% against delivery, balance 10% payment after installation", "Above rates are excluding of GST, will be applicable @ 18%", "Installation/Mechanic/oil of above fixtures on site is not in our scope of work, If it is then it will be charge extra 6-8% on base value for above one lakh, Rs2000 per head below one lakh.", "Above rates are excluding of loading, unloading & transportation Charges, It will be charge extra at actuals, Packing charges 4% extra.", "Above rates are approximately and are likely to be change, according to the (Market/Rawmaterials) conditions.", "This Quotation is valid for 15days from the date of issue."]'::jsonb
 );
 
 -- =========================================================
