@@ -431,68 +431,35 @@
         </p>
       </div>
 
-      <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-10" data-aos="fade-up">
+      <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-10 max-w-2xl mx-auto" data-aos="fade-up">
         <form id="customer-inquiry-form" onsubmit="handleDirectInquirySubmit(event)" class="space-y-5">
           
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-4">
             <div>
               <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 <i class="fa-solid fa-user text-orange-500 mr-1"></i> Customer Name *
               </label>
-              <input id="inq-client-name" type="text" required placeholder="e.g. Ramesh Kumar / Sri Balaji Infra" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900" />
+              <input id="inq-client-name" type="text" required placeholder="e.g. Ramesh Kumar / Sri Balaji Infra" class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-sm font-semibold bg-slate-50 text-slate-900" />
             </div>
 
             <div>
               <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 <i class="fa-solid fa-phone text-orange-500 mr-1"></i> Phone / WhatsApp Number *
               </label>
-              <input id="inq-client-phone" type="tel" required placeholder="+91 98480 12345" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900" />
+              <input id="inq-client-phone" type="tel" required placeholder="+91 98480 12345" class="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-sm font-semibold bg-slate-50 text-slate-900" />
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                <i class="fa-solid fa-envelope text-orange-500 mr-1"></i> Email Address (Optional)
-              </label>
-              <input id="inq-client-email" type="email" placeholder="ramesh@company.com" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900" />
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                <i class="fa-solid fa-shapes text-orange-500 mr-1"></i> Project / Structure Type *
-              </label>
-              <select id="inq-project-type" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900">
-                <option value="PEB Industrial Shed">PEB Industrial Shed & Warehouse</option>
-                <option value="Heavy Structural Steel">Heavy Structural Steel Fabrication</option>
-                <option value="Mezzanine Floor">Heavy-Duty Mezzanine Floor</option>
-                <option value="Storage Racks & Pallets">Warehouse Pallet & Storage Racks</option>
-                <option value="Roofing Sheets & Trusses">Roofing Sheets & Trusses</option>
-                <option value="Stainless Steel / Gates & Railings">Stainless Steel / Gates & Railings</option>
-                <option value="Custom Fabrication Works">Custom Fabrication Works</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              <i class="fa-solid fa-ruler-combined text-orange-500 mr-1"></i> Approx. Dimensions / Area (Optional)
-            </label>
-            <input id="inq-dimensions" type="text" placeholder="e.g. 100ft x 50ft / 5,000 Sq.Ft / 20 Tons" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              <i class="fa-solid fa-comment-dots text-orange-500 mr-1"></i> Project Requirements & Notes
-            </label>
-            <textarea id="inq-message" rows="3" placeholder="Tell us about your site location, crane requirement, material grade or delivery timeline..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 text-xs font-semibold bg-slate-50 text-slate-900"></textarea>
-          </div>
-
-          <button type="submit" id="inq-submit-btn" class="w-full btn-orange-pill text-xs py-3.5 justify-center shadow-lg shadow-orange-600/20 font-bold uppercase tracking-wider">
+          <button type="submit" id="inq-submit-btn" class="w-full btn-orange-pill text-xs py-3.5 justify-center shadow-lg shadow-orange-600/20 font-bold uppercase tracking-wider transition-all">
             <i class="fa-solid fa-paper-plane mr-2"></i> Submit Quotation Request
           </button>
 
-          <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-500">
+          <div id="inq-success-msg" class="hidden p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold text-center flex items-center justify-center gap-2 transition-all shadow-sm">
+            <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+            <span>Thank you! Your quotation request has been received directly. Our engineers will contact you shortly.</span>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-500 gap-2">
             <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-orange-500"></i> Direct Quotation from Factory Workshop</span>
             <span class="flex items-center gap-1.5"><i class="fa-solid fa-phone text-emerald-600"></i> Immediate Support: +91 83339 91114</span>
           </div>
@@ -610,39 +577,55 @@
     async function handleDirectInquirySubmit(e) {
       e.preventDefault();
       const btn = document.getElementById('inq-submit-btn');
+      const successMsg = document.getElementById('inq-success-msg');
       const name = document.getElementById('inq-client-name').value.trim();
       const phone = document.getElementById('inq-client-phone').value.trim();
-      const email = document.getElementById('inq-client-email').value.trim();
-      const projectType = document.getElementById('inq-project-type').value;
-      const dimensions = document.getElementById('inq-dimensions').value.trim();
-      const message = document.getElementById('inq-message').value.trim();
 
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting Request...`;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...`;
       }
-
-      const scopeText = dimensions ? `Area/Dimensions: ${dimensions}` : 'Direct Client Quotation Request';
 
       if (typeof dbSubmitInquiry === 'function') {
-        await dbSubmitInquiry({
-          name: name,
-          phone: phone,
-          email: email || null,
-          projectType: projectType,
-          scope: scopeText,
-          estimatedCost: 'Custom Quotation Requested',
-          message: message || `Quotation requested for ${projectType}. ${scopeText}`
-        });
+        try {
+          await dbSubmitInquiry({
+            name: name,
+            phone: phone,
+            email: null,
+            projectType: 'General Fabrication Quote',
+            scope: 'Direct Website Quotation Inquiry',
+            estimatedCost: 'Contact for Quote',
+            message: `Direct quotation callback requested by ${name} (${phone}).`
+          });
+        } catch (err) {
+          console.warn("Direct inquiry submit:", err);
+        }
       }
 
-      alert(`Thank you, ${name}! Your quotation inquiry for "${projectType}" has been received. Our fabrication team will contact you at ${phone} with a detailed proposal.`);
+      // Reset form fields immediately
       document.getElementById('customer-inquiry-form').reset();
 
+      // Show instant inline green success state without any popup dialogs
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i> Submit Quotation Request`;
+        btn.className = "w-full rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-3.5 justify-center shadow-lg shadow-emerald-600/20 font-bold uppercase tracking-wider transition-all inline-flex items-center gap-2";
+        btn.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> Request Submitted Directly!`;
       }
+
+      if (successMsg) {
+        successMsg.classList.remove('hidden');
+      }
+
+      // Auto-revert button back after 4 seconds
+      setTimeout(() => {
+        if (btn) {
+          btn.className = "w-full btn-orange-pill text-xs py-3.5 justify-center shadow-lg shadow-orange-600/20 font-bold uppercase tracking-wider transition-all";
+          btn.innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i> Submit Quotation Request`;
+        }
+        if (successMsg) {
+          successMsg.classList.add('hidden');
+        }
+      }, 4000);
     }
 
     async function loadLiveSiteGallery() {
