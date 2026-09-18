@@ -1704,3 +1704,95 @@ async function dbDeleteAllQuotations() {
   }
   return true;
 }
+
+// =========================================================
+// 10. CRYPTOGRAPHIC SECURITY PIN AUTHENTICATION ENGINE
+// =========================================================
+
+const PIN_SALT = "sasi_steels_secure_salt_v1_2026_";
+
+// Compute salted SHA-256 hash using native Web Crypto API
+async function hashSecurityPin(pin) {
+  if (!pin) return "";
+  const encoder = new TextEncoder();
+  const data = encoder.encode(PIN_SALT + String(pin).trim());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+let DEFAULT_PIN_HASH = null;
+async function getDefaultPinHash() {
+  if (!DEFAULT_PIN_HASH) {
+    DEFAULT_PIN_HASH = await hashSecurityPin("1234");
+  }
+  return DEFAULT_PIN_HASH;
+}
+
+// Get the current persistent PIN Hash (from Supabase or persistent local storage)
+async function dbGetSecurityPinHash() {
+  const local = localStorage.getItem('sasi_security_pin_hash');
+  const client = getSupabaseClient();
+  
+  if (client) {
+    try {
+      const { data, error } = await client.from('quotation_settings').select('security_pin_hash').limit(1);
+      if (!error && data && data.length > 0 && data[0].security_pin_hash) {
+        localStorage.setItem('sasi_security_pin_hash', data[0].security_pin_hash);
+        return data[0].security_pin_hash;
+      }
+    } catch (e) {
+      console.warn("Supabase fetch pin hash error:", e);
+    }
+  }
+
+  if (local) return local;
+
+  const defaultHash = await getDefaultPinHash();
+  localStorage.setItem('sasi_security_pin_hash', defaultHash);
+  return defaultHash;
+}
+
+// Verify entered PIN against stored hash
+async function dbVerifySecurityPin(enteredPin) {
+  if (!enteredPin) return false;
+  const inputHash = await hashSecurityPin(enteredPin);
+  const storedHash = await dbGetSecurityPinHash();
+  return inputHash === storedHash;
+}
+
+// Change PIN after verifying current PIN
+async function dbChangeSecurityPin(currentPin, newPin) {
+  const isValidCurrent = await dbVerifySecurityPin(currentPin);
+  if (!isValidCurrent) {
+    throw new Error("Current PIN is incorrect. Please try again.");
+  }
+
+  const cleanNew = String(newPin || '').trim();
+  if (cleanNew.length < 4 || cleanNew.length > 8) {
+    throw new Error("New PIN must be between 4 and 8 digits.");
+  }
+
+  if (!/^\d+$/.test(cleanNew)) {
+    throw new Error("PIN must contain numbers only.");
+  }
+
+  const newHash = await hashSecurityPin(cleanNew);
+  localStorage.setItem('sasi_security_pin_hash', newHash);
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data } = await client.from('quotation_settings').select('id').limit(1);
+      if (data && data.length > 0) {
+        await client.from('quotation_settings').update({ security_pin_hash: newHash, updated_at: new Date().toISOString() }).eq('id', data[0].id);
+      } else {
+        await client.from('quotation_settings').insert([{ security_pin_hash: newHash, updated_at: new Date().toISOString() }]);
+      }
+    } catch (e) {
+      console.warn("Supabase save pin hash error:", e);
+    }
+  }
+
+  return true;
+}

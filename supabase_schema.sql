@@ -187,6 +187,7 @@ CREATE TABLE IF NOT EXISTS quotation_settings (
   ifsc_code TEXT DEFAULT 'SBIN0001234',
   branch_name TEXT DEFAULT 'Gorantla Main Branch, Guntur',
   upi_id TEXT DEFAULT 'sasisteels@upi',
+  security_pin_hash TEXT,
   default_terms JSONB DEFAULT '["Prices are valid for 15 days from the date of quotation.", "Payment Terms: 50% advance along with Purchase Order, 50% before material dispatch.", "Delivery Schedule: 7 to 10 working days from advance payment and drawing approval.", "Freight, loading, unloading and transport charges extra at actuals.", "GST @ 18% and all applicable statutory taxes charged extra.", "Subject to Guntur jurisdiction only."]'::jsonb
 );
 

@@ -6,6 +6,18 @@ let currentActiveTab = 'quotations';
 let activeModalType = null;
 let editingItemId = null;
 
+const PROTECTED_SECTIONS = ['quotations', 'orders', 'finance'];
+
+// In-memory lock state: All 3 sections are always locked by default on page load / refresh
+const sectionLockState = {
+  quotations: true,
+  orders: true,
+  finance: true
+};
+
+let previousActiveTab = 'employees';
+let pendingUnlockTab = null;
+
 // Auth check on load
 async function loadInitialCounts() {
   try {
@@ -53,7 +65,15 @@ function checkAdminAuth() {
   } else {
     if (authModal) authModal.classList.add('hidden');
     initHeaderTodayDate();
-    loadCurrentTab();
+    updateAllLockBadges();
+    
+    // Check if initial tab is locked
+    if (PROTECTED_SECTIONS.includes(currentActiveTab) && sectionLockState[currentActiveTab]) {
+      // By default prompt for unlock on protected landing or switch to unlocked section
+      openPinLockModal(currentActiveTab);
+    } else {
+      loadCurrentTab();
+    }
     loadInitialCounts();
   }
 }
@@ -67,7 +87,13 @@ function handleAdminLogin(e) {
   if ((user === 'admin' || user === 'sasisteels863@gmail.com') && (pass === '123456789' || pass === 'sasi833399')) {
     sessionStorage.setItem('sasi_admin_auth', 'true');
     document.getElementById('auth-modal').classList.add('hidden');
-    loadCurrentTab();
+    initHeaderTodayDate();
+    updateAllLockBadges();
+    if (PROTECTED_SECTIONS.includes(currentActiveTab) && sectionLockState[currentActiveTab]) {
+      openPinLockModal(currentActiveTab);
+    } else {
+      loadCurrentTab();
+    }
     loadInitialCounts();
   } else {
     alert('Incorrect credentials! Please enter the correct password.');
@@ -84,9 +110,281 @@ function toggleSidebar() {
   if (sb) sb.classList.toggle('hidden');
 }
 
-// Tab Switching
+// ================= PIN LOCK & SECURITY CONTROLLER =================
+
+function updateSectionLockIcon(sectionName, isLocked) {
+  const iconEl = document.getElementById(`lock-icon-${sectionName}`);
+  if (!iconEl) return;
+  if (isLocked) {
+    iconEl.className = 'fa-solid fa-lock text-[11px] text-amber-400 transition-transform';
+    iconEl.title = 'Protected with Security PIN';
+  } else {
+    iconEl.className = 'fa-solid fa-lock-open text-[11px] text-emerald-400 transition-transform';
+    iconEl.title = 'Unlocked for current session';
+  }
+}
+
+function updateAllLockBadges() {
+  PROTECTED_SECTIONS.forEach(sec => {
+    updateSectionLockIcon(sec, sectionLockState[sec]);
+  });
+}
+
+function openPinLockModal(targetTab) {
+  pendingUnlockTab = targetTab;
+  const modal = document.getElementById('pin-lock-modal');
+  const titleEl = document.getElementById('pin-lock-section-title');
+  const descEl = document.getElementById('pin-lock-section-desc');
+  const iconEl = document.getElementById('pin-lock-icon');
+  const inputEl = document.getElementById('pin-input');
+  const errorEl = document.getElementById('pin-lock-error');
+
+  if (errorEl) errorEl.classList.add('hidden');
+  if (inputEl) {
+    inputEl.value = '';
+    inputEl.classList.remove('border-red-500');
+  }
+
+  let sectionDisplayName = 'Protected Section';
+  let sectionDesc = 'Enter your 4-digit master security PIN to access this section.';
+  let iconClass = 'fa-solid fa-lock';
+
+  if (targetTab === 'quotations') {
+    sectionDisplayName = 'Quotations & Leads';
+    sectionDesc = 'Official company proposals, client pricing, and RFQ inquiries are protected.';
+    iconClass = 'fa-solid fa-file-invoice text-orange-500';
+  } else if (targetTab === 'orders') {
+    sectionDisplayName = 'Orders & Bookings';
+    sectionDesc = 'Customer purchase orders, delivery statuses, and payments are protected.';
+    iconClass = 'fa-solid fa-cart-shopping text-emerald-400';
+  } else if (targetTab === 'finance') {
+    sectionDisplayName = 'Income & Expenses (Finance)';
+    sectionDesc = 'Workshop revenues, raw material expenses, wages, and audit logs are protected.';
+    iconClass = 'fa-solid fa-chart-line text-emerald-400';
+  }
+
+  if (titleEl) titleEl.textContent = sectionDisplayName;
+  if (descEl) descEl.textContent = sectionDesc;
+  if (iconEl) iconEl.className = iconClass;
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+      if (inputEl) inputEl.focus();
+    }, 100);
+  }
+}
+
+function closePinLockModal() {
+  const modal = document.getElementById('pin-lock-modal');
+  if (modal) modal.classList.add('hidden');
+  const inputEl = document.getElementById('pin-input');
+  if (inputEl) inputEl.value = '';
+}
+
+function cancelPinUnlockModal() {
+  closePinLockModal();
+  const wasPending = pendingUnlockTab;
+  pendingUnlockTab = null;
+
+  // If currently on a locked section without unlock, revert to safe unlocked tab (employees or inventory)
+  if (PROTECTED_SECTIONS.includes(currentActiveTab) && sectionLockState[currentActiveTab]) {
+    switchTab('employees');
+  }
+}
+
+async function handlePinUnlockSubmit(e) {
+  if (e) e.preventDefault();
+  const inputEl = document.getElementById('pin-input');
+  const errorEl = document.getElementById('pin-lock-error');
+  const errorTextEl = document.getElementById('pin-lock-error-text');
+  const unlockBtn = document.getElementById('pin-unlock-btn');
+  const enteredPin = inputEl?.value.trim();
+
+  if (!enteredPin) {
+    if (errorEl && errorTextEl) {
+      errorTextEl.textContent = "Please enter your security PIN.";
+      errorEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (unlockBtn) {
+    unlockBtn.disabled = true;
+    unlockBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...`;
+  }
+
+  try {
+    const isCorrect = await dbVerifySecurityPin(enteredPin);
+    if (isCorrect) {
+      const targetTab = pendingUnlockTab || currentActiveTab;
+      sectionLockState[targetTab] = false;
+      updateSectionLockIcon(targetTab, false);
+      closePinLockModal();
+
+      previousActiveTab = currentActiveTab;
+      currentActiveTab = targetTab;
+
+      document.querySelectorAll('.sidebar-link').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`tab-btn-${targetTab}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
+      const activeSection = document.getElementById(`section-${targetTab}`);
+      if (activeSection) activeSection.classList.remove('hidden');
+
+      loadCurrentTab();
+      pendingUnlockTab = null;
+    } else {
+      if (errorEl && errorTextEl) {
+        errorTextEl.textContent = "Incorrect PIN. Please try again.";
+        errorEl.classList.remove('hidden');
+      }
+      if (inputEl) {
+        inputEl.classList.add('border-red-500');
+        inputEl.value = '';
+        inputEl.focus();
+      }
+    }
+  } catch (err) {
+    if (errorEl && errorTextEl) {
+      errorTextEl.textContent = err.message || "Verification failed. Please try again.";
+      errorEl.classList.remove('hidden');
+    }
+  } finally {
+    if (unlockBtn) {
+      unlockBtn.disabled = false;
+      unlockBtn.innerHTML = `<i class="fa-solid fa-lock-open mr-2"></i> Unlock Section`;
+    }
+  }
+}
+
+// Numeric Keypad Handlers
+function appendPinDigit(digit) {
+  const input = document.getElementById('pin-input');
+  if (input && input.value.length < 8) {
+    input.value += digit;
+    const errorEl = document.getElementById('pin-lock-error');
+    if (errorEl) errorEl.classList.add('hidden');
+  }
+}
+
+function clearPinInput() {
+  const input = document.getElementById('pin-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+}
+
+function backspacePinDigit() {
+  const input = document.getElementById('pin-input');
+  if (input && input.value.length > 0) {
+    input.value = input.value.slice(0, -1);
+  }
+}
+
+function togglePinInputVisibility(inputId, btnEl) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isPass = input.type === 'password';
+  input.type = isPass ? 'text' : 'password';
+  if (btnEl) {
+    btnEl.innerHTML = isPass ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
+  }
+}
+
+// Change PIN Modal Handlers
+function openChangePinModal() {
+  const modal = document.getElementById('change-pin-modal');
+  const msgEl = document.getElementById('change-pin-msg');
+  if (msgEl) {
+    msgEl.className = 'hidden mb-4 p-3 rounded-xl text-xs font-semibold';
+    msgEl.innerHTML = '';
+  }
+  document.getElementById('change-pin-current').value = '';
+  document.getElementById('change-pin-new').value = '';
+  document.getElementById('change-pin-confirm').value = '';
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeChangePinModal() {
+  const modal = document.getElementById('change-pin-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function handleChangePinSubmit(e) {
+  e.preventDefault();
+  const currentPin = document.getElementById('change-pin-current').value.trim();
+  const newPin = document.getElementById('change-pin-new').value.trim();
+  const confirmPin = document.getElementById('change-pin-confirm').value.trim();
+  const msgEl = document.getElementById('change-pin-msg');
+  const saveBtn = document.getElementById('btn-change-pin-save');
+
+  if (newPin !== confirmPin) {
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-400 block';
+      msgEl.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1.5"></i> New PIN and Confirm PIN do not match.';
+    }
+    return;
+  }
+
+  if (newPin.length < 4 || newPin.length > 8) {
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-400 block';
+      msgEl.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1.5"></i> New PIN must be between 4 and 8 digits.';
+    }
+    return;
+  }
+
+  if (!/^\d+$/.test(newPin)) {
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-400 block';
+      msgEl.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1.5"></i> PIN must contain numeric digits only.';
+    }
+    return;
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Verifying & Saving...`;
+  }
+
+  try {
+    await dbChangeSecurityPin(currentPin, newPin);
+
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 block';
+      msgEl.innerHTML = '<i class="fa-solid fa-circle-check mr-1.5"></i> Security PIN updated successfully!';
+    }
+
+    setTimeout(() => {
+      closeChangePinModal();
+    }, 1200);
+  } catch (err) {
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-400 block';
+      msgEl.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1.5"></i> ${err.message || 'Current PIN is incorrect. Please try again.'}`;
+    }
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = `<i class="fa-solid fa-shield-halved mr-1.5"></i> Verify & Save New PIN`;
+    }
+  }
+}
+
+// Tab Switching Interceptor
 function switchTab(tabName) {
+  // If target section is protected and currently locked, intercept and show PIN modal
+  if (PROTECTED_SECTIONS.includes(tabName) && sectionLockState[tabName] === true) {
+    openPinLockModal(tabName);
+    return;
+  }
+
+  previousActiveTab = currentActiveTab;
   currentActiveTab = tabName;
+
   document.querySelectorAll('.sidebar-link').forEach(btn => btn.classList.remove('active'));
   const activeBtn = document.getElementById(`tab-btn-${tabName}`);
   if (activeBtn) activeBtn.classList.add('active');
