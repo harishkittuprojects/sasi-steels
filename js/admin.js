@@ -2363,14 +2363,11 @@ async function generatePdfDocument(quote, settings) {
     } catch (e) {}
   }
 
-  // Create isolated container with fixed position to prevent scroll offset clipping in html2canvas
+  // Create container in normal DOM flow so html2canvas renders complete PDF document without blank page clipping
   const container = document.createElement('div');
   container.id = 'sasi-pdf-export-temp-container';
-  container.style.position = 'fixed';
-  container.style.top = '0';
-  container.style.left = '0';
-  container.style.zIndex = '999999';
   container.style.width = '730px';
+  container.style.margin = '0 auto';
   container.style.background = '#ffffff';
   container.style.boxSizing = 'border-box';
   container.style.padding = '0';
@@ -2384,10 +2381,10 @@ async function generatePdfDocument(quote, settings) {
     return new Promise(res => {
       img.onload = res;
       img.onerror = res;
-      setTimeout(res, 800);
+      setTimeout(res, 600);
     });
   }));
-  await new Promise(r => setTimeout(r, 250));
+  await new Promise(r => setTimeout(r, 200));
 
   const cleanNum = (safeQuote.quote_number || 'Quotation').replace(/[^a-zA-Z0-9_-]/g, '_');
   const opt = {
@@ -2399,9 +2396,7 @@ async function generatePdfDocument(quote, settings) {
       useCORS: true,
       allowTaint: true,
       letterRendering: true,
-      logging: false,
-      scrollX: 0,
-      scrollY: 0
+      logging: false
     },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak: { mode: ['css', 'legacy'] }
