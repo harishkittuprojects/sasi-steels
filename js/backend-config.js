@@ -813,10 +813,10 @@ async function dbDeleteGalleryItem(id) {
 
 // 8. EMPLOYEES & STAFF CRUD (Cloud-First Sync)
 const DEFAULT_EMPLOYEES = [
-  { id: 1, name: 'Ramesh Kumar', phone: '+91 98480 12345', role: 'Fabricator', daily_wage: 950, status: 'Active', join_date: '2025-01-10', notes: 'Lead Structural Fabricator' },
-  { id: 2, name: 'Suresh Rao', phone: '+91 98480 23456', role: 'Welder', daily_wage: 850, status: 'Active', join_date: '2025-02-15', notes: 'TIG / MIG Specialist' },
-  { id: 3, name: 'Venkatesh M', phone: '+91 98480 34567', role: 'Supervisor', daily_wage: 1200, status: 'Active', join_date: '2024-11-01', notes: 'Shop Floor Master' },
-  { id: 4, name: 'Rajesh V', phone: '+91 98480 45678', role: 'Helper', daily_wage: 600, status: 'Active', join_date: '2025-03-01', notes: 'Workshop Assistant' }
+  { id: 1, name: 'Ramesh Kumar', phone: '+91 98480 12345', role: 'Welding mestri', daily_wage: 950, status: 'Active', join_date: '2025-01-10', notes: 'Senior Welding Specialist' },
+  { id: 2, name: 'Suresh Rao', phone: '+91 98480 23456', role: 'Powder coating mestri', daily_wage: 900, status: 'Active', join_date: '2025-02-15', notes: 'Powder Coating Lead' },
+  { id: 3, name: 'Venkatesh M', phone: '+91 98480 34567', role: 'Manager', daily_wage: 1300, status: 'Active', join_date: '2024-11-01', notes: 'Workshop Operations Manager' },
+  { id: 4, name: 'Rajesh V', phone: '+91 98480 45678', role: 'Helpers', daily_wage: 600, status: 'Active', join_date: '2025-03-01', notes: 'Workshop Assistant' }
 ];
 
 async function dbGetEmployees() {
@@ -849,7 +849,7 @@ async function dbAddEmployee(emp) {
     created_at: new Date().toISOString(),
     name: emp.name,
     phone: emp.phone || '',
-    role: emp.role || 'Fabricator',
+    role: emp.role || 'Welding mestri',
     daily_wage: parseFloat(emp.daily_wage) || 800,
     join_date: emp.join_date || new Date().toISOString().split('T')[0],
     status: emp.status || 'Active',

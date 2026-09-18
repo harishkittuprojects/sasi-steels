@@ -3051,6 +3051,50 @@ async function loadEmployees() {
   }
 }
 
+const WORKSHOP_EMPLOYEE_ROLES = [
+  'Manager',
+  'Computer',
+  'Powder coating mestri',
+  'Powder coating helper',
+  'Welding mestri',
+  'Welding helper',
+  'Polished mestri',
+  'Polished helpers',
+  'Helpers',
+  'Pvd mestri',
+  'Pvd helpers'
+];
+
+function getRoleBadgeClass(role) {
+  const r = (role || '').toLowerCase();
+  if (r.includes('manager')) return 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
+  if (r.includes('computer')) return 'bg-sky-500/20 text-sky-300 border border-sky-500/30';
+  if (r.includes('welding mestri')) return 'bg-orange-500/20 text-orange-400 border border-orange-500/30';
+  if (r.includes('welding helper')) return 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+  if (r.includes('powder coating mestri')) return 'bg-pink-500/20 text-pink-300 border border-pink-500/30';
+  if (r.includes('powder coating helper')) return 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
+  if (r.includes('polished mestri')) return 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
+  if (r.includes('polished helper')) return 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+  if (r.includes('pvd mestri')) return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+  if (r.includes('pvd helper')) return 'bg-teal-500/20 text-teal-300 border border-teal-500/30';
+  if (r.includes('helper')) return 'bg-slate-700 text-slate-300 border border-slate-600';
+  if (r.includes('mestri')) return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30';
+  return 'bg-slate-800 text-cyan-300 border border-slate-700';
+}
+
+function handleRoleSelectChange(selectEl) {
+  const container = document.getElementById('custom-role-container');
+  const customInput = document.getElementById('employee-custom-role');
+  if (!container) return;
+  if (selectEl.value === '__CUSTOM__') {
+    container.classList.remove('hidden');
+    if (customInput) customInput.focus();
+  } else {
+    container.classList.add('hidden');
+  }
+}
+window.handleRoleSelectChange = handleRoleSelectChange;
+
 function filterEmployeesData() {
   const tbody = document.getElementById('table-employees');
   if (!tbody) return;
@@ -3060,7 +3104,13 @@ function filterEmployeesData() {
   const statusVal = document.getElementById('employee-filter-status')?.value || 'ALL';
 
   const filtered = allEmployeesRecords.filter(emp => {
-    if (roleVal !== 'ALL' && emp.role !== roleVal) return false;
+    if (roleVal !== 'ALL') {
+      if (roleVal === '__CUSTOM__') {
+        if (WORKSHOP_EMPLOYEE_ROLES.includes(emp.role)) return false;
+      } else if (emp.role !== roleVal) {
+        return false;
+      }
+    }
     if (statusVal !== 'ALL' && emp.status !== statusVal) return false;
     if (searchVal) {
       const matchName = (emp.name || '').toLowerCase().includes(searchVal);
@@ -3073,7 +3123,7 @@ function filterEmployeesData() {
 
   // Calculate summary counts
   const activeCount = allEmployeesRecords.filter(e => e.status === 'Active').length;
-  const weldersCount = allEmployeesRecords.filter(e => e.role === 'Welder' || e.role === 'Fabricator').length;
+  const mestrisCount = allEmployeesRecords.filter(e => /mestri|manager|welding|powder|pvd|polished/i.test(e.role || '')).length;
 
   const countBadge = document.getElementById('badge-employees-count');
   if (countBadge) countBadge.textContent = activeCount;
@@ -3082,7 +3132,7 @@ function filterEmployeesData() {
   if (countEl) countEl.textContent = activeCount;
 
   const weldersEl = document.getElementById('employees-welders-count');
-  if (weldersEl) weldersEl.textContent = weldersCount;
+  if (weldersEl) weldersEl.textContent = mestrisCount;
 
   if (filtered.length === 0) {
     tbody.innerHTML = `
@@ -3112,12 +3162,7 @@ function filterEmployeesData() {
           <div class="text-[11px] text-slate-400">${emp.notes || 'Workshop Staff'}</div>
         </td>
         <td class="py-3 px-4">
-          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-            emp.role === 'Welder' ? 'bg-orange-500/20 text-orange-400' :
-            emp.role === 'Fabricator' ? 'bg-cyan-500/20 text-cyan-400' :
-            emp.role === 'Supervisor' ? 'bg-purple-500/20 text-purple-400' :
-            emp.role === 'Site Engineer' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-300'
-          }">${emp.role}</span>
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getRoleBadgeClass(emp.role)}">${emp.role}</span>
         </td>
         <td class="py-3 px-4 text-slate-300 font-mono text-xs">
           ${emp.phone ? `<span>${emp.phone}</span>` : '<span class="text-slate-600">N/A</span>'}
@@ -3181,6 +3226,16 @@ function openEmployeeModal(id = null) {
     existing = allEmployeesRecords.find(e => String(e.id) === String(id));
   }
 
+  const currentRole = existing ? (existing.role || '') : 'Welding mestri';
+  const isCustomRole = currentRole && !WORKSHOP_EMPLOYEE_ROLES.includes(currentRole);
+  const selectedRoleOption = isCustomRole ? '__CUSTOM__' : (currentRole || 'Welding mestri');
+
+  const roleOptionsHtml = WORKSHOP_EMPLOYEE_ROLES.map(role => `
+    <option value="${role}" ${selectedRoleOption === role ? 'selected' : ''}>${role}</option>
+  `).join('') + `
+    <option value="__CUSTOM__" ${selectedRoleOption === '__CUSTOM__' ? 'selected' : ''}>+ Other / Manual Entry</option>
+  `;
+
   document.getElementById('crud-modal-title').textContent = existing ? 'Edit Employee Details' : 'Add New Employee / Worker';
   document.getElementById('crud-modal-subtitle').textContent = 'Manage workshop employee role, phone number, and daily wage rate.';
 
@@ -3192,14 +3247,12 @@ function openEmployeeModal(id = null) {
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Role / Designation</label>
-        <select name="role" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500">
-          <option value="Fabricator" ${existing && existing.role === 'Fabricator' ? 'selected' : ''}>Fabricator</option>
-          <option value="Welder" ${existing && existing.role === 'Welder' ? 'selected' : ''}>Welder</option>
-          <option value="Helper" ${existing && existing.role === 'Helper' ? 'selected' : ''}>Helper / Assistant</option>
-          <option value="Supervisor" ${existing && existing.role === 'Supervisor' ? 'selected' : ''}>Supervisor</option>
-          <option value="Site Engineer" ${existing && existing.role === 'Site Engineer' ? 'selected' : ''}>Site Engineer</option>
-          <option value="Machine Operator" ${existing && existing.role === 'Machine Operator' ? 'selected' : ''}>Machine Operator</option>
+        <select name="role" id="employee-role-select" onchange="handleRoleSelectChange(this)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500">
+          ${roleOptionsHtml}
         </select>
+        <div id="custom-role-container" class="${selectedRoleOption === '__CUSTOM__' ? 'mt-2' : 'hidden mt-2'}">
+          <input type="text" name="custom_role" id="employee-custom-role" value="${isCustomRole ? currentRole : ''}" placeholder="Type custom role (e.g. Lathe Mestri)" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-cyan-500 text-white text-xs focus:outline-none focus:ring-1 focus:ring-cyan-400 placeholder:text-slate-500" />
+        </div>
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Daily Wage Rate (₹)</label>
@@ -3383,7 +3436,17 @@ function onAttendanceEmpSelect(empName) {
   const match = allEmployeesRecords.find(e => e.name === empName);
   if (match) {
     const roleSelect = document.querySelector('#crud-form-fields select[name="role"]');
-    if (roleSelect) roleSelect.value = match.role;
+    if (roleSelect) {
+      if (WORKSHOP_EMPLOYEE_ROLES.includes(match.role)) {
+        roleSelect.value = match.role;
+        handleRoleSelectChange(roleSelect);
+      } else {
+        roleSelect.value = '__CUSTOM__';
+        handleRoleSelectChange(roleSelect);
+        const customInput = document.getElementById('employee-custom-role');
+        if (customInput) customInput.value = match.role;
+      }
+    }
   }
 }
 
@@ -3402,6 +3465,12 @@ async function openAttendanceModal() {
     .map(e => `<option value="${e.name}">${e.name} (${e.role})</option>`)
     .join('');
 
+  const roleOptionsHtml = WORKSHOP_EMPLOYEE_ROLES.map(role => `
+    <option value="${role}">${role}</option>
+  `).join('') + `
+    <option value="__CUSTOM__">+ Other / Manual Entry</option>
+  `;
+
   document.getElementById('crud-form-fields').innerHTML = `
     <div>
       <label class="block text-slate-300 font-bold mb-1">Quick Select Registered Staff</label>
@@ -3415,14 +3484,12 @@ async function openAttendanceModal() {
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Role</label>
-        <select name="role" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
-          <option value="Fabricator">Fabricator</option>
-          <option value="Welder">Welder</option>
-          <option value="Helper">Helper / Assistant</option>
-          <option value="Supervisor">Supervisor</option>
-          <option value="Site Engineer">Site Engineer</option>
-          <option value="Machine Operator">Machine Operator</option>
+        <select name="role" id="employee-role-select" onchange="handleRoleSelectChange(this)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+          ${roleOptionsHtml}
         </select>
+        <div id="custom-role-container" class="hidden mt-2">
+          <input type="text" name="custom_role" id="employee-custom-role" placeholder="Type custom role..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-orange-500 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-400 placeholder:text-slate-500" />
+        </div>
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Status</label>
@@ -4271,9 +4338,14 @@ async function handleCrudSubmit(e) {
       loadInitialCounts();
     }
     else if (activeModalType === 'employee') {
+      let role = formData.get('role');
+      if (role === '__CUSTOM__') {
+        role = (formData.get('custom_role') || '').trim();
+        if (!role) role = 'Helpers';
+      }
       const empData = {
         name: formData.get('name'),
-        role: formData.get('role'),
+        role: role,
         daily_wage: parseFloat(formData.get('daily_wage')) || 800,
         phone: formData.get('phone') || '',
         status: formData.get('status') || 'Active',
@@ -4289,9 +4361,14 @@ async function handleCrudSubmit(e) {
       loadEmployees();
     }
     else if (activeModalType === 'attendance') {
+      let role = formData.get('role');
+      if (role === '__CUSTOM__') {
+        role = (formData.get('custom_role') || '').trim();
+        if (!role) role = 'Helpers';
+      }
       const record = {
         employee_name: formData.get('employee_name'),
-        role: formData.get('role'),
+        role: role,
         attendance_date: formData.get('attendance_date') || getLocalDateStr(),
         status: formData.get('status'),
         overtime_hours: parseFloat(formData.get('overtime_hours')) || 0
