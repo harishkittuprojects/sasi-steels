@@ -2,7 +2,7 @@
 // SASI STEEL ENGINEERING - ADMIN DASHBOARD ENGINE (Supabase & Cloudinary)
 // =========================================================
 
-let currentActiveTab = 'quotations';
+let currentActiveTab = 'employees';
 let activeModalType = null;
 let editingItemId = null;
 
@@ -67,13 +67,8 @@ function checkAdminAuth() {
     initHeaderTodayDate();
     updateAllLockBadges();
     
-    // Check if initial tab is locked
-    if (PROTECTED_SECTIONS.includes(currentActiveTab) && sectionLockState[currentActiveTab]) {
-      // By default prompt for unlock on protected landing or switch to unlocked section
-      openPinLockModal(currentActiveTab);
-    } else {
-      loadCurrentTab();
-    }
+    // Always land on an unlocked safe section (Employees) so protected sections remain safely locked
+    switchTab('employees');
     loadInitialCounts();
   }
 }
@@ -89,11 +84,7 @@ function handleAdminLogin(e) {
     document.getElementById('auth-modal').classList.add('hidden');
     initHeaderTodayDate();
     updateAllLockBadges();
-    if (PROTECTED_SECTIONS.includes(currentActiveTab) && sectionLockState[currentActiveTab]) {
-      openPinLockModal(currentActiveTab);
-    } else {
-      loadCurrentTab();
-    }
+    switchTab('employees');
     loadInitialCounts();
   } else {
     alert('Incorrect credentials! Please enter the correct password.');

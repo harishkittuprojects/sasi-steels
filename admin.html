@@ -177,7 +177,7 @@
       <div class="space-y-1">
         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 py-2">Workshop Management</p>
         
-        <button onclick="switchTab('quotations')" id="tab-btn-quotations" class="sidebar-link active w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+        <button onclick="switchTab('quotations')" id="tab-btn-quotations" class="sidebar-link w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
           <div class="flex items-center gap-3">
             <i class="fa-solid fa-file-invoice text-orange-500 w-4 text-center"></i>
             <span>Quotations & Leads</span>
@@ -199,7 +199,7 @@
           </div>
         </button>
 
-        <button onclick="switchTab('employees')" id="tab-btn-employees" class="sidebar-link w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
+        <button onclick="switchTab('employees')" id="tab-btn-employees" class="sidebar-link active w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-all text-left">
           <div class="flex items-center gap-3">
             <i class="fa-solid fa-users text-cyan-400 w-4 text-center"></i>
             <span>Employees & Staff</span>
@@ -252,7 +252,7 @@
     <main class="flex-1 min-w-0">
 
       <!-- ================= SECTION 1: QUOTATIONS & ESTIMATES ================= -->
-      <section id="section-quotations" class="tab-section">
+      <section id="section-quotations" class="tab-section hidden">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <div class="flex items-center gap-2 mb-1">
@@ -567,7 +567,7 @@
       </section>
 
       <!-- ================= SECTION: EMPLOYEES & STAFF DIRECTORY ================= -->
-      <section id="section-employees" class="tab-section hidden">
+      <section id="section-employees" class="tab-section">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Employees & Staff Directory</h2>
