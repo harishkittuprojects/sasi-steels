@@ -2282,19 +2282,15 @@ async function generatePdfDocument(quote, settings) {
     } catch (e) {}
   }
 
-  // Create isolated container positioned absolutely (NOT fixed to avoid viewport clipping)
+  // Create isolated container in DOM flow (do NOT use position: absolute with top:0/left:0 which causes html2canvas blank page offset bug)
   const container = document.createElement('div');
   container.id = 'sasi-pdf-export-temp-container';
-  container.innerHTML = generateQuotationPaperHTML(clonedQuote, clonedSettings);
-  container.style.position = 'absolute';
-  container.style.top = '0';
-  container.style.left = '0';
   container.style.width = '780px';
-  container.style.zIndex = '999999';
+  container.style.margin = '0 auto';
   container.style.background = '#ffffff';
   container.style.boxSizing = 'border-box';
-  container.style.margin = '0';
   container.style.padding = '0';
+  container.innerHTML = generateQuotationPaperHTML(clonedQuote, clonedSettings);
   document.body.appendChild(container);
 
   // Wait for all images in container to load completely
@@ -2311,16 +2307,14 @@ async function generatePdfDocument(quote, settings) {
 
   const cleanNum = (quote.quote_number || 'Quotation').replace(/[^a-zA-Z0-9_-]/g, '_');
   const opt = {
-    margin: [6, 6, 6, 6],
+    margin: [5, 5, 5, 5],
     filename: `${cleanNum}_${getLocalDateStr()}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: {
       scale: 2,
       useCORS: true,
       allowTaint: true,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: 780,
+      letterRendering: true,
       logging: false
     },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
