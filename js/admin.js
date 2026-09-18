@@ -2247,24 +2247,49 @@ async function exportAllQuotationsExcel() {
 // ================= 7. PDF GENERATION ENGINE (html2pdf) =================
 
 async function exportQuotationToPDF(quoteId) {
-  const quote = allQuotationsRecords.find(q => String(q.id) === String(quoteId) || String(q.quote_number) === String(quoteId));
-  if (!quote) return;
+  let quote = allQuotationsRecords.find(q => String(q.id) === String(quoteId) || String(q.quote_number) === String(quoteId));
+  if (!quote) {
+    const quotes = await dbGetQuotations();
+    allQuotationsRecords = quotes || [];
+    quote = allQuotationsRecords.find(q => String(q.id) === String(quoteId) || String(q.quote_number) === String(quoteId));
+  }
+  if (!quote) {
+    alert("Quotation not found.");
+    return;
+  }
   const settings = activeQuotationSettings || (await dbGetQuotationSettings());
   await generatePdfDocument(quote, settings);
 }
 
 async function downloadCurrentQuotationPDF() {
-  const quote = previewingQuotationData || (await getQuotationFormData());
-  if (!quote) return;
+  const quoteModal = document.getElementById('quotation-modal');
+  const previewModal = document.getElementById('quotation-preview-modal');
+  
+  let quote = null;
+  if (previewModal && !previewModal.classList.contains('hidden')) {
+    quote = previewingQuotationData;
+  } else if (quoteModal && !quoteModal.classList.contains('hidden')) {
+    quote = await getQuotationFormData();
+  } else {
+    quote = previewingQuotationData || (await getQuotationFormData());
+  }
+
+  if (!quote) {
+    alert("Please fill in or select a quotation first.");
+    return;
+  }
   const settings = activeQuotationSettings || (await dbGetQuotationSettings());
   await generatePdfDocument(quote, settings);
 }
 
 async function downloadPreviewPDF() {
-  if (previewingQuotationData) {
-    const settings = activeQuotationSettings || (await dbGetQuotationSettings());
-    await generatePdfDocument(previewingQuotationData, settings);
+  const quote = previewingQuotationData || (await getQuotationFormData());
+  if (!quote) {
+    alert("No quotation preview found.");
+    return;
   }
+  const settings = activeQuotationSettings || (await dbGetQuotationSettings());
+  await generatePdfDocument(quote, settings);
 }
 
 // Helper: Convert Image URL or local file path to Base64 Data URL for html2canvas
@@ -2310,8 +2335,15 @@ async function generatePdfDocument(quote, settings) {
     return;
   }
 
+  const safeSettings = sanitizeQuotationSettings(settings);
+  const safeQuote = {
+    ...quote,
+    terms: sanitizeQuotationTerms(quote.terms || safeSettings.default_terms),
+    bank_details: quote.bank_details ? sanitizeQuotationSettings(quote.bank_details) : safeSettings
+  };
+
   // Clone and pre-convert image URLs to Base64 to ensure immediate synchronous render in html2canvas
-  const clonedQuote = JSON.parse(JSON.stringify(quote));
+  const clonedQuote = JSON.parse(JSON.stringify(safeQuote));
   if (clonedQuote.items && Array.isArray(clonedQuote.items)) {
     for (let it of clonedQuote.items) {
       if (it.image_url) {
@@ -2323,7 +2355,7 @@ async function generatePdfDocument(quote, settings) {
     }
   }
 
-  const clonedSettings = { ...settings };
+  const clonedSettings = { ...safeSettings };
   if (clonedSettings.company_logo) {
     try {
       const logoB64 = await urlToBase64(clonedSettings.company_logo);
@@ -2331,11 +2363,14 @@ async function generatePdfDocument(quote, settings) {
     } catch (e) {}
   }
 
-  // Create isolated container in DOM flow (do NOT use position: absolute with top:0/left:0 which causes html2canvas blank page offset bug)
+  // Create isolated container with fixed position to prevent scroll offset clipping in html2canvas
   const container = document.createElement('div');
   container.id = 'sasi-pdf-export-temp-container';
-  container.style.width = '780px';
-  container.style.margin = '0 auto';
+  container.style.position = 'fixed';
+  container.style.top = '0';
+  container.style.left = '0';
+  container.style.zIndex = '999999';
+  container.style.width = '730px';
   container.style.background = '#ffffff';
   container.style.boxSizing = 'border-box';
   container.style.padding = '0';
@@ -2352,11 +2387,11 @@ async function generatePdfDocument(quote, settings) {
       setTimeout(res, 800);
     });
   }));
-  await new Promise(r => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 250));
 
-  const cleanNum = (quote.quote_number || 'Quotation').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const cleanNum = (safeQuote.quote_number || 'Quotation').replace(/[^a-zA-Z0-9_-]/g, '_');
   const opt = {
-    margin: [5, 5, 5, 5],
+    margin: [4, 4, 4, 4],
     filename: `${cleanNum}_${getLocalDateStr()}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: {
@@ -2364,7 +2399,9 @@ async function generatePdfDocument(quote, settings) {
       useCORS: true,
       allowTaint: true,
       letterRendering: true,
-      logging: false
+      logging: false,
+      scrollX: 0,
+      scrollY: 0
     },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak: { mode: ['css', 'legacy'] }
