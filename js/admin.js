@@ -2575,11 +2575,6 @@ async function urlToBase64(url) {
 }
 
 async function generatePdfDocument(quote, settings) {
-  if (typeof html2pdf === 'undefined') {
-    printQuotationDocument();
-    return;
-  }
-
   const safeSettings = sanitizeQuotationSettings(settings);
   const safeQuote = {
     ...quote,
@@ -2587,7 +2582,7 @@ async function generatePdfDocument(quote, settings) {
     bank_details: quote.bank_details ? sanitizeQuotationSettings(quote.bank_details) : safeSettings
   };
 
-  // Clone and pre-convert image URLs to Base64 to ensure immediate synchronous render in html2canvas
+  // Pre-convert all image URLs to Base64 data URLs for synchronous canvas rasterization
   const clonedQuote = JSON.parse(JSON.stringify(safeQuote));
   if (clonedQuote.items && Array.isArray(clonedQuote.items)) {
     for (let it of clonedQuote.items) {
@@ -2608,53 +2603,126 @@ async function generatePdfDocument(quote, settings) {
     } catch (e) {}
   }
 
-  // Create container in normal DOM flow so html2canvas renders complete PDF document without blank page clipping
-  const container = document.createElement('div');
-  container.id = 'sasi-pdf-export-temp-container';
-  container.style.width = '730px';
-  container.style.margin = '0 auto';
-  container.style.background = '#ffffff';
-  container.style.boxSizing = 'border-box';
-  container.style.padding = '0';
-  container.innerHTML = generateQuotationPaperHTML(clonedQuote, clonedSettings);
-  document.body.appendChild(container);
+  // Create an isolated fixed off-screen wrapper to avoid window.scrollY coordinate offsets
+  const wrapper = document.createElement('div');
+  wrapper.id = 'sasi-pdf-render-isolation-wrapper';
+  wrapper.style.position = 'fixed';
+  wrapper.style.top = '0';
+  wrapper.style.left = '0';
+  wrapper.style.width = '740px';
+  wrapper.style.maxWidth = '740px';
+  wrapper.style.background = '#ffffff';
+  wrapper.style.color = '#000000';
+  wrapper.style.zIndex = '999999';
+  wrapper.style.opacity = '0';
+  wrapper.style.pointerEvents = 'none';
+  wrapper.style.margin = '0';
+  wrapper.style.padding = '0';
+  wrapper.style.boxSizing = 'border-box';
+  wrapper.innerHTML = generateQuotationPaperHTML(clonedQuote, clonedSettings);
+  document.body.appendChild(wrapper);
 
-  // Wait for all images in container to load completely
-  const imgEls = container.querySelectorAll('img');
+  // Ensure all images are fully loaded and rendered
+  const imgEls = wrapper.querySelectorAll('img');
   await Promise.all(Array.from(imgEls).map(img => {
     if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
     return new Promise(res => {
       img.onload = res;
       img.onerror = res;
-      setTimeout(res, 600);
+      setTimeout(res, 500);
     });
   }));
-  await new Promise(r => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 150));
 
   const cleanNum = (safeQuote.quote_number || 'Quotation').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const opt = {
-    margin: [4, 4, 4, 4],
-    filename: `${cleanNum}_${getLocalDateStr()}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      letterRendering: true,
-      logging: false
-    },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['css', 'legacy'] }
-  };
+  const fileName = `${cleanNum}_${getLocalDateStr()}.pdf`;
 
   try {
-    await html2pdf().set(opt).from(container).save();
+    // 1. Check for html2canvas & jsPDF for deterministic high-res rendering
+    const hasCanvas = typeof html2canvas !== 'undefined';
+    const JsPDFClass = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF || (typeof html2pdf !== 'undefined' ? (new html2pdf().jsPDF) : null);
+
+    if (hasCanvas) {
+      const canvas = await html2canvas(wrapper, {
+        scale: 2.2,
+        useCORS: true,
+        allowTaint: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 740,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+
+      if (JsPDFClass) {
+        const pdf = new JsPDFClass('p', 'mm', 'a4');
+        const pdfWidth = 210;
+        const pdfHeight = 297;
+        const marginX = 4;
+        const marginY = 4;
+        const printableWidth = pdfWidth - (marginX * 2); // 202 mm
+        const printableHeight = pdfHeight - (marginY * 2); // 289 mm
+
+        const imgWidth = printableWidth;
+        const imgHeight = (canvas.height * printableWidth) / canvas.width;
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+        // If the document fits within single A4 page
+        if (imgHeight <= printableHeight) {
+          pdf.addImage(imgData, 'JPEG', marginX, marginY, imgWidth, imgHeight, undefined, 'FAST');
+        } else {
+          // Precise multi-page chunking without clipping headers
+          let heightLeft = imgHeight;
+          let position = marginY;
+
+          pdf.addImage(imgData, 'JPEG', marginX, position, imgWidth, imgHeight, undefined, 'FAST');
+          heightLeft -= printableHeight;
+
+          while (heightLeft > 0) {
+            position = position - printableHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', marginX, position, imgWidth, imgHeight, undefined, 'FAST');
+            heightLeft -= printableHeight;
+          }
+        }
+
+        pdf.save(fileName);
+        showDashboardToast(`Quotation PDF downloaded successfully!`, 'success');
+        return;
+      }
+    }
+
+    // 2. Fallback to html2pdf if direct jsPDF instance is wrapped
+    if (typeof html2pdf !== 'undefined') {
+      const opt = {
+        margin: [4, 4, 4, 4],
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 740,
+          backgroundColor: '#ffffff',
+          logging: false
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      await html2pdf().set(opt).from(wrapper).save();
+      showDashboardToast(`Quotation PDF exported successfully!`, 'success');
+      return;
+    }
+
+    // 3. Fallback to Browser Print dialog
+    printQuotationDocument();
   } catch (err) {
-    console.error("html2pdf failed, falling back to print:", err);
+    console.error("PDF generation error, fallback to print:", err);
     printQuotationDocument();
   } finally {
-    if (container && container.parentNode) {
-      container.parentNode.removeChild(container);
+    if (wrapper && wrapper.parentNode) {
+      wrapper.parentNode.removeChild(wrapper);
     }
   }
 }
@@ -3538,15 +3606,31 @@ async function exportCompanyOrdersPDF(specificCompany = null) {
     </div>
   `;
 
+  printContainer.style.position = 'fixed';
+  printContainer.style.top = '0';
+  printContainer.style.left = '0';
+  printContainer.style.width = '800px';
+  printContainer.style.background = '#ffffff';
+  printContainer.style.zIndex = '999999';
+  printContainer.style.opacity = '0';
+  printContainer.style.pointerEvents = 'none';
+
   if (typeof html2pdf !== 'undefined') {
     const opt = {
-      margin: [10, 10, 10, 10],
+      margin: [8, 8, 8, 8],
       filename: `SASI_Steels_${targetCompany.replace(/[^a-zA-Z0-9]/g, '_')}_Statement_${getLocalDateStr()}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, windowWidth: 800, logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    html2pdf().set(opt).from(printContainer).save();
+    try {
+      await html2pdf().set(opt).from(printContainer).save();
+      showDashboardToast(`Company statement PDF downloaded!`, 'success');
+    } catch (e) {
+      console.warn("Statement PDF error:", e);
+    } finally {
+      if (printContainer && printContainer.parentNode) printContainer.parentNode.removeChild(printContainer);
+    }
   } else {
     // Print window fallback
     const printWin = window.open('', '_blank');
@@ -3556,6 +3640,7 @@ async function exportCompanyOrdersPDF(specificCompany = null) {
     setTimeout(() => {
       printWin.print();
       printWin.close();
+      if (printContainer && printContainer.parentNode) printContainer.parentNode.removeChild(printContainer);
     }, 400);
   }
 }
