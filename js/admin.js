@@ -98,6 +98,75 @@ function handleAdminLogin(e) {
   }
 }
 
+// ================= DASHBOARD TOAST NOTIFICATION ENGINE =================
+function showDashboardToast(message, type = 'success', actionText = '', actionCallback = null) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-md w-full px-4';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  let bgClass = 'bg-slate-900 border-slate-700 text-white';
+  let icon = '<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>';
+
+  if (type === 'success') {
+    bgClass = 'bg-slate-900/95 border-emerald-500/50 text-white shadow-emerald-950/50';
+    icon = '<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>';
+  } else if (type === 'error') {
+    bgClass = 'bg-slate-900/95 border-red-500/50 text-white shadow-red-950/50';
+    icon = '<i class="fa-solid fa-circle-xmark text-red-400 text-base"></i>';
+  } else if (type === 'info') {
+    bgClass = 'bg-slate-900/95 border-cyan-500/50 text-white shadow-cyan-950/50';
+    icon = '<i class="fa-solid fa-circle-info text-cyan-400 text-base"></i>';
+  } else if (type === 'warning') {
+    bgClass = 'bg-slate-900/95 border-amber-500/50 text-white shadow-amber-950/50';
+    icon = '<i class="fa-solid fa-triangle-exclamation text-amber-400 text-base"></i>';
+  }
+
+  const toastId = 'toast-' + Date.now();
+  toast.id = toastId;
+  toast.className = `toast pointer-events-auto flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl ${bgClass} text-xs font-semibold transition-all`;
+  
+  toast.innerHTML = `
+    <div class="flex items-center gap-2.5 flex-1">
+      ${icon}
+      <span class="leading-snug">${message}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      ${actionText && typeof actionCallback === 'function' ? `
+        <button id="${toastId}-btn" class="px-2.5 py-1 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-[11px] transition-all whitespace-nowrap shadow-sm cursor-pointer">
+          ${actionText}
+        </button>
+      ` : ''}
+      <button onclick="this.closest('.toast').remove()" class="text-slate-400 hover:text-white text-sm px-1 cursor-pointer">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  `;
+
+  container.appendChild(toast);
+
+  if (actionText && typeof actionCallback === 'function') {
+    const actionBtn = document.getElementById(`${toastId}-btn`);
+    if (actionBtn) {
+      actionBtn.addEventListener('click', () => {
+        actionCallback();
+        toast.remove();
+      });
+    }
+  }
+
+  setTimeout(() => {
+    if (toast && toast.parentElement) {
+      toast.classList.add('opacity-0', 'translate-y-2');
+      setTimeout(() => toast.remove(), 350);
+    }
+  }, 5000);
+}
+
 function lockAllProtectedSections() {
   PROTECTED_SECTIONS.forEach(sec => {
     sectionLockState[sec] = true;
@@ -919,23 +988,39 @@ function resetQuotationsFilter() {
 }
 
 async function confirmQuotationOrder(id) {
-  const quote = allQuotationsRecords.find(q => String(q.id) === String(id) || String(q.quote_number) === String(id));
-  if (!quote) return;
-
-  await dbUpdateQuotation(quote.id || quote.quote_number, { status: 'Approved' });
-  const updatedQuote = { ...quote, status: 'Approved' };
-  
-  if (typeof syncQuotationToOrder === 'function') {
-    await syncQuotationToOrder(updatedQuote);
+  let quote = (allQuotationsRecords || []).find(q => String(q.id) === String(id) || String(q.quote_number) === String(id));
+  if (!quote && previewingQuotationData && (String(previewingQuotationData.id) === String(id) || String(previewingQuotationData.quote_number) === String(id))) {
+    quote = previewingQuotationData;
+  }
+  if (!quote && allQuotationsRecords.length > 0) {
+    quote = allQuotationsRecords[0];
+  }
+  if (!quote) {
+    alert("Quotation not found.");
+    return false;
   }
 
-  await loadQuotations();
-  await loadOrders();
-  loadInitialCounts();
+  try {
+    const updatedQuote = { ...quote, status: 'Approved' };
+    await dbUpdateQuotation(quote.id || quote.quote_number, { status: 'Approved' });
 
-  showDashboardToast(`🎉 Quotation #${quote.quote_number} confirmed! Order booked in Orders & Bookings.`, 'success', 'View in Orders', () => {
-    viewLinkedOrder(quote.quote_number);
-  });
+    if (typeof syncQuotationToOrder === 'function') {
+      await syncQuotationToOrder(updatedQuote);
+    }
+
+    await loadQuotations();
+    await loadOrders();
+    loadInitialCounts();
+
+    showDashboardToast(`🎉 Quotation #${quote.quote_number} confirmed! Order booked in Orders & Bookings.`, 'success', 'View in Orders', () => {
+      viewLinkedOrder(quote.quote_number);
+    });
+    return true;
+  } catch (err) {
+    console.error("Error confirming quotation order:", err);
+    alert("Could not confirm quotation order: " + (err.message || err));
+    return false;
+  }
 }
 
 async function handleQuotationStatusChange(id, newStatus) {
@@ -1914,18 +1999,33 @@ async function openQuotationPreview(quoteId) {
 }
 
 async function confirmQuotationOrderFromPreview() {
-  if (!previewingQuotationData) return;
+  const confirmBtn = document.getElementById('preview-confirm-order-btn');
+  if (!previewingQuotationData) {
+    alert("No active quotation preview to confirm.");
+    return;
+  }
+
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Confirming...`;
+  }
+
   const qId = previewingQuotationData.id || previewingQuotationData.quote_number;
-  await confirmQuotationOrder(qId);
+  const ok = await confirmQuotationOrder(qId);
   
-  const updatedQuote = allQuotationsRecords.find(q => String(q.id) === String(qId) || String(q.quote_number) === String(qId));
-  if (updatedQuote) {
-    previewingQuotationData = updatedQuote;
-    const confirmBtn = document.getElementById('preview-confirm-order-btn');
-    if (confirmBtn) {
-      confirmBtn.className = 'px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs font-bold inline-flex items-center gap-1.5 border border-emerald-500/30 transition-all';
+  const updatedQuote = (allQuotationsRecords || []).find(q => String(q.id) === String(qId) || String(q.quote_number) === String(qId)) || { ...previewingQuotationData, status: 'Approved' };
+  previewingQuotationData = updatedQuote;
+
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    if (ok) {
+      confirmBtn.className = 'px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs font-bold inline-flex items-center gap-1.5 border border-emerald-500/30 transition-all cursor-pointer';
       confirmBtn.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> View in Orders`;
       confirmBtn.onclick = () => viewLinkedOrder(updatedQuote.quote_number);
+    } else {
+      confirmBtn.className = 'px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow transition-all cursor-pointer';
+      confirmBtn.innerHTML = `<i class="fa-solid fa-cart-arrow-down"></i> Confirm Order`;
+      confirmBtn.onclick = () => confirmQuotationOrderFromPreview();
     }
   }
 }
