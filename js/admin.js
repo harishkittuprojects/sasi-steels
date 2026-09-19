@@ -65,10 +65,17 @@ function checkAdminAuth() {
   } else {
     if (authModal) authModal.classList.add('hidden');
     initHeaderTodayDate();
+
+    // Check if session has already unlocked the protected sections
+    const isUnlocked = sessionStorage.getItem('sasi_sections_unlocked') === 'true';
+    PROTECTED_SECTIONS.forEach(sec => {
+      sectionLockState[sec] = !isUnlocked;
+    });
+
     updateAllLockBadges();
     
-    // Always land on an unlocked safe section (Employees) so protected sections remain safely locked
-    switchTab('employees');
+    // Navigate to default tab
+    switchTab(isUnlocked ? 'quotations' : 'employees');
     loadInitialCounts();
   }
 }
@@ -91,8 +98,21 @@ function handleAdminLogin(e) {
   }
 }
 
+function lockAllProtectedSections() {
+  PROTECTED_SECTIONS.forEach(sec => {
+    sectionLockState[sec] = true;
+    updateSectionLockIcon(sec, true);
+  });
+  sessionStorage.removeItem('sasi_sections_unlocked');
+  if (PROTECTED_SECTIONS.includes(currentActiveTab)) {
+    switchTab('employees');
+  }
+  showDashboardToast(`🔒 All protected sections have been locked.`, 'info');
+}
+
 function adminLogout() {
   sessionStorage.removeItem('sasi_admin_auth');
+  sessionStorage.removeItem('sasi_sections_unlocked');
   window.location.reload();
 }
 
@@ -137,20 +157,20 @@ function openPinLockModal(targetTab) {
   }
 
   let sectionDisplayName = 'Protected Section';
-  let sectionDesc = 'Enter your 4-digit master security PIN to access this section.';
+  let sectionDesc = 'Enter your 4-digit master security PIN. Entering PIN unlocks all protected sections (Quotations, Orders & Finance) for this session.';
   let iconClass = 'fa-solid fa-lock';
 
   if (targetTab === 'quotations') {
     sectionDisplayName = 'Quotations & Leads';
-    sectionDesc = 'Official company proposals, client pricing, and RFQ inquiries are protected.';
+    sectionDesc = 'Enter your PIN to unlock Quotations, Orders & Bookings, and Finance sections.';
     iconClass = 'fa-solid fa-file-invoice text-orange-500';
   } else if (targetTab === 'orders') {
     sectionDisplayName = 'Orders & Bookings';
-    sectionDesc = 'Customer purchase orders, delivery statuses, and payments are protected.';
+    sectionDesc = 'Enter your PIN to unlock Orders, Quotations, and Finance sections.';
     iconClass = 'fa-solid fa-cart-shopping text-emerald-400';
   } else if (targetTab === 'finance') {
     sectionDisplayName = 'Income & Expenses (Finance)';
-    sectionDesc = 'Workshop revenues, raw material expenses, wages, and audit logs are protected.';
+    sectionDesc = 'Enter your PIN to unlock Finance, Quotations, and Orders sections.';
     iconClass = 'fa-solid fa-chart-line text-emerald-400';
   }
 
@@ -210,17 +230,13 @@ async function handlePinUnlockSubmit(e) {
     if (isCorrect) {
       const targetTab = pendingUnlockTab || currentActiveTab;
       
-      // Auto-relock all other protected sections
+      // UNLOCK ALL PROTECTED SECTIONS TOGETHER (Quotations, Orders & Finance)
       PROTECTED_SECTIONS.forEach(sec => {
-        if (sec !== targetTab) {
-          sectionLockState[sec] = true;
-          updateSectionLockIcon(sec, true);
-        }
+        sectionLockState[sec] = false;
+        updateSectionLockIcon(sec, false);
       });
+      sessionStorage.setItem('sasi_sections_unlocked', 'true');
 
-      // Unlock only the selected target section
-      sectionLockState[targetTab] = false;
-      updateSectionLockIcon(targetTab, false);
       closePinLockModal();
 
       previousActiveTab = currentActiveTab;
@@ -236,6 +252,8 @@ async function handlePinUnlockSubmit(e) {
 
       loadCurrentTab();
       pendingUnlockTab = null;
+
+      showDashboardToast(`🔓 All protected sections (Quotations, Orders & Finance) unlocked!`, 'success');
     } else {
       if (errorEl && errorTextEl) {
         errorTextEl.textContent = "Incorrect PIN. Please try again.";
@@ -255,7 +273,7 @@ async function handlePinUnlockSubmit(e) {
   } finally {
     if (unlockBtn) {
       unlockBtn.disabled = false;
-      unlockBtn.innerHTML = `<i class="fa-solid fa-lock-open mr-2"></i> Unlock Section`;
+      unlockBtn.innerHTML = `<i class="fa-solid fa-lock-open mr-2"></i> Unlock All Sections`;
     }
   }
 }
@@ -375,15 +393,9 @@ async function handleChangePinSubmit(e) {
   }
 }
 
-// Tab Switching Interceptor with Auto-Relock on navigation
+// Tab Switching Controller (Keeps unlocked sections accessible throughout session)
 function switchTab(tabName) {
-  // Whenever navigating away from any protected section, automatically re-lock it immediately!
-  if (PROTECTED_SECTIONS.includes(currentActiveTab) && currentActiveTab !== tabName) {
-    sectionLockState[currentActiveTab] = true;
-    updateSectionLockIcon(currentActiveTab, true);
-  }
-
-  // If target section is protected and locked, intercept and show PIN modal
+  // If target section is protected and still locked, intercept and show PIN modal
   if (PROTECTED_SECTIONS.includes(tabName) && sectionLockState[tabName] === true) {
     openPinLockModal(tabName);
     return;

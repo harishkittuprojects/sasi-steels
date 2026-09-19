@@ -154,6 +154,10 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>Supabase RDS Connected</span>
         </div>
+        <button onclick="lockAllProtectedSections()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5" title="Relock All Protected Sections">
+          <i class="fa-solid fa-lock text-amber-400 text-xs"></i>
+          <span class="hidden sm:inline">Lock Sections</span>
+        </button>
         <button onclick="openChangePinModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5" title="Change Security PIN">
           <i class="fa-solid fa-key text-amber-400 text-xs"></i>
           <span class="hidden sm:inline">Change PIN</span>
