@@ -3076,13 +3076,17 @@ async function openOrderModal(id = null) {
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Unit</label>
-        <select name="unit" class="w-full px-2 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+        <select name="unit" class="w-full px-2 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 text-xs font-semibold">
           <option value="Tons" ${initialUnit === 'Tons' ? 'selected' : ''}>Tons</option>
           <option value="Sheets" ${initialUnit === 'Sheets' ? 'selected' : ''}>Sheets</option>
           <option value="Units" ${initialUnit === 'Units' ? 'selected' : ''}>Units</option>
           <option value="Meters" ${initialUnit === 'Meters' ? 'selected' : ''}>Meters</option>
           <option value="Kgs" ${initialUnit === 'Kgs' ? 'selected' : ''}>Kgs</option>
           <option value="Boxes" ${initialUnit === 'Boxes' ? 'selected' : ''}>Boxes</option>
+          <option value="Nos" ${initialUnit === 'Nos' ? 'selected' : ''}>Nos</option>
+          <option value="Sq.Ft" ${initialUnit === 'Sq.Ft' ? 'selected' : ''}>Sq.Ft</option>
+          <option value="Bundles" ${initialUnit === 'Bundles' ? 'selected' : ''}>Bundles</option>
+          <option value="Pcs" ${initialUnit === 'Pcs' ? 'selected' : ''}>Pcs</option>
         </select>
       </div>
       <div>
@@ -3825,6 +3829,21 @@ function toggleInventoryCustomCategory(val) {
   if (wrap) {
     if (val === 'CUSTOM') {
       wrap.classList.remove('hidden');
+      const input = wrap.querySelector('input');
+      if (input) input.focus();
+    } else {
+      wrap.classList.add('hidden');
+    }
+  }
+}
+
+function toggleInventoryCustomUnit(val) {
+  const wrap = document.getElementById('inventory-custom-unit-wrap');
+  if (wrap) {
+    if (val === 'CUSTOM_UNIT') {
+      wrap.classList.remove('hidden');
+      const input = wrap.querySelector('input');
+      if (input) input.focus();
     } else {
       wrap.classList.add('hidden');
     }
@@ -3845,8 +3864,11 @@ function openInventoryModal(id = null) {
 
   const standardCats = ['Structural Steel', 'Stainless Steel', 'Pipes & Tubes', 'Plates & Sheets', 'Storage Systems', 'Custom Fabrication', 'Consumables', 'Hardware'];
   const cat = existing ? existing.category : 'Structural Steel';
-  const isCustom = existing && !standardCats.includes(cat);
+  const isCustomCat = existing && !standardCats.includes(cat);
+
+  const standardUnits = ['Tons', 'Sheets', 'Units', 'Meters', 'Kgs', 'Boxes', 'Nos', 'Sq.Ft', 'Bundles', 'Pcs'];
   const unit = existing ? existing.unit : 'Tons';
+  const isCustomUnit = existing && !standardUnits.includes(unit);
 
   document.getElementById('crud-form-fields').innerHTML = `
     <div>
@@ -3865,24 +3887,31 @@ function openInventoryModal(id = null) {
           <option value="Plates & Sheets" ${cat === 'Plates & Sheets' ? 'selected' : ''}>Plates & Sheets</option>
           <option value="Consumables" ${cat === 'Consumables' ? 'selected' : ''}>Consumables & Rods</option>
           <option value="Hardware" ${cat === 'Hardware' ? 'selected' : ''}>Hardware & Fasteners</option>
-          <option value="CUSTOM" ${isCustom ? 'selected' : ''}>+ Other Custom Category...</option>
+          <option value="CUSTOM" ${isCustomCat ? 'selected' : ''}>+ Other Custom Category...</option>
         </select>
-        <div id="inventory-custom-category-wrap" class="${isCustom ? '' : 'hidden'} mt-2">
-          <input type="text" name="custom_category" value="${isCustom ? cat : ''}" placeholder="Type custom category name..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/70 text-amber-300 text-xs font-semibold focus:outline-none focus:border-amber-400" />
+        <div id="inventory-custom-category-wrap" class="${isCustomCat ? '' : 'hidden'} mt-2">
+          <input type="text" name="custom_category" value="${isCustomCat ? cat : ''}" placeholder="Type custom category name..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/70 text-amber-300 text-xs font-semibold focus:outline-none focus:border-amber-400" />
         </div>
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Current Stock Quantity & Unit <span class="text-orange-500">*</span></label>
         <div class="flex gap-2">
-          <input type="number" step="0.1" name="quantity" required value="${existing ? existing.quantity : ''}" placeholder="Available Qty" class="w-2/3 px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-orange-400 font-bold focus:outline-none focus:border-orange-500" />
-          <select name="unit" class="w-1/3 px-2 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold">
+          <input type="number" step="0.1" name="quantity" required value="${existing ? existing.quantity : ''}" placeholder="Available Qty" class="w-1/2 px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-orange-400 font-bold focus:outline-none focus:border-orange-500" />
+          <select name="unit" onchange="toggleInventoryCustomUnit(this.value)" class="w-1/2 px-2 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold text-xs">
             <option value="Tons" ${unit === 'Tons' ? 'selected' : ''}>Tons</option>
             <option value="Sheets" ${unit === 'Sheets' ? 'selected' : ''}>Sheets</option>
             <option value="Units" ${unit === 'Units' ? 'selected' : ''}>Units</option>
             <option value="Meters" ${unit === 'Meters' ? 'selected' : ''}>Meters</option>
             <option value="Kgs" ${unit === 'Kgs' ? 'selected' : ''}>Kgs</option>
             <option value="Boxes" ${unit === 'Boxes' ? 'selected' : ''}>Boxes</option>
+            <option value="Nos" ${unit === 'Nos' ? 'selected' : ''}>Nos</option>
+            <option value="Sq.Ft" ${unit === 'Sq.Ft' ? 'selected' : ''}>Sq.Ft</option>
+            <option value="Bundles" ${unit === 'Bundles' ? 'selected' : ''}>Bundles</option>
+            <option value="CUSTOM_UNIT" ${isCustomUnit ? 'selected' : ''}>+ Custom Unit...</option>
           </select>
+        </div>
+        <div id="inventory-custom-unit-wrap" class="${isCustomUnit ? '' : 'hidden'} mt-2">
+          <input type="text" name="custom_unit" value="${isCustomUnit ? unit : ''}" placeholder="Type custom unit (e.g. Rolls, Packs, Ft)..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-orange-500/70 text-orange-400 text-xs font-semibold focus:outline-none focus:border-orange-400" />
         </div>
       </div>
     </div>
@@ -4625,11 +4654,15 @@ async function handleCrudSubmit(e) {
       const customCat = (formData.get('custom_category') || '').trim();
       const finalCategory = (selectedCat === 'CUSTOM' && customCat) ? customCat : (selectedCat === 'CUSTOM' ? 'Custom Fabrication' : (selectedCat || 'Structural Steel'));
 
+      const selectedUnit = formData.get('unit');
+      const customUnit = (formData.get('custom_unit') || '').trim();
+      const finalUnit = (selectedUnit === 'CUSTOM_UNIT' && customUnit) ? customUnit : (selectedUnit === 'CUSTOM_UNIT' ? 'Units' : (selectedUnit || 'Units'));
+
       const item = {
         item_name: formData.get('item_name'),
         category: finalCategory,
         quantity: parseFloat(formData.get('quantity')) || 0,
-        unit: formData.get('unit'),
+        unit: finalUnit,
         unit_price: parseFloat(formData.get('unit_price')) || 0,
         storage_location: formData.get('storage_location'),
         min_reorder_level: parseFloat(formData.get('min_reorder_level')) || 5
