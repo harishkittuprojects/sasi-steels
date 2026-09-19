@@ -460,51 +460,148 @@
           </div>
         </div>
       </section>
-
-      <!-- ================= SECTION: ORDERS & BOOKINGS (AUTO-INVENTORY SYNC) ================= -->
+      <!-- ================= SECTION: ORDERS & BOOKINGS (COMPANY-WISE LEDGER & CALCULATION ENGINE) ================= -->
       <section id="section-orders" class="tab-section hidden">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <!-- Top Section Header & Actions -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 class="text-xl sm:text-2xl font-black font-heading text-white">Customer Orders & Bookings</h2>
-            <p class="text-xs text-slate-400">Record customer orders with real-time automatic stock inventory deduction & restoration.</p>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-wider">Company Management</span>
+              <span class="text-xs text-slate-400">| Real-Time Calculation Engine</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black font-heading text-white mt-1">Customer Orders & Company Ledger</h2>
+            <p class="text-xs text-slate-400">Track orders company-wise, filter date ranges, check paid/pending balances, and export statements.</p>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <button onclick="exportOrdersCSV()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-2 transition-all shadow-sm">
-              <i class="fa-solid fa-file-excel text-emerald-400"></i> Export Orders CSV
+            <button onclick="exportCompanyOrdersExcel()" class="px-3.5 py-2 rounded-xl bg-emerald-700/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Export current company calculation statement to Excel">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i> Statement Excel
             </button>
-            <button onclick="openOrderModal()" class="btn-orange-pill text-xs px-4 py-2.5">
-              <i class="fa-solid fa-cart-plus"></i> Create Manual Order
+            <button onclick="exportCompanyOrdersPDF()" class="px-3.5 py-2 rounded-xl bg-cyan-700/30 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Export printable PDF ledger statement">
+              <i class="fa-solid fa-file-pdf text-cyan-400"></i> Statement PDF
+            </button>
+            <button onclick="exportOrdersCSV()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer">
+              <i class="fa-solid fa-table"></i> All CSV
+            </button>
+            <button onclick="openOrderModal()" class="btn-orange-pill text-xs px-4 py-2 cursor-pointer shadow-lg shadow-orange-500/20">
+              <i class="fa-solid fa-cart-plus mr-1"></i> Create Order
             </button>
           </div>
         </div>
 
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Orders</span>
-            <div class="text-2xl font-black text-white mt-1 font-heading" id="orders-total-count">0</div>
+        <!-- 1. PRIMARY COMPANY SELECTOR & FILTER BAR -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-700/70 p-4 rounded-3xl mb-6 shadow-xl relative overflow-hidden">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex-1">
+              <label class="block text-xs font-bold text-orange-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-building-flag text-orange-500"></i> Active Company Scope:
+              </label>
+              <div class="relative">
+                <select id="order-filter-company" onchange="onCompanyFilterChange(this.value)" class="w-full bg-slate-950 border-2 border-orange-500/50 hover:border-orange-500 text-white font-bold text-sm sm:text-base rounded-2xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/40 shadow-inner cursor-pointer appearance-none pr-10 transition-all">
+                  <option value="ALL">🏢 All Companies (Combined Totals & Overview)</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-orange-400">
+                  <i class="fa-solid fa-chevron-down text-xs"></i>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 self-end md:self-center">
+              <div id="company-active-badge" class="px-3.5 py-2 rounded-2xl bg-orange-500/15 border border-orange-500/30 text-orange-300 text-xs font-bold flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-orange-400"></i>
+                <span id="company-active-label">Showing All Companies Combined</span>
+              </div>
+            </div>
           </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active & In-Progress</span>
-            <div class="text-2xl font-black text-orange-400 mt-1 font-heading" id="orders-active-count">0</div>
-          </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivered Orders</span>
-            <div class="text-2xl font-black text-cyan-400 mt-1 font-heading" id="orders-delivered-count">0</div>
-          </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Revenue</span>
-            <div class="text-2xl font-black text-emerald-400 mt-1 font-heading" id="orders-total-revenue">₹0</div>
+
+          <!-- Quick Company Pills / Tags -->
+          <div class="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2 overflow-x-auto pb-1 text-xs" id="order-company-pills">
+            <button onclick="onCompanyFilterChange('ALL')" class="company-pill active px-3 py-1 rounded-xl text-xs font-bold bg-orange-600 text-white shrink-0 transition-all shadow-sm">
+              All Companies
+            </button>
           </div>
         </div>
 
-        <!-- Filter Bar -->
+        <!-- 2. SEVEN REAL-TIME COMPANY CALCULATION METRICS CARDS -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
+          <!-- Total Orders -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Orders</span>
+              <i class="fa-solid fa-receipt text-slate-500 text-xs"></i>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-white mt-1 font-heading" id="orders-total-count">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Booked orders</div>
+          </div>
+
+          <!-- Total Quantity -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Qty</span>
+              <i class="fa-solid fa-boxes-stacked text-cyan-500 text-xs"></i>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-cyan-400 mt-1 font-heading" id="orders-total-quantity">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Units / Tons</div>
+          </div>
+
+          <!-- Total Amount -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Value</span>
+              <i class="fa-solid fa-sack-dollar text-slate-400 text-xs"></i>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-white mt-1 font-heading" id="orders-total-revenue">₹0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Order sum</div>
+          </div>
+
+          <!-- Paid Amount -->
+          <div class="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-3.5 flex flex-col justify-between hover:border-emerald-500/50 transition-all shadow-sm bg-gradient-to-b from-slate-900 to-emerald-950/20">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Paid Amount</span>
+              <i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1 font-heading" id="orders-paid-amount">₹0</div>
+            <div class="text-[10px] text-emerald-500/70 mt-0.5 font-semibold">Collected</div>
+          </div>
+
+          <!-- Pending Amount / Due Balance -->
+          <div class="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-3.5 flex flex-col justify-between hover:border-amber-500/60 transition-all shadow-sm bg-gradient-to-b from-slate-900 to-amber-950/20">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Pending Due</span>
+              <i class="fa-solid fa-triangle-exclamation text-amber-400 text-xs"></i>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-amber-400 mt-1 font-heading" id="orders-pending-amount">₹0</div>
+            <div class="text-[10px] text-amber-500/70 mt-0.5 font-semibold">Balance due</div>
+          </div>
+
+          <!-- Pending / Active Orders -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Pending Orders</span>
+              <i class="fa-solid fa-clock text-orange-400 text-xs"></i>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-orange-400 mt-1 font-heading" id="orders-active-count">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">In production</div>
+          </div>
+
+          <!-- Completed / Delivered -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm col-span-2 sm:col-span-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Completed</span>
+              <i class="fa-solid fa-truck-fast text-emerald-400 text-xs"></i>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1 font-heading" id="orders-delivered-count">0</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Delivered</div>
+          </div>
+        </div>
+
+        <!-- 3. DATE-WISE FILTER & SEARCH BAR -->
         <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-magnifying-glass text-emerald-400"></i> Search:</span>
-              <input type="text" id="order-filter-search" placeholder="Search order # / customer..." class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-emerald-500 outline-none w-40" oninput="filterOrdersData()" />
+              <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-magnifying-glass text-orange-400"></i> Search:</span>
+              <input type="text" id="order-filter-search" placeholder="Search order / company / item..." class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none w-44" oninput="filterOrdersData()" />
             </div>
+
+            <!-- Date-wise Pickers -->
             <div class="flex items-center gap-2">
               <span class="text-xs text-slate-400 font-semibold"><i class="fa-regular fa-calendar text-orange-400"></i> From:</span>
               <input type="date" id="order-filter-from" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-2.5 py-1.5 focus:border-orange-500 outline-none cursor-pointer" oninput="onDateInputFilterChange('order')" onchange="onDateInputFilterChange('order')" onclick="if(this.showPicker) this.showPicker()" />
@@ -513,9 +610,11 @@
               <span class="text-xs text-slate-400 font-semibold">To:</span>
               <input type="date" id="order-filter-to" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-2.5 py-1.5 focus:border-orange-500 outline-none cursor-pointer" oninput="onDateInputFilterChange('order')" onchange="onDateInputFilterChange('order')" onclick="if(this.showPicker) this.showPicker()" />
             </div>
+
+            <!-- Order Status & Payment Status -->
             <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400 font-semibold">Order Status:</span>
-              <select id="order-filter-status" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-emerald-500 outline-none" onchange="filterOrdersData()">
+              <span class="text-xs text-slate-400 font-semibold">Status:</span>
+              <select id="order-filter-status" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none cursor-pointer" onchange="filterOrdersData()">
                 <option value="ALL">All Statuses</option>
                 <option value="Pending">Pending</option>
                 <option value="Confirmed">Confirmed</option>
@@ -526,37 +625,41 @@
             </div>
             <div class="flex items-center gap-2">
               <span class="text-xs text-slate-400 font-semibold">Payment:</span>
-              <select id="order-filter-payment" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-emerald-500 outline-none" onchange="filterOrdersData()">
+              <select id="order-filter-payment" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none cursor-pointer" onchange="filterOrdersData()">
                 <option value="ALL">All Payments</option>
-                <option value="Paid">Paid</option>
+                <option value="Paid">Fully Paid</option>
                 <option value="Partial">Partial</option>
-                <option value="Pending">Pending</option>
+                <option value="Pending">Pending Due</option>
               </select>
             </div>
           </div>
+
+          <!-- Date Quick Presets & Reset -->
           <div class="flex items-center gap-2">
             <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-              <button id="order-preset-all" onclick="setOrderDatePreset('all')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white">All</button>
-              <button id="order-preset-today" onclick="setOrderDatePreset('today')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300">Today</button>
-              <button id="order-preset-month" onclick="setOrderDatePreset('this_month')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300">This Month</button>
+              <button id="order-preset-all" onclick="setOrderDatePreset('all')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white cursor-pointer">All</button>
+              <button id="order-preset-today" onclick="setOrderDatePreset('today')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Today</button>
+              <button id="order-preset-week" onclick="setOrderDatePreset('this_week')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">This Week</button>
+              <button id="order-preset-month" onclick="setOrderDatePreset('this_month')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">This Month</button>
             </div>
-            <button onclick="resetOrdersFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1">
+            <button onclick="resetOrdersFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1 cursor-pointer">
               <i class="fa-solid fa-rotate-right"></i> Reset
             </button>
           </div>
         </div>
 
-        <!-- Orders Table Container -->
+        <!-- 4. ORDERS & LEDGER TABLE CONTAINER -->
         <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
               <thead>
                 <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
                   <th class="py-3.5 px-4">Order # & Date</th>
-                  <th class="py-3.5 px-4">Customer</th>
+                  <th class="py-3.5 px-4">Company & Customer</th>
                   <th class="py-3.5 px-4">Material / Product</th>
                   <th class="py-3.5 px-4">Quantity</th>
-                  <th class="py-3.5 px-4">Total Amount</th>
+                  <th class="py-3.5 px-4">Total Value</th>
+                  <th class="py-3.5 px-4">Paid & Due Balance</th>
                   <th class="py-3.5 px-4">Payment</th>
                   <th class="py-3.5 px-4">Order Status</th>
                   <th class="py-3.5 px-4 text-right">Actions</th>

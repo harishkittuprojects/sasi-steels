@@ -504,6 +504,17 @@ function setDateFilterPreset(prefix, preset) {
   if (preset === 'today') {
     if (fromInput) fromInput.value = todayStr;
     if (toInput) toInput.value = todayStr;
+  } else if (preset === 'this_week') {
+    const now = new Date();
+    const day = now.getDay(); // 0 is Sun, 1 is Mon
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    const mondayStr = getLocalDateStr(monday);
+    const endOfWeek = new Date(monday);
+    endOfWeek.setDate(monday.getDate() + 6);
+    const endOfWeekStr = getLocalDateStr(endOfWeek);
+    if (fromInput) fromInput.value = mondayStr;
+    if (toInput) toInput.value = endOfWeekStr;
   } else if (preset === 'this_month') {
     const now = new Date();
     const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -553,17 +564,18 @@ function onDateInputFilterChange(prefix) {
 function updatePresetButtonStyles(prefix, activePreset) {
   const allBtn = document.getElementById(`${prefix}-preset-all`);
   const todayBtn = document.getElementById(`${prefix}-preset-today`);
+  const weekBtn = document.getElementById(`${prefix}-preset-week`);
   const monthBtn = document.getElementById(`${prefix}-preset-month`);
 
-  [allBtn, todayBtn, monthBtn].forEach(b => {
+  [allBtn, todayBtn, weekBtn, monthBtn].forEach(b => {
     if (b) {
-      b.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300';
+      b.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer';
     }
   });
 
-  const activeBtn = document.getElementById(`${prefix}-preset-${activePreset === 'this_month' ? 'month' : activePreset}`);
+  const activeBtn = document.getElementById(`${prefix}-preset-${activePreset === 'this_month' ? 'month' : (activePreset === 'this_week' ? 'week' : activePreset)}`);
   if (activeBtn) {
-    activeBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow';
+    activeBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow cursor-pointer';
   }
 }
 
@@ -2704,20 +2716,79 @@ function openNewInquiryModal() {
   document.getElementById('crud-modal').classList.remove('hidden');
 }
 
-// ================= 2. CUSTOMER ORDERS & BOOKINGS (AUTO-INVENTORY SYNC) =================
+// ================= 2. CUSTOMER ORDERS & COMPANY-WISE LEDGER ENGINE =================
+let currentSelectedOrderCompany = 'ALL';
+
 async function loadOrders() {
   const tbody = document.getElementById('table-orders');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & bookings...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & company ledgers...</td></tr>`;
 
   try {
     const orders = await dbGetOrders();
     allOrdersRecords = orders || [];
+    populateCompanyFilterOptions();
     filterOrdersData();
   } catch (err) {
     console.error("Error in loadOrders:", err);
-    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Failed to load orders.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Failed to load orders.</td></tr>`;
   }
+}
+
+function populateCompanyFilterOptions() {
+  const selectEl = document.getElementById('order-filter-company');
+  const pillsEl = document.getElementById('order-company-pills');
+  if (!selectEl) return;
+
+  // Extract distinct company names
+  const companyCounts = {};
+  (allOrdersRecords || []).forEach(o => {
+    const name = (o.company_name && o.company_name.trim()) ? o.company_name.trim() : ((o.customer_name && o.customer_name.trim()) || 'General Client');
+    companyCounts[name] = (companyCounts[name] || 0) + 1;
+  });
+
+  const companyList = Object.keys(companyCounts).sort();
+  const curVal = currentSelectedOrderCompany || selectEl.value || 'ALL';
+
+  // Populate Dropdown
+  let optionsHtml = `<option value="ALL" ${curVal === 'ALL' ? 'selected' : ''}>🏢 All Companies (Combined Totals & Overview)</option>`;
+  companyList.forEach(comp => {
+    const count = companyCounts[comp];
+    optionsHtml += `<option value="${comp}" ${curVal === comp ? 'selected' : ''}>🏢 ${comp} (${count} ${count === 1 ? 'order' : 'orders'})</option>`;
+  });
+  selectEl.innerHTML = optionsHtml;
+
+  // Populate Quick Pills
+  if (pillsEl) {
+    const totalOrdersCount = (allOrdersRecords || []).length;
+    let pillsHtml = `
+      <button onclick="onCompanyFilterChange('ALL')" class="company-pill ${curVal === 'ALL' ? 'bg-orange-600 text-white shadow-md' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'} px-3 py-1 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer">
+        All Companies <span class="ml-1 text-[10px] px-1.5 py-0.2 rounded-full ${curVal === 'ALL' ? 'bg-black/30 text-white' : 'bg-slate-700 text-slate-300'}">${totalOrdersCount}</span>
+      </button>
+    `;
+
+    companyList.forEach(comp => {
+      const isSelected = curVal === comp;
+      const count = companyCounts[comp];
+      pillsHtml += `
+        <button onclick="onCompanyFilterChange('${comp.replace(/'/g, "\\'")}')" class="company-pill ${isSelected ? 'bg-orange-600 text-white shadow-md' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'} px-3 py-1 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5">
+          <i class="fa-solid fa-building text-[10px] opacity-70"></i>
+          <span>${comp}</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-black/30 text-white' : 'bg-slate-700 text-slate-300'}">${count}</span>
+        </button>
+      `;
+    });
+    pillsEl.innerHTML = pillsHtml;
+  }
+}
+
+function onCompanyFilterChange(compName) {
+  currentSelectedOrderCompany = compName || 'ALL';
+  const selectEl = document.getElementById('order-filter-company');
+  if (selectEl) selectEl.value = currentSelectedOrderCompany;
+
+  populateCompanyFilterOptions();
+  filterOrdersData();
 }
 
 function renderOrdersList(list) {
@@ -2727,13 +2798,13 @@ function renderOrdersList(list) {
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" class="py-12 text-center text-slate-400">
+        <td colspan="9" class="py-12 text-center text-slate-400">
           <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-emerald-400">
             <i class="fa-solid fa-cart-shopping"></i>
           </div>
           <p class="text-sm font-bold text-slate-300">No orders match your filter.</p>
-          <p class="text-xs text-slate-500 mt-1 mb-4">Create a manual customer order or reset your filters.</p>
-          <button onclick="openOrderModal()" class="btn-orange-pill text-xs px-4 py-2">
+          <p class="text-xs text-slate-500 mt-1 mb-4">Select another company, adjust dates, or create a new order.</p>
+          <button onclick="openOrderModal()" class="btn-orange-pill text-xs px-4 py-2 cursor-pointer">
             <i class="fa-solid fa-plus mr-1"></i> Create Manual Order
           </button>
         </td>
@@ -2745,36 +2816,59 @@ function renderOrdersList(list) {
     const rawPhone = (ord.customer_phone || '').replace(/[^0-9]/g, '');
     const phoneLink = rawPhone.startsWith('91') ? rawPhone : (rawPhone ? '91' + rawPhone : '');
     const orderDate = ord.order_date || (ord.created_at ? new Date(ord.created_at).toLocaleDateString('en-IN') : 'Recent');
+    const companyName = (ord.company_name && ord.company_name.trim()) ? ord.company_name.trim() : (ord.customer_name || 'General Client');
+    const customerName = ord.customer_name || 'Valued Client';
+    
+    const totalAmount = parseFloat(ord.total_amount) || 0;
+    const paidAmount = parseFloat(ord.paid_amount !== undefined ? ord.paid_amount : (ord.payment_status === 'Paid' ? totalAmount : 0)) || 0;
+    const pendingDue = Math.max(0, totalAmount - paidAmount);
 
     return `
       <tr class="hover:bg-slate-800/50 transition-colors">
         <td class="py-3 px-4">
           <div class="font-bold text-white font-mono text-xs text-orange-400">${ord.order_number || ('ORD-' + ord.id)}</div>
-          <div class="text-[11px] text-slate-300 font-mono font-semibold flex items-center gap-1 mt-0.5"><i class="fa-regular fa-calendar text-orange-400"></i> ${formatDisplayDate(ord.order_date || ord.created_at)}</div>
+          <div class="text-[11px] text-slate-300 font-mono font-semibold flex items-center gap-1 mt-0.5">
+            <i class="fa-regular fa-calendar text-orange-400"></i> ${formatDisplayDate(ord.order_date || ord.created_at)}
+          </div>
         </td>
         <td class="py-3 px-4">
-          <div class="font-bold text-white">${ord.customer_name}</div>
-          <div class="text-[11px] text-slate-400">${ord.customer_phone || 'No phone'}</div>
+          <div class="font-bold text-white flex items-center gap-1.5">
+            <span class="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 text-[10px] font-black uppercase tracking-wider">
+              <i class="fa-solid fa-building text-[9px] mr-0.5"></i> ${companyName}
+            </span>
+          </div>
+          <div class="text-xs text-slate-200 font-semibold mt-1 flex items-center gap-1">
+            <i class="fa-solid fa-user text-slate-400 text-[10px]"></i> ${customerName}
+          </div>
+          <div class="text-[11px] text-slate-400 mt-0.5">${ord.customer_phone || 'No phone'}</div>
         </td>
         <td class="py-3 px-4">
           <div class="font-bold text-slate-200">${ord.item_name}</div>
           <div class="text-[10px] text-slate-400">${ord.category || 'Standard Stock'}</div>
         </td>
-        <td class="py-3 px-4 font-bold text-cyan-400">
-          ${ord.quantity}
+        <td class="py-3 px-4 font-bold text-cyan-400 font-mono text-xs">
+          ${ord.quantity} <span class="text-[10px] text-slate-400 font-normal">${ord.unit || 'Units'}</span>
         </td>
         <td class="py-3 px-4">
-          <div class="font-bold text-emerald-400 font-mono">₹${(parseFloat(ord.total_amount) || 0).toLocaleString('en-IN')}</div>
-          <div class="text-[10px] text-slate-400">@ ₹${(parseFloat(ord.unit_price) || 0).toLocaleString('en-IN')}</div>
+          <div class="font-bold text-white font-mono">₹${Math.round(totalAmount).toLocaleString('en-IN')}</div>
+          <div class="text-[10px] text-slate-400">@ ₹${(parseFloat(ord.unit_price) || 0).toLocaleString('en-IN')}/${ord.unit || 'Unit'}</div>
+        </td>
+        <td class="py-3 px-4">
+          <div class="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1">
+            <i class="fa-solid fa-circle-check text-[10px]"></i> Paid: ₹${Math.round(paidAmount).toLocaleString('en-IN')}
+          </div>
+          <div class="text-xs font-bold ${pendingDue > 0 ? 'text-amber-400' : 'text-slate-500'} font-mono flex items-center gap-1 mt-0.5">
+            <i class="fa-solid ${pendingDue > 0 ? 'fa-triangle-exclamation' : 'fa-circle-check'} text-[10px]"></i> Due: ₹${Math.round(pendingDue).toLocaleString('en-IN')}
+          </div>
         </td>
         <td class="py-3 px-4">
           <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-            ord.payment_status === 'Paid' ? 'bg-emerald-500/20 text-emerald-400' :
-            ord.payment_status === 'Partial' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
-          }">${ord.payment_status || 'Pending'}</span>
+            ord.payment_status === 'Paid' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+            ord.payment_status === 'Partial' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
+          }">${ord.payment_status || (pendingDue === 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Pending'))}</span>
         </td>
         <td class="py-3 px-4">
-          <select onchange="handleOrderStatusChange('${ord.id}', this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-[11px] font-semibold">
+          <select onchange="handleOrderStatusChange('${ord.id}', this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-semibold cursor-pointer">
             <option value="Pending" ${ord.order_status === 'Pending' ? 'selected' : ''}>Pending</option>
             <option value="Confirmed" ${ord.order_status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
             <option value="Processing" ${ord.order_status === 'Processing' ? 'selected' : ''}>Processing</option>
@@ -2784,13 +2878,13 @@ function renderOrdersList(list) {
         </td>
         <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
           ${phoneLink ? `
-            <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(ord.customer_name)},%20this%20is%20SASI%20Steel%20Engineering%20regarding%20your%20Order%20${encodeURIComponent(ord.order_number || '')}." target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white text-[11px] font-bold inline-flex items-center gap-1">
+            <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(customerName)},%20this%20is%20SASI%20Steel%20Engineering%20regarding%20Order%20${encodeURIComponent(ord.order_number || '')}%20(${encodeURIComponent(companyName)}).%20Total:%20₹${Math.round(totalAmount)},%20Paid:%20₹${Math.round(paidAmount)},%20Pending%20Balance:%20₹${Math.round(pendingDue)}." target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer" title="Chat on WhatsApp">
               <i class="fa-brands fa-whatsapp"></i>
             </a>` : ''}
-          <button onclick="openOrderModal('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px]" title="Edit Order">
+          <button onclick="openOrderModal('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px] cursor-pointer" title="Edit Order">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
-          <button onclick="deleteOrderItem('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]" title="Delete Order">
+          <button onclick="deleteOrderItem('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] cursor-pointer" title="Delete Order">
             <i class="fa-solid fa-trash"></i>
           </button>
         </td>
@@ -2799,19 +2893,43 @@ function renderOrdersList(list) {
   }).join('');
 }
 
-function updateOrdersMetrics() {
-  const totalCount = allOrdersRecords.length;
-  const activeCount = allOrdersRecords.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
-  const deliveredCount = allOrdersRecords.filter(o => o.order_status === 'Delivered').length;
-  const totalRevenue = allOrdersRecords
-    .filter(o => o.order_status !== 'Cancelled')
-    .reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+function updateOrdersMetrics(currentFilteredList = allOrdersRecords) {
+  const targetCompany = currentSelectedOrderCompany || document.getElementById('order-filter-company')?.value || 'ALL';
+  
+  // Calculate on currently filtered dataset for accurate real-time company & date metrics
+  const totalCount = currentFilteredList.length;
+  const totalQty = currentFilteredList.reduce((sum, o) => sum + (parseFloat(o.quantity) || 0), 0);
+  
+  const validOrders = currentFilteredList.filter(o => o.order_status !== 'Cancelled');
+  const totalRevenue = validOrders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+  const totalPaid = validOrders.reduce((sum, o) => {
+    const tot = parseFloat(o.total_amount) || 0;
+    const paid = parseFloat(o.paid_amount !== undefined ? o.paid_amount : (o.payment_status === 'Paid' ? tot : 0)) || 0;
+    return sum + paid;
+  }, 0);
+  const totalPending = Math.max(0, totalRevenue - totalPaid);
 
+  const activeCount = currentFilteredList.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
+  const deliveredCount = currentFilteredList.filter(o => o.order_status === 'Delivered').length;
+
+  // Update DOM metric cards
   const badgeEl = document.getElementById('badge-orders-count');
   if (badgeEl) badgeEl.textContent = activeCount;
 
   const totalEl = document.getElementById('orders-total-count');
   if (totalEl) totalEl.textContent = totalCount;
+
+  const qtyEl = document.getElementById('orders-total-quantity');
+  if (qtyEl) qtyEl.textContent = totalQty % 1 === 0 ? totalQty.toLocaleString('en-IN') : totalQty.toFixed(1);
+
+  const revenueEl = document.getElementById('orders-total-revenue');
+  if (revenueEl) revenueEl.textContent = `₹${Math.round(totalRevenue).toLocaleString('en-IN')}`;
+
+  const paidEl = document.getElementById('orders-paid-amount');
+  if (paidEl) paidEl.textContent = `₹${Math.round(totalPaid).toLocaleString('en-IN')}`;
+
+  const pendingEl = document.getElementById('orders-pending-amount');
+  if (pendingEl) pendingEl.textContent = `₹${Math.round(totalPending).toLocaleString('en-IN')}`;
 
   const activeEl = document.getElementById('orders-active-count');
   if (activeEl) activeEl.textContent = activeCount;
@@ -2819,8 +2937,15 @@ function updateOrdersMetrics() {
   const deliveredEl = document.getElementById('orders-delivered-count');
   if (deliveredEl) deliveredEl.textContent = deliveredCount;
 
-  const revenueEl = document.getElementById('orders-total-revenue');
-  if (revenueEl) revenueEl.textContent = `₹${totalRevenue.toLocaleString('en-IN')}`;
+  // Active Company Label & Badge
+  const activeBadgeLabel = document.getElementById('company-active-label');
+  if (activeBadgeLabel) {
+    if (targetCompany === 'ALL') {
+      activeBadgeLabel.textContent = `Showing All Companies Combined (${totalCount} Orders)`;
+    } else {
+      activeBadgeLabel.innerHTML = `Active Company: <strong class="text-white">${targetCompany}</strong> (${totalCount} Orders | Balance Due: <strong class="text-amber-400">₹${Math.round(totalPending).toLocaleString('en-IN')}</strong>)`;
+    }
+  }
 }
 
 function setOrderDatePreset(preset) {
@@ -2828,39 +2953,58 @@ function setOrderDatePreset(preset) {
 }
 
 function filterOrdersData() {
-  updateOrdersMetrics();
-
+  const companyVal = currentSelectedOrderCompany || document.getElementById('order-filter-company')?.value || 'ALL';
   const searchVal = (document.getElementById('order-filter-search')?.value || '').toLowerCase().trim();
   const statusVal = document.getElementById('order-filter-status')?.value || 'ALL';
   const paymentVal = document.getElementById('order-filter-payment')?.value || 'ALL';
   const fromVal = document.getElementById('order-filter-from')?.value || '';
   const toVal = document.getElementById('order-filter-to')?.value || '';
 
-  const filtered = allOrdersRecords.filter(ord => {
+  const filtered = (allOrdersRecords || []).filter(ord => {
+    // 1. Company Filter
+    if (companyVal !== 'ALL') {
+      const ordComp = ((ord.company_name && ord.company_name.trim()) ? ord.company_name.trim() : (ord.customer_name || 'General Client')).toLowerCase();
+      if (ordComp !== companyVal.toLowerCase().trim()) return false;
+    }
+
+    // 2. Order Status Filter
     if (statusVal !== 'ALL' && ord.order_status !== statusVal) return false;
-    if (paymentVal !== 'ALL' && ord.payment_status !== paymentVal) return false;
+
+    // 3. Payment Status Filter
+    if (paymentVal !== 'ALL') {
+      const tot = parseFloat(ord.total_amount) || 0;
+      const pd = parseFloat(ord.paid_amount !== undefined ? ord.paid_amount : (ord.payment_status === 'Paid' ? tot : 0)) || 0;
+      const due = Math.max(0, tot - pd);
+      let calculatedPaymentStatus = ord.payment_status || (due === 0 ? 'Paid' : (pd > 0 ? 'Partial' : 'Pending'));
+      
+      if (paymentVal === 'Paid' && calculatedPaymentStatus !== 'Paid') return false;
+      if (paymentVal === 'Partial' && calculatedPaymentStatus !== 'Partial') return false;
+      if (paymentVal === 'Pending' && (calculatedPaymentStatus !== 'Pending' && due <= 0)) return false;
+    }
     
-    // Accurate date comparison using normalized YYYY-MM-DD
+    // 4. Date Comparison
     const oDate = getRecordDateStr(ord.order_date || ord.created_at);
     if (fromVal && oDate < fromVal) return false;
     if (toVal && oDate > toVal) return false;
 
+    // 5. Search Text
     if (searchVal) {
       const matchNum = (ord.order_number || '').toLowerCase().includes(searchVal);
+      const matchComp = (ord.company_name || '').toLowerCase().includes(searchVal);
       const matchCust = (ord.customer_name || '').toLowerCase().includes(searchVal);
       const matchPhone = (ord.customer_phone || '').toLowerCase().includes(searchVal);
       const matchItem = (ord.item_name || '').toLowerCase().includes(searchVal);
       const matchNotes = (ord.notes || '').toLowerCase().includes(searchVal);
       const cleanSearch = searchVal.replace(/[^a-z0-9]/g, '');
       const cleanNum = (ord.order_number || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const cleanNotes = (ord.notes || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const matchClean = cleanSearch ? (cleanNum.includes(cleanSearch) || cleanNotes.includes(cleanSearch)) : false;
+      const matchClean = cleanSearch ? cleanNum.includes(cleanSearch) : false;
 
-      if (!matchNum && !matchCust && !matchPhone && !matchItem && !matchNotes && !matchClean) return false;
+      if (!matchNum && !matchComp && !matchCust && !matchPhone && !matchItem && !matchNotes && !matchClean) return false;
     }
     return true;
   });
 
+  updateOrdersMetrics(filtered);
   renderOrdersList(filtered);
 }
 
@@ -2873,40 +3017,481 @@ async function handleOrderStatusChange(id, newStatus) {
 }
 
 function resetOrdersFilter() {
+  currentSelectedOrderCompany = 'ALL';
+  const compSelect = document.getElementById('order-filter-company');
   const searchInput = document.getElementById('order-filter-search');
   const statusSelect = document.getElementById('order-filter-status');
   const paymentSelect = document.getElementById('order-filter-payment');
+
+  if (compSelect) compSelect.value = 'ALL';
   if (searchInput) searchInput.value = '';
   if (statusSelect) statusSelect.value = 'ALL';
   if (paymentSelect) paymentSelect.value = 'ALL';
 
+  populateCompanyFilterOptions();
   setDateFilterPreset('order', 'all');
+}
+
+// -------------------------------------------------------------
+// EXPORT COMPANY ORDERS STATEMENT TO EXCEL (EXCELJS)
+// -------------------------------------------------------------
+async function exportCompanyOrdersExcel(specificCompany = null) {
+  const targetCompany = specificCompany || currentSelectedOrderCompany || document.getElementById('order-filter-company')?.value || 'ALL';
+  const fromVal = document.getElementById('order-filter-from')?.value || '';
+  const toVal = document.getElementById('order-filter-to')?.value || '';
+
+  if (!allOrdersRecords || allOrdersRecords.length === 0) {
+    allOrdersRecords = (await dbGetOrders()) || [];
+  }
+
+  // Filter orders in current scope
+  const exportList = allOrdersRecords.filter(ord => {
+    if (targetCompany !== 'ALL') {
+      const ordComp = ((ord.company_name && ord.company_name.trim()) ? ord.company_name.trim() : (ord.customer_name || 'General Client')).toLowerCase();
+      if (ordComp !== targetCompany.toLowerCase().trim()) return false;
+    }
+    const oDate = getRecordDateStr(ord.order_date || ord.created_at);
+    if (fromVal && oDate < fromVal) return false;
+    if (toVal && oDate > toVal) return false;
+    return true;
+  });
+
+  if (exportList.length === 0) {
+    alert(`No orders found for ${targetCompany === 'ALL' ? 'the selected date range' : targetCompany}.`);
+    return;
+  }
+
+  // Calculation totals
+  const totalOrders = exportList.length;
+  const totalQty = exportList.reduce((sum, o) => sum + (parseFloat(o.quantity) || 0), 0);
+  const totalAmount = exportList.filter(o => o.order_status !== 'Cancelled').reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+  const totalPaid = exportList.filter(o => o.order_status !== 'Cancelled').reduce((sum, o) => {
+    const t = parseFloat(o.total_amount) || 0;
+    const p = parseFloat(o.paid_amount !== undefined ? o.paid_amount : (o.payment_status === 'Paid' ? t : 0)) || 0;
+    return sum + p;
+  }, 0);
+  const totalPendingDue = Math.max(0, totalAmount - totalPaid);
+
+  if (typeof ExcelJS === 'undefined') {
+    // Fallback to CSV
+    exportOrdersCSV();
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'SASI STEEL ENGINEERING';
+  const sheet = workbook.addWorksheet(targetCompany === 'ALL' ? 'All Companies Statement' : targetCompany.substring(0, 30));
+
+  sheet.views = [{ showGridLines: true }];
+
+  // Column definitions
+  sheet.columns = [
+    { key: 'sno', width: 6 },
+    { key: 'order_no', width: 16 },
+    { key: 'order_date', width: 14 },
+    { key: 'company', width: 26 },
+    { key: 'customer', width: 22 },
+    { key: 'item_name', width: 30 },
+    { key: 'qty', width: 10 },
+    { key: 'unit', width: 10 },
+    { key: 'unit_price', width: 14 },
+    { key: 'total_amount', width: 16 },
+    { key: 'paid_amount', width: 16 },
+    { key: 'pending_due', width: 16 },
+    { key: 'payment_status', width: 14 },
+    { key: 'order_status', width: 14 },
+    { key: 'notes', width: 24 }
+  ];
+
+  const colorNavy = '1E293B';
+  const colorOrange = 'EA580C';
+  const colorHeaderBg = 'F1F5F9';
+  const colorGreenBg = 'DCFCE7';
+  const colorAmberBg = 'FEF3C7';
+  const solidBorder = {
+    top: { style: 'thin', color: { argb: 'CBD5E1' } },
+    left: { style: 'thin', color: { argb: 'CBD5E1' } },
+    bottom: { style: 'thin', color: { argb: 'CBD5E1' } },
+    right: { style: 'thin', color: { argb: 'CBD5E1' } }
+  };
+
+  // Row 1: Header Banner
+  sheet.mergeCells('A1:O1');
+  const h1 = sheet.getCell('A1');
+  h1.value = 'SASI STEEL ENGINEERING & WELDING WORKS';
+  h1.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFF' } };
+  h1.alignment = { vertical: 'middle', horizontal: 'center' };
+  h1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorNavy } };
+  sheet.getRow(1).height = 30;
+
+  // Row 2: Subtitle & Statement Scope
+  sheet.mergeCells('A2:O2');
+  const h2 = sheet.getCell('A2');
+  h2.value = `OFFICIAL COMPANY ORDER & ACCOUNT STATEMENT — ${targetCompany.toUpperCase()}`;
+  h2.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFF' } };
+  h2.alignment = { vertical: 'middle', horizontal: 'center' };
+  h2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorOrange } };
+  sheet.getRow(2).height = 22;
+
+  // Row 3: Period & Date
+  sheet.mergeCells('A3:O3');
+  const h3 = sheet.getCell('A3');
+  const periodText = (fromVal || toVal) ? `Period: ${fromVal || 'Start'} to ${toVal || 'Today'}` : 'Period: All Time Ledger';
+  h3.value = `${periodText}  |  Generated On: ${new Date().toLocaleDateString('en-IN')} ${new Date().toLocaleTimeString('en-IN')}  |  GSTIN: 37AUCPA2925Q1ZG`;
+  h3.font = { name: 'Calibri', size: 9.5, italic: true };
+  h3.alignment = { vertical: 'middle', horizontal: 'center' };
+  sheet.getRow(3).height = 18;
+
+  // Row 5-6: Statement Metrics Summary Table
+  sheet.getRow(5).values = ['', 'STATEMENT SUMMARY', '', 'TOTAL ORDERS', 'TOTAL QUANTITY', 'TOTAL VALUE (INR)', 'PAID AMOUNT (INR)', 'PENDING DUE BALANCE (INR)'];
+  sheet.mergeCells('B5:C5');
+  sheet.getCell('B5').font = { name: 'Calibri', size: 10, bold: true };
+  sheet.getCell('D5').font = { name: 'Calibri', size: 10, bold: true };
+  sheet.getCell('E5').font = { name: 'Calibri', size: 10, bold: true };
+  sheet.getCell('F5').font = { name: 'Calibri', size: 10, bold: true };
+  sheet.getCell('G5').font = { name: 'Calibri', size: 10, bold: true, color: { argb: '166534' } };
+  sheet.getCell('H5').font = { name: 'Calibri', size: 10, bold: true, color: { argb: '9A3412' } };
+
+  sheet.getRow(6).values = ['', targetCompany, '', totalOrders, totalQty, totalAmount, totalPaid, totalPendingDue];
+  sheet.mergeCells('B6:C6');
+  sheet.getCell('B6').font = { name: 'Calibri', size: 11, bold: true, color: { argb: '0F172A' } };
+  sheet.getCell('D6').font = { name: 'Calibri', size: 12, bold: true };
+  sheet.getCell('E6').font = { name: 'Calibri', size: 12, bold: true };
+  sheet.getCell('F6').font = { name: 'Calibri', size: 12, bold: true };
+  sheet.getCell('G6').font = { name: 'Calibri', size: 12, bold: true, color: { argb: '166534' } };
+  sheet.getCell('H6').font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'B91C1C' } };
+
+  sheet.getCell('G6').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorGreenBg } };
+  sheet.getCell('H6').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorAmberBg } };
+
+  for (let c = 2; c <= 8; c++) {
+    sheet.getRow(5).getCell(c).border = solidBorder;
+    sheet.getRow(6).getCell(c).border = solidBorder;
+  }
+  sheet.getRow(5).height = 20;
+  sheet.getRow(6).height = 24;
+
+  // Row 8: Table Header
+  const tableHeaders = ['S.No', 'Order #', 'Order Date', 'Company Name', 'Customer / Contact', 'Item Description', 'Qty', 'Unit', 'Rate/Unit (₹)', 'Total Amount (₹)', 'Paid (₹)', 'Pending Due (₹)', 'Payment Status', 'Order Status', 'Notes'];
+  const headerRow = sheet.getRow(8);
+  headerRow.height = 24;
+  tableHeaders.forEach((th, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = th;
+    cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: '000000' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorHeaderBg } };
+    cell.alignment = { vertical: 'middle', horizontal: idx === 0 || idx === 6 || idx === 7 || idx === 12 || idx === 13 ? 'center' : (idx >= 8 && idx <= 11 ? 'right' : 'left') };
+    cell.border = solidBorder;
+  });
+
+  // Rows 9 to N: Order Rows
+  let curRowIdx = 9;
+  exportList.forEach((ord, i) => {
+    const row = sheet.getRow(curRowIdx);
+    row.height = 20;
+
+    const tot = parseFloat(ord.total_amount) || 0;
+    const pd = parseFloat(ord.paid_amount !== undefined ? ord.paid_amount : (ord.payment_status === 'Paid' ? tot : 0)) || 0;
+    const due = Math.max(0, tot - pd);
+
+    row.getCell(1).value = i + 1;
+    row.getCell(2).value = ord.order_number || `ORD-${ord.id}`;
+    row.getCell(3).value = formatDisplayDate(ord.order_date || ord.created_at);
+    row.getCell(4).value = (ord.company_name && ord.company_name.trim()) ? ord.company_name.trim() : (ord.customer_name || 'General Client');
+    row.getCell(5).value = `${ord.customer_name || ''} ${ord.customer_phone ? '(' + ord.customer_phone + ')' : ''}`.trim();
+    row.getCell(6).value = ord.item_name || '';
+    row.getCell(7).value = parseFloat(ord.quantity) || 1;
+    row.getCell(8).value = ord.unit || 'Units';
+    row.getCell(9).value = parseFloat(ord.unit_price) || 0;
+    row.getCell(10).value = tot;
+    row.getCell(11).value = pd;
+    row.getCell(12).value = due;
+    row.getCell(13).value = ord.payment_status || (due === 0 ? 'Paid' : (pd > 0 ? 'Partial' : 'Pending'));
+    row.getCell(14).value = ord.order_status || 'Confirmed';
+    row.getCell(15).value = ord.notes || '';
+
+    // Alignments & formats
+    row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(3).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(7).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(8).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(9).alignment = { vertical: 'middle', horizontal: 'right' };
+    row.getCell(10).alignment = { vertical: 'middle', horizontal: 'right' };
+    row.getCell(11).alignment = { vertical: 'middle', horizontal: 'right' };
+    row.getCell(12).alignment = { vertical: 'middle', horizontal: 'right' };
+    row.getCell(13).alignment = { vertical: 'middle', horizontal: 'center' };
+    row.getCell(14).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    for (let c = 1; c <= 15; c++) {
+      row.getCell(c).border = solidBorder;
+      row.getCell(c).font = { name: 'Calibri', size: 9.5 };
+    }
+
+    if (due > 0) {
+      row.getCell(12).font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'B91C1C' } };
+    }
+
+    curRowIdx++;
+  });
+
+  // Grand Totals Row
+  const totalRow = sheet.getRow(curRowIdx);
+  totalRow.height = 24;
+  sheet.mergeCells(`A${curRowIdx}:F${curRowIdx}`);
+  totalRow.getCell(1).value = 'GRAND TOTAL:';
+  totalRow.getCell(1).font = { name: 'Calibri', size: 11, bold: true };
+  totalRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'right' };
+
+  totalRow.getCell(7).value = totalQty;
+  totalRow.getCell(7).font = { name: 'Calibri', size: 11, bold: true };
+  totalRow.getCell(7).alignment = { vertical: 'middle', horizontal: 'center' };
+
+  totalRow.getCell(10).value = totalAmount;
+  totalRow.getCell(10).font = { name: 'Calibri', size: 11, bold: true };
+  totalRow.getCell(10).alignment = { vertical: 'middle', horizontal: 'right' };
+
+  totalRow.getCell(11).value = totalPaid;
+  totalRow.getCell(11).font = { name: 'Calibri', size: 11, bold: true, color: { argb: '166534' } };
+  totalRow.getCell(11).alignment = { vertical: 'middle', horizontal: 'right' };
+
+  totalRow.getCell(12).value = totalPendingDue;
+  totalRow.getCell(12).font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'B91C1C' } };
+  totalRow.getCell(12).alignment = { vertical: 'middle', horizontal: 'right' };
+
+  for (let c = 1; c <= 15; c++) {
+    totalRow.getCell(c).border = solidBorder;
+    totalRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F8FAFC' } };
+  }
+
+  const cleanCompanyName = targetCompany.replace(/[^a-zA-Z0-9]/g, '_');
+  const fileName = `SASI_Steels_${cleanCompanyName}_Statement_${getLocalDateStr()}.xlsx`;
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  if (typeof saveAs !== 'undefined') {
+    saveAs(blob, fileName);
+  } else {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+  }
+}
+
+// -------------------------------------------------------------
+// EXPORT COMPANY ORDERS STATEMENT TO PDF
+// -------------------------------------------------------------
+async function exportCompanyOrdersPDF(specificCompany = null) {
+  const targetCompany = specificCompany || currentSelectedOrderCompany || document.getElementById('order-filter-company')?.value || 'ALL';
+  const fromVal = document.getElementById('order-filter-from')?.value || '';
+  const toVal = document.getElementById('order-filter-to')?.value || '';
+
+  if (!allOrdersRecords || allOrdersRecords.length === 0) {
+    allOrdersRecords = (await dbGetOrders()) || [];
+  }
+
+  const exportList = allOrdersRecords.filter(ord => {
+    if (targetCompany !== 'ALL') {
+      const ordComp = ((ord.company_name && ord.company_name.trim()) ? ord.company_name.trim() : (ord.customer_name || 'General Client')).toLowerCase();
+      if (ordComp !== targetCompany.toLowerCase().trim()) return false;
+    }
+    const oDate = getRecordDateStr(ord.order_date || ord.created_at);
+    if (fromVal && oDate < fromVal) return false;
+    if (toVal && oDate > toVal) return false;
+    return true;
+  });
+
+  if (exportList.length === 0) {
+    alert(`No orders found for ${targetCompany === 'ALL' ? 'the selected date range' : targetCompany}.`);
+    return;
+  }
+
+  const totalOrders = exportList.length;
+  const totalQty = exportList.reduce((sum, o) => sum + (parseFloat(o.quantity) || 0), 0);
+  const totalAmount = exportList.filter(o => o.order_status !== 'Cancelled').reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+  const totalPaid = exportList.filter(o => o.order_status !== 'Cancelled').reduce((sum, o) => {
+    const t = parseFloat(o.total_amount) || 0;
+    const p = parseFloat(o.paid_amount !== undefined ? o.paid_amount : (o.payment_status === 'Paid' ? t : 0)) || 0;
+    return sum + p;
+  }, 0);
+  const totalPendingDue = Math.max(0, totalAmount - totalPaid);
+
+  const printContainer = document.createElement('div');
+  printContainer.id = 'company-statement-print-container';
+  printContainer.style.fontFamily = "'Inter', Arial, sans-serif";
+  printContainer.style.color = "#0f172a";
+  printContainer.style.background = "#ffffff";
+  printContainer.style.padding = "24px";
+
+  const periodText = (fromVal || toVal) ? `Period: ${fromVal || 'Start'} to ${toVal || 'Today'}` : 'All Time Ledger';
+
+  printContainer.innerHTML = `
+    <div style="border: 2px solid #0f172a; padding: 20px; border-radius: 8px;">
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ea580c; padding-bottom: 12px; margin-bottom: 16px;">
+        <div>
+          <h1 style="margin: 0; font-size: 20px; font-weight: 900; color: #ea580c; letter-spacing: 0.5px;">SASI STEEL ENGINEERING & WELDING WORKS</h1>
+          <p style="margin: 2px 0 0 0; font-size: 11px; color: #475569;">128-56/4, Guntur Amaravathi Road, Gorantla, Guntur, A.P. | Ph: +91 98480 12345</p>
+          <p style="margin: 2px 0 0 0; font-size: 11px; font-weight: bold; color: #0f172a;">GSTIN: 37AUCPA2925Q1ZG</p>
+        </div>
+        <div style="text-align: right;">
+          <div style="display: inline-block; background: #ea580c; color: #ffffff; padding: 4px 12px; font-size: 12px; font-weight: bold; border-radius: 4px; text-transform: uppercase;">Company Account Statement</div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Date: ${new Date().toLocaleDateString('en-IN')}</div>
+        </div>
+      </div>
+
+      <!-- Scope Info -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 16px; display: flex; justify-content: space-between;">
+        <div>
+          <span style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold;">Company Name:</span>
+          <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${targetCompany}</div>
+          <div style="font-size: 11px; color: #475569; margin-top: 2px;">${periodText}</div>
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold;">Statement Status:</span>
+          <div style="font-size: 14px; font-weight: bold; color: ${totalPendingDue > 0 ? '#ea580c' : '#166534'};">${totalPendingDue > 0 ? 'Pending Balance Due' : 'All Clear / Fully Settled'}</div>
+        </div>
+      </div>
+
+      <!-- 5 Metric Boxes -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px;">
+        <div style="background: #f1f5f9; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #cbd5e1;">
+          <div style="font-size: 10px; color: #64748b; font-weight: bold; text-transform: uppercase;">Total Orders</div>
+          <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 2px;">${totalOrders}</div>
+        </div>
+        <div style="background: #f1f5f9; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #cbd5e1;">
+          <div style="font-size: 10px; color: #64748b; font-weight: bold; text-transform: uppercase;">Total Quantity</div>
+          <div style="font-size: 16px; font-weight: 800; color: #0284c7; margin-top: 2px;">${totalQty.toLocaleString('en-IN')}</div>
+        </div>
+        <div style="background: #f1f5f9; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #cbd5e1;">
+          <div style="font-size: 10px; color: #64748b; font-weight: bold; text-transform: uppercase;">Total Order Value</div>
+          <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 2px;">₹${Math.round(totalAmount).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="background: #dcfce7; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #86efac;">
+          <div style="font-size: 10px; color: #166534; font-weight: bold; text-transform: uppercase;">Paid Amount</div>
+          <div style="font-size: 16px; font-weight: 800; color: #166534; margin-top: 2px;">₹${Math.round(totalPaid).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="background: #fef3c7; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #fcd34d;">
+          <div style="font-size: 10px; color: #9a3412; font-weight: bold; text-transform: uppercase;">Pending Due</div>
+          <div style="font-size: 16px; font-weight: 800; color: #b91c1c; margin-top: 2px;">₹${Math.round(totalPendingDue).toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+
+      <!-- Orders Item Table -->
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px;">
+        <thead>
+          <tr style="background: #0f172a; color: #ffffff; text-align: left;">
+            <th style="padding: 6px 8px; border: 1px solid #0f172a;">S.No</th>
+            <th style="padding: 6px 8px; border: 1px solid #0f172a;">Order #</th>
+            <th style="padding: 6px 8px; border: 1px solid #0f172a;">Date</th>
+            <th style="padding: 6px 8px; border: 1px solid #0f172a;">Material / Item</th>
+            <th style="padding: 6px 8px; border: 1px solid #0f172a; text-align: center;">Qty</th>
+            <th style="padding: 6px 8px; border: 1px solid #0f172a; text-align: right;">Total (₹)</th>
+            <th style="padding: 6px 8px; border: 1px solid #0f172a; text-align: right;">Paid (₹)</th>
+            <th style="padding: 6px 8px; border: 1px solid #0f172a; text-align: right;">Due (₹)</th>
+            <th style="padding: 6px 8px; border: 1px solid #0f172a; text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${exportList.map((ord, idx) => {
+            const tot = parseFloat(ord.total_amount) || 0;
+            const pd = parseFloat(ord.paid_amount !== undefined ? ord.paid_amount : (ord.payment_status === 'Paid' ? tot : 0)) || 0;
+            const due = Math.max(0, tot - pd);
+            return `
+              <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: center;">${idx + 1}</td>
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1; font-family: monospace; font-weight: bold;">${ord.order_number || ('ORD-' + ord.id)}</td>
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1;">${formatDisplayDate(ord.order_date || ord.created_at)}</td>
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1; font-weight: 600;">${ord.item_name}</td>
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${ord.quantity} ${ord.unit || 'Units'}</td>
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold;">₹${Math.round(tot).toLocaleString('en-IN')}</td>
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right; color: #166534; font-weight: bold;">₹${Math.round(pd).toLocaleString('en-IN')}</td>
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right; color: ${due > 0 ? '#b91c1c' : '#475569'}; font-weight: bold;">₹${Math.round(due).toLocaleString('en-IN')}</td>
+                <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: center; font-size: 10px; font-weight: bold;">${ord.order_status || 'Confirmed'}</td>
+              </tr>
+            `;
+          }).join('')}
+          <tr style="background: #e2e8f0; font-weight: bold;">
+            <td colspan="4" style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">GRAND TOTAL:</td>
+            <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">${totalQty}</td>
+            <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">₹${Math.round(totalAmount).toLocaleString('en-IN')}</td>
+            <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; color: #166534;">₹${Math.round(totalPaid).toLocaleString('en-IN')}</td>
+            <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; color: #b91c1c;">₹${Math.round(totalPendingDue).toLocaleString('en-IN')}</td>
+            <td style="padding: 6px 8px; border: 1px solid #cbd5e1;"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Footer & Signatures -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; padding-top: 15px; border-top: 1px solid #cbd5e1;">
+        <div style="font-size: 10px; color: #64748b;">
+          This is a computer-generated company account ledger.<br>
+          For queries: Call +91 98480 12345 or email info@sasisteels.com
+        </div>
+        <div style="text-align: center;">
+          <div style="border-top: 1px dashed #475569; width: 180px; margin-bottom: 4px;"></div>
+          <div style="font-size: 11px; font-weight: bold; color: #0f172a;">For SASI STEEL ENGINEERING</div>
+          <div style="font-size: 9px; color: #64748b;">Authorized Signatory</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (typeof html2pdf !== 'undefined') {
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `SASI_Steels_${targetCompany.replace(/[^a-zA-Z0-9]/g, '_')}_Statement_${getLocalDateStr()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(printContainer).save();
+  } else {
+    // Print window fallback
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`<html><head><title>Company Statement - ${targetCompany}</title></head><body>${printContainer.innerHTML}</body></html>`);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+      printWin.close();
+    }, 400);
+  }
 }
 
 async function exportOrdersCSV() {
   if (!allOrdersRecords || allOrdersRecords.length === 0) {
-    allOrdersRecords = await dbGetOrders() || [];
+    allOrdersRecords = (await dbGetOrders()) || [];
   }
 
-  const headers = ['Order #', 'Order Date', 'Customer Name', 'Customer Phone', 'Item / Product', 'Category', 'Quantity', 'Unit', 'Unit Price (INR)', 'Total Amount (INR)', 'Payment Status', 'Order Status', 'Delivery Address', 'Notes'];
-  const rows = allOrdersRecords.map(ord => [
-    ord.order_number || `ORD-${ord.id}`,
-    ord.order_date || '',
-    ord.customer_name || '',
-    ord.customer_phone || '',
-    ord.item_name || '',
-    ord.category || '',
-    ord.quantity || 1,
-    ord.unit || 'Units',
-    ord.unit_price || 0,
-    ord.total_amount || 0,
-    ord.payment_status || 'Pending',
-    ord.order_status || 'Confirmed',
-    ord.delivery_address || '',
-    ord.notes || ''
-  ]);
-  const dateStr = new Date().toISOString().split('T')[0];
-  downloadCSV(`SASI_Steels_Orders_${dateStr}.csv`, headers, rows);
+  const headers = ['Order #', 'Order Date', 'Company Name', 'Customer Name', 'Customer Phone', 'Item / Product', 'Category', 'Quantity', 'Unit', 'Unit Price (INR)', 'Total Amount (INR)', 'Paid Amount (INR)', 'Pending Due (INR)', 'Payment Status', 'Order Status', 'Delivery Address', 'Notes'];
+  const rows = allOrdersRecords.map(ord => {
+    const tot = parseFloat(ord.total_amount) || 0;
+    const pd = parseFloat(ord.paid_amount !== undefined ? ord.paid_amount : (ord.payment_status === 'Paid' ? tot : 0)) || 0;
+    const due = Math.max(0, tot - pd);
+    return [
+      ord.order_number || `ORD-${ord.id}`,
+      ord.order_date || '',
+      ord.company_name || ord.customer_name || 'General Client',
+      ord.customer_name || '',
+      ord.customer_phone || '',
+      ord.item_name || '',
+      ord.category || '',
+      ord.quantity || 1,
+      ord.unit || 'Units',
+      ord.unit_price || 0,
+      tot,
+      pd,
+      due,
+      ord.payment_status || (due === 0 ? 'Paid' : 'Pending'),
+      ord.order_status || 'Confirmed',
+      ord.delivery_address || '',
+      ord.notes || ''
+    ];
+  });
+  const dateStr = getLocalDateStr();
+  downloadCSV(`SASI_Steels_Orders_Ledger_${dateStr}.csv`, headers, rows);
 }
 
 function onOrderItemSelect(itemId) {
@@ -2961,13 +3546,42 @@ function calculateOrderTotal() {
   const qtyInput = document.querySelector('#crud-form-fields input[name="quantity"]');
   const priceInput = document.querySelector('#crud-form-fields input[name="unit_price"]');
   const totalInput = document.querySelector('#crud-form-fields input[name="total_amount"]');
+  const paidInput = document.querySelector('#crud-form-fields input[name="paid_amount"]');
+  const paymentSelect = document.querySelector('#crud-form-fields select[name="payment_status"]');
+  const balanceBadge = document.getElementById('order-balance-badge');
   const selectEl = document.getElementById('order-product-select');
   const warningEl = document.getElementById('order-stock-warning');
 
   if (qtyInput && priceInput && totalInput) {
     const q = parseFloat(qtyInput.value) || 0;
     const p = parseFloat(priceInput.value) || 0;
-    totalInput.value = Math.round(q * p);
+    const total = Math.round(q * p);
+    totalInput.value = total;
+
+    // Paid & Balance check
+    let paid = paidInput ? (parseFloat(paidInput.value) || 0) : 0;
+    const balanceDue = Math.max(0, total - paid);
+
+    if (balanceBadge) {
+      if (balanceDue === 0 && total > 0) {
+        balanceBadge.className = 'mt-1.5 text-xs font-bold text-emerald-400 flex items-center gap-1';
+        balanceBadge.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Fully Paid (₹${total.toLocaleString('en-IN')})`;
+      } else {
+        balanceBadge.className = 'mt-1.5 text-xs font-bold text-amber-400 flex items-center gap-1';
+        balanceBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Pending Due Balance: ₹${balanceDue.toLocaleString('en-IN')}`;
+      }
+    }
+
+    // Auto update payment_status select if not manually adjusted
+    if (paymentSelect) {
+      if (paid >= total && total > 0) {
+        paymentSelect.value = 'Paid';
+      } else if (paid > 0 && paid < total) {
+        paymentSelect.value = 'Partial';
+      } else {
+        paymentSelect.value = 'Pending';
+      }
+    }
 
     // Stock sufficiency check
     if (selectEl && selectEl.value && selectEl.value !== 'custom') {
@@ -2994,16 +3608,23 @@ async function openOrderModal(id = null) {
   editingItemId = id;
 
   if (!allInventoryRecords || allInventoryRecords.length === 0) {
-    allInventoryRecords = await dbGetInventory();
+    allInventoryRecords = (await dbGetInventory()) || [];
   }
 
   let existing = null;
   if (id) {
-    existing = allOrdersRecords.find(o => String(o.id) === String(id));
+    existing = (allOrdersRecords || []).find(o => String(o.id) === String(id));
   }
 
-  document.getElementById('crud-modal-title').textContent = existing ? `Edit Order #${existing.order_number || existing.id}` : 'Create Manual Customer Order';
-  document.getElementById('crud-modal-subtitle').textContent = 'Select product & quantity. Stock inventory will automatically adjust in real-time.';
+  // Extract distinct company names for autocomplete datalist
+  const existingCompanies = Array.from(new Set((allOrdersRecords || [])
+    .map(o => (o.company_name && o.company_name.trim()) ? o.company_name.trim() : (o.customer_name ? o.customer_name.trim() : ''))
+    .filter(Boolean))).sort();
+
+  const companyDatalistOptions = existingCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  document.getElementById('crud-modal-title').textContent = existing ? `Edit Order #${existing.order_number || existing.id}` : 'Create Company Customer Order';
+  document.getElementById('crud-modal-subtitle').textContent = 'Record company-wise orders with real-time stock sync and payment ledger calculations.';
 
   // Build options list for Product / Inventory dropdown
   const productOptions = (allInventoryRecords || []).map(item => {
@@ -3025,14 +3646,36 @@ async function openOrderModal(id = null) {
   const initialPrice = existing ? existing.unit_price : (initialItem ? initialItem.unit_price : 0);
   const initialQty = existing ? existing.quantity : 1;
   const initialTotal = existing ? existing.total_amount : (initialPrice * initialQty);
+  const initialPaid = existing ? (existing.paid_amount !== undefined ? existing.paid_amount : (existing.payment_status === 'Paid' ? initialTotal : 0)) : 0;
+  const initialCompany = existing ? (existing.company_name || existing.customer_name || '') : (currentSelectedOrderCompany !== 'ALL' ? currentSelectedOrderCompany : '');
 
   document.getElementById('crud-form-fields').innerHTML = `
-    <!-- Product Selection Dropdown -->
+    <!-- 1. COMPULSORY COMPANY NAME & CUSTOMER NAME -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-orange-950/20 border border-orange-500/30">
+      <div>
+        <label class="block text-orange-400 font-bold mb-1 text-xs uppercase tracking-wider flex items-center gap-1.5">
+          <i class="fa-solid fa-building"></i> Company Name <span class="text-red-500">* Compulsory</span>
+        </label>
+        <input type="text" name="company_name" list="company-datalist" required value="${initialCompany}" placeholder="e.g. Navayuga Engineering / Balaji Builders" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border-2 border-orange-500/60 focus:border-orange-500 text-white font-bold focus:outline-none placeholder-slate-500" />
+        <datalist id="company-datalist">
+          ${companyDatalistOptions}
+        </datalist>
+        <span class="text-[10px] text-slate-400 mt-1 block">Orders will be grouped and calculated under this company ledger.</span>
+      </div>
+      <div>
+        <label class="block text-slate-300 font-bold mb-1 text-xs">
+          <i class="fa-solid fa-user text-orange-400 mr-1"></i> Contact Person / Customer Name <span class="text-orange-500">*</span>
+        </label>
+        <input type="text" name="customer_name" required value="${existing ? existing.customer_name : ''}" placeholder="e.g. M. Rama Krishna (Site Incharge)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
+    </div>
+
+    <!-- 2. Product Selection Dropdown -->
     <div>
-      <label class="block text-slate-300 font-bold mb-1">
-        <i class="fa-solid fa-boxes-stacked text-orange-500 mr-1"></i> Select Product / Inventory Material <span class="text-orange-500">*</span>
+      <label class="block text-slate-300 font-bold mb-1 text-xs">
+        <i class="fa-solid fa-boxes-stacked text-cyan-400 mr-1"></i> Select Product / Inventory Material <span class="text-orange-500">*</span>
       </label>
-      <select id="order-product-select" onchange="onOrderItemSelect(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold text-xs">
+      <select id="order-product-select" onchange="onOrderItemSelect(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold text-xs cursor-pointer">
         <option value="">-- Choose a Product from Inventory --</option>
         ${productOptions}
         <option value="custom" ${existing && !existing.inventory_item_id ? 'selected' : ''}>+ Custom / Non-Catalog Steel Item</option>
@@ -3047,36 +3690,36 @@ async function openOrderModal(id = null) {
     <!-- Item Name & Category -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Item Description / Name</label>
+        <label class="block text-slate-300 font-bold mb-1 text-xs">Item Description / Name <span class="text-orange-500">*</span></label>
         <input type="text" name="item_name" required value="${initialItemName}" placeholder="e.g. ISMB 200 Heavy I-Beams" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Category</label>
+        <label class="block text-slate-300 font-bold mb-1 text-xs">Category</label>
         <input type="text" name="category" value="${initialCategory}" placeholder="e.g. Structural Steel" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
     </div>
 
-    <!-- Customer Details -->
+    <!-- Customer Contact & WhatsApp -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Customer / Client Name <span class="text-orange-500">*</span></label>
-        <input type="text" name="customer_name" required value="${existing ? existing.customer_name : ''}" placeholder="e.g. Sri Balaji Builders" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+        <label class="block text-slate-300 font-bold mb-1 text-xs"><i class="fa-solid fa-phone text-emerald-400 mr-1"></i> Customer Phone / WhatsApp <span class="text-orange-500">*</span></label>
+        <input type="text" name="customer_phone" required value="${existing ? existing.customer_phone : ''}" placeholder="+91 98480 12345" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Customer Phone / WhatsApp <span class="text-orange-500">*</span></label>
-        <input type="text" name="customer_phone" required value="${existing ? existing.customer_phone : ''}" placeholder="+91 98480 12345" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+        <label class="block text-slate-300 font-bold mb-1 text-xs"><i class="fa-solid fa-envelope text-cyan-400 mr-1"></i> Customer Email</label>
+        <input type="email" name="customer_email" value="${existing && existing.customer_email ? existing.customer_email : ''}" placeholder="client@company.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
     </div>
 
     <!-- Quantity & Unit & Unit Price -->
     <div class="grid grid-cols-3 gap-3">
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Quantity <span class="text-orange-500">*</span></label>
+        <label class="block text-slate-300 font-bold mb-1 text-xs">Quantity <span class="text-orange-500">*</span></label>
         <input type="number" step="0.1" min="0.1" name="quantity" required oninput="calculateOrderTotal()" value="${initialQty}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-orange-400" />
       </div>
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Unit</label>
-        <select name="unit" class="w-full px-2 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 text-xs font-semibold">
+        <label class="block text-slate-300 font-bold mb-1 text-xs">Unit</label>
+        <select name="unit" class="w-full px-2 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 text-xs font-semibold cursor-pointer">
           <option value="Tons" ${initialUnit === 'Tons' ? 'selected' : ''}>Tons</option>
           <option value="Sheets" ${initialUnit === 'Sheets' ? 'selected' : ''}>Sheets</option>
           <option value="Units" ${initialUnit === 'Units' ? 'selected' : ''}>Units</option>
@@ -3090,28 +3733,41 @@ async function openOrderModal(id = null) {
         </select>
       </div>
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Unit Price (₹)</label>
+        <label class="block text-slate-300 font-bold mb-1 text-xs">Unit Price (₹)</label>
         <input type="number" step="0.5" name="unit_price" required oninput="calculateOrderTotal()" value="${initialPrice}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold" />
       </div>
     </div>
 
-    <!-- Total Amount & Statuses -->
+    <!-- 3. REAL-TIME PAYMENT & LEDGER CALCULATOR -->
+    <div class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-700">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1 text-xs">Total Amount (₹)</label>
+          <input type="number" name="total_amount" required oninput="calculateOrderTotal()" value="${initialTotal}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/50 text-emerald-400 font-black text-sm focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-emerald-400 font-bold mb-1 text-xs">Paid Amount (₹)</label>
+          <input type="number" step="1" name="paid_amount" oninput="calculateOrderTotal()" value="${initialPaid}" placeholder="0" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/60 text-emerald-300 font-black text-sm focus:outline-none focus:border-emerald-400" />
+        </div>
+        <div>
+          <label class="block text-slate-300 font-bold mb-1 text-xs">Payment Status</label>
+          <select name="payment_status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer">
+            <option value="Paid" ${existing && existing.payment_status === 'Paid' ? 'selected' : ''}>Paid</option>
+            <option value="Partial" ${existing && existing.payment_status === 'Partial' ? 'selected' : ''}>Partial</option>
+            <option value="Pending" ${!existing || existing.payment_status === 'Pending' ? 'selected' : ''}>Pending</option>
+          </select>
+        </div>
+      </div>
+      <div id="order-balance-badge" class="mt-2 text-xs font-bold text-amber-400">
+        <!-- Live JS calculation -->
+      </div>
+    </div>
+
+    <!-- Order Status & Dates -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Total Amount (₹)</label>
-        <input type="number" name="total_amount" required value="${initialTotal}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-emerald-500/50 text-emerald-400 font-black text-sm focus:outline-none" />
-      </div>
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Payment Status</label>
-        <select name="payment_status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold">
-          <option value="Paid" ${existing && existing.payment_status === 'Paid' ? 'selected' : ''}>Paid</option>
-          <option value="Partial" ${existing && existing.payment_status === 'Partial' ? 'selected' : ''}>Partial</option>
-          <option value="Pending" ${!existing || existing.payment_status === 'Pending' ? 'selected' : ''}>Pending</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-slate-300 font-bold mb-1">Order Status</label>
-        <select name="order_status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold">
+        <label class="block text-slate-300 font-bold mb-1 text-xs">Order Status</label>
+        <select name="order_status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer">
           <option value="Confirmed" ${!existing || existing.order_status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
           <option value="Processing" ${existing && existing.order_status === 'Processing' ? 'selected' : ''}>Processing</option>
           <option value="Delivered" ${existing && existing.order_status === 'Delivered' ? 'selected' : ''}>Delivered</option>
@@ -3119,10 +3775,6 @@ async function openOrderModal(id = null) {
           <option value="Cancelled" ${existing && existing.order_status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
         </select>
       </div>
-    </div>
-
-    <!-- Dates -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
         <div class="flex items-center justify-between mb-1">
           <label class="block text-slate-300 font-bold text-xs"><i class="fa-regular fa-calendar text-orange-400 mr-1"></i> Order Date <span class="text-orange-500">*</span></label>
@@ -3132,7 +3784,7 @@ async function openOrderModal(id = null) {
       </div>
       <div>
         <div class="flex items-center justify-between mb-1">
-          <label class="block text-slate-300 font-bold text-xs"><i class="fa-regular fa-calendar-check text-emerald-400 mr-1"></i> Expected Delivery Date</label>
+          <label class="block text-slate-300 font-bold text-xs"><i class="fa-regular fa-calendar-check text-emerald-400 mr-1"></i> Delivery Date</label>
         </div>
         <input type="date" name="expected_delivery" value="${existing && existing.expected_delivery ? existing.expected_delivery : ''}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 cursor-pointer" onclick="if(this.showPicker) this.showPicker()" />
       </div>
@@ -3140,20 +3792,22 @@ async function openOrderModal(id = null) {
 
     <!-- Delivery Address & Notes -->
     <div>
-      <label class="block text-slate-300 font-bold mb-1">Delivery Address & Site Location</label>
+      <label class="block text-slate-300 font-bold mb-1 text-xs">Delivery Address & Site Location</label>
       <input type="text" name="delivery_address" value="${existing && existing.delivery_address ? existing.delivery_address : ''}" placeholder="Site location, crane access, gate entry notes..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
     </div>
     <div>
-      <label class="block text-slate-300 font-bold mb-1">Internal Order Notes</label>
+      <label class="block text-slate-300 font-bold mb-1 text-xs">Internal Order & Company Notes</label>
       <input type="text" name="notes" value="${existing && existing.notes ? existing.notes : ''}" placeholder="Specific fabrication requirements, dispatch vehicle no..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
     </div>
   `;
 
   document.getElementById('crud-modal').classList.remove('hidden');
 
-  // Trigger initial item selection preview
+  // Trigger initial item selection and payment balance calculation
   if (selectedInventoryId) {
     onOrderItemSelect(selectedInventoryId);
+  } else {
+    calculateOrderTotal();
   }
 }
 
@@ -3171,6 +3825,7 @@ async function handleDeleteAllOrders() {
   if (confirm("⚠️ Are you sure you want to delete ALL customer orders? Active stocks will be restored to Inventory. This cannot be undone.")) {
     await dbDeleteAllOrders();
     allOrdersRecords = [];
+    populateCompanyFilterOptions();
     filterOrdersData();
     await loadInventory();
     await loadProducts();
@@ -4581,18 +5236,42 @@ async function handleCrudSubmit(e) {
       loadQuotations();
     }
     else if (activeModalType === 'order') {
+      const compName = (formData.get('company_name') || '').trim();
+      const custName = (formData.get('customer_name') || '').trim();
+      if (!compName) {
+        alert("Company Name is compulsory for booking an order.");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-2"></i> Save Record`;
+        return;
+      }
+
+      const totalAmt = parseFloat(formData.get('total_amount')) || 0;
+      let rawPaid = formData.get('paid_amount');
+      let paidAmt = (rawPaid !== null && rawPaid !== undefined && rawPaid !== '') ? (parseFloat(rawPaid) || 0) : 0;
+      let payStatus = formData.get('payment_status') || 'Pending';
+
+      if (payStatus === 'Paid' && paidAmt === 0 && totalAmt > 0) {
+        paidAmt = totalAmt;
+      } else if (paidAmt >= totalAmt && totalAmt > 0) {
+        payStatus = 'Paid';
+      } else if (paidAmt > 0 && paidAmt < totalAmt) {
+        payStatus = 'Partial';
+      }
+
       const orderData = {
         inventory_item_id: formData.get('inventory_item_id') ? parseInt(formData.get('inventory_item_id')) : null,
+        company_name: compName,
+        customer_name: custName || compName,
         item_name: formData.get('item_name'),
         category: formData.get('category') || 'Structural Steel',
-        customer_name: formData.get('customer_name'),
-        customer_phone: formData.get('customer_phone'),
+        customer_phone: formData.get('customer_phone') || '',
         customer_email: formData.get('customer_email') || null,
         quantity: parseFloat(formData.get('quantity')) || 1,
         unit: formData.get('unit') || 'Units',
         unit_price: parseFloat(formData.get('unit_price')) || 0,
-        total_amount: parseFloat(formData.get('total_amount')) || 0,
-        payment_status: formData.get('payment_status') || 'Pending',
+        total_amount: totalAmt,
+        paid_amount: paidAmt,
+        payment_status: payStatus,
         order_status: formData.get('order_status') || 'Confirmed',
         order_date: formData.get('order_date') || getLocalDateStr(),
         expected_delivery: formData.get('expected_delivery') || null,

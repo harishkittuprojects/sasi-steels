@@ -1084,6 +1084,7 @@ const DEFAULT_ORDERS = [
   {
     id: 1,
     order_number: 'ORD-1001',
+    company_name: 'Kavitha Infra Projects',
     customer_name: 'Kavitha Infra Projects',
     customer_phone: '+91 98480 88990',
     item_name: 'Galvalume Corrugated Roofing Sheets',
@@ -1092,6 +1093,7 @@ const DEFAULT_ORDERS = [
     unit: 'Sheets',
     unit_price: 380,
     total_amount: 19000,
+    paid_amount: 19000,
     payment_status: 'Paid',
     order_status: 'Processing',
     order_date: new Date().toISOString().split('T')[0],
@@ -1100,7 +1102,8 @@ const DEFAULT_ORDERS = [
   {
     id: 2,
     order_number: 'ORD-1002',
-    customer_name: 'Sri Balaji Engineering',
+    company_name: 'Sri Balaji Engineering Works',
+    customer_name: 'Venkata Rao',
     customer_phone: '+91 98480 77665',
     item_name: 'Heavy-Duty Warehouse Pallet Racks',
     category: 'Structural Steel',
@@ -1108,6 +1111,7 @@ const DEFAULT_ORDERS = [
     unit: 'Tons',
     unit_price: 4200,
     total_amount: 16800,
+    paid_amount: 10000,
     payment_status: 'Partial',
     order_status: 'Confirmed',
     order_date: new Date().toISOString().split('T')[0],
@@ -1122,12 +1126,45 @@ async function dbGetOrders() {
     local = DEFAULT_ORDERS;
   }
 
+  // Ensure every order object has company_name and paid_amount properly formatted
+  let updatedLocal = false;
+  local = (local || []).map(ord => {
+    if (!ord.company_name) {
+      ord.company_name = ord.customer_name ? ord.customer_name.replace(/\s*\(.*?\)\s*/g, '').trim() : 'General Client';
+      updatedLocal = true;
+    }
+    if (ord.paid_amount === undefined || ord.paid_amount === null || isNaN(parseFloat(ord.paid_amount))) {
+      const tot = parseFloat(ord.total_amount) || 0;
+      if (ord.payment_status === 'Paid') ord.paid_amount = tot;
+      else if (ord.payment_status === 'Partial') ord.paid_amount = Math.round(tot * 0.5 * 100) / 100;
+      else ord.paid_amount = 0;
+      updatedLocal = true;
+    }
+    return ord;
+  });
+  if (updatedLocal) {
+    saveLocalCollection('sasi_orders', local);
+  }
+
   const client = getSupabaseClient();
   if (client) {
     try {
       const { data, error } = await client.from('orders').select('*').order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        const merged = mergeCollections(data, local);
+        const sanitizedRemote = data.map(rem => {
+          if (!rem.company_name) {
+            const loc = local.find(l => String(l.id) === String(rem.id) || l.order_number === rem.order_number);
+            rem.company_name = (loc && loc.company_name) ? loc.company_name : (rem.customer_name || 'General Client');
+          }
+          if (rem.paid_amount === undefined || rem.paid_amount === null || isNaN(parseFloat(rem.paid_amount))) {
+            const tot = parseFloat(rem.total_amount) || 0;
+            if (rem.payment_status === 'Paid') rem.paid_amount = tot;
+            else if (rem.payment_status === 'Partial') rem.paid_amount = Math.round(tot * 0.5 * 100) / 100;
+            else rem.paid_amount = 0;
+          }
+          return rem;
+        });
+        const merged = mergeCollections(sanitizedRemote, local);
         saveLocalCollection('sasi_orders', merged);
         return merged;
       }
@@ -1145,11 +1182,21 @@ async function dbAddOrder(order) {
   const unitPrice = parseFloat(order.unit_price) || 0;
   const total = parseFloat(order.total_amount) || (qty * unitPrice);
 
+  let paid = parseFloat(order.paid_amount);
+  if (isNaN(paid) || paid < 0) {
+    if (order.payment_status === 'Paid') paid = total;
+    else if (order.payment_status === 'Partial') paid = Math.round(total * 0.5 * 100) / 100;
+    else paid = 0;
+  }
+
+  const companyName = (order.company_name || order.customer_name || 'General Client').trim();
+
   const newRow = {
     id: Date.now(),
     created_at: new Date().toISOString(),
     order_number: orderNum,
-    customer_name: order.customer_name,
+    company_name: companyName,
+    customer_name: order.customer_name || companyName,
     customer_phone: order.customer_phone || 'N/A',
     customer_email: order.customer_email || null,
     delivery_address: order.delivery_address || null,
@@ -1160,7 +1207,8 @@ async function dbAddOrder(order) {
     unit: order.unit || 'Units',
     unit_price: unitPrice,
     total_amount: total,
-    payment_status: order.payment_status || 'Pending',
+    paid_amount: paid,
+    payment_status: order.payment_status || (paid >= total ? 'Paid' : (paid > 0 ? 'Partial' : 'Pending')),
     order_status: order.order_status || 'Confirmed',
     order_date: order.order_date || new Date().toISOString().split('T')[0],
     expected_delivery: order.expected_delivery || null,
@@ -1867,7 +1915,8 @@ async function syncQuotationToOrder(quote) {
 
   const grandTotal = parseFloat(quote.grand_total) || 0;
   const unitPrice = totalQty > 0 ? Math.round((grandTotal / totalQty) * 100) / 100 : grandTotal;
-  const customerName = quote.customer_name + (quote.company_name ? ` (${quote.company_name})` : '');
+  const companyName = (quote.company_name && quote.company_name.trim()) ? quote.company_name.trim() : (quote.customer_name || 'General Client');
+  const customerName = quote.customer_name || 'Valued Client';
   const notesText = `Official Order booked from Quotation #${quoteNum}${quote.notes ? ' | ' + quote.notes : ''}`;
 
   // Find if an order matching this quotation already exists
@@ -1889,6 +1938,7 @@ async function syncQuotationToOrder(quote) {
     }
 
     const updatedOrder = {
+      company_name: companyName,
       customer_name: customerName,
       customer_phone: quote.customer_phone || existingOrder.customer_phone,
       customer_email: quote.customer_email || existingOrder.customer_email || null,
@@ -1898,6 +1948,7 @@ async function syncQuotationToOrder(quote) {
       quantity: totalQty,
       unit_price: unitPrice,
       total_amount: grandTotal,
+      paid_amount: existingOrder.paid_amount !== undefined ? existingOrder.paid_amount : (quote.status === 'Completed' ? grandTotal : 0),
       order_status: targetOrderStatus,
       order_date: quote.quote_date || existingOrder.order_date || new Date().toISOString().split('T')[0],
       notes: notesText
@@ -1907,6 +1958,7 @@ async function syncQuotationToOrder(quote) {
   } else if (isApproved) {
     const newOrder = {
       order_number: orderNum,
+      company_name: companyName,
       customer_name: customerName,
       customer_phone: quote.customer_phone || 'N/A',
       customer_email: quote.customer_email || null,
@@ -1917,7 +1969,8 @@ async function syncQuotationToOrder(quote) {
       unit: 'Units',
       unit_price: unitPrice,
       total_amount: grandTotal,
-      payment_status: 'Pending',
+      paid_amount: quote.status === 'Completed' ? grandTotal : 0,
+      payment_status: quote.status === 'Completed' ? 'Paid' : 'Pending',
       order_status: 'Confirmed',
       order_date: quote.quote_date || new Date().toISOString().split('T')[0],
       notes: notesText
