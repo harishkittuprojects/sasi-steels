@@ -3736,12 +3736,42 @@ function filterInventoryData() {
   `).join('');
 }
 
+function setInventoryCategoryFilter(cat) {
+  const catSelect = document.getElementById('inventory-filter-category');
+  if (catSelect) {
+    catSelect.value = cat;
+  }
+  
+  const pills = {
+    'ALL': 'inv-pill-all',
+    'Custom Fabrication': 'inv-pill-custom',
+    'Storage Systems': 'inv-pill-storage',
+    'Structural Steel': 'inv-pill-structural',
+    'Stainless Steel': 'inv-pill-ss'
+  };
+
+  Object.entries(pills).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (key === cat) {
+        el.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow';
+      } else {
+        el.className = key === 'Custom Fabrication' 
+          ? 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30'
+          : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300';
+      }
+    }
+  });
+
+  filterInventoryData();
+}
+
 function resetInventoryFilter() {
   const searchInput = document.getElementById('inventory-filter-search');
   const catSelect = document.getElementById('inventory-filter-category');
   if (searchInput) searchInput.value = '';
   if (catSelect) catSelect.value = 'ALL';
-  filterInventoryData();
+  setInventoryCategoryFilter('ALL');
 }
 
 async function exportInventoryCSV() {
@@ -3778,6 +3808,17 @@ async function exportInventoryCSV() {
   downloadCSV(`SASI_Steels_Inventory_${dateStr}.csv`, headers, rows);
 }
 
+function toggleInventoryCustomCategory(val) {
+  const wrap = document.getElementById('inventory-custom-category-wrap');
+  if (wrap) {
+    if (val === 'CUSTOM') {
+      wrap.classList.remove('hidden');
+    } else {
+      wrap.classList.add('hidden');
+    }
+  }
+}
+
 function openInventoryModal(id = null) {
   activeModalType = 'inventory';
   editingItemId = id;
@@ -3790,7 +3831,9 @@ function openInventoryModal(id = null) {
   document.getElementById('crud-modal-title').textContent = existing ? `Edit Stock: ${existing.item_name}` : 'Add New Inventory Stock Item';
   document.getElementById('crud-modal-subtitle').textContent = 'Enter quantity, rate per unit, storage yard location and minimum reorder alert level.';
 
+  const standardCats = ['Structural Steel', 'Stainless Steel', 'Pipes & Tubes', 'Plates & Sheets', 'Storage Systems', 'Custom Fabrication', 'Consumables', 'Hardware'];
   const cat = existing ? existing.category : 'Structural Steel';
+  const isCustom = existing && !standardCats.includes(cat);
   const unit = existing ? existing.unit : 'Tons';
 
   document.getElementById('crud-form-fields').innerHTML = `
@@ -3801,16 +3844,20 @@ function openInventoryModal(id = null) {
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Category</label>
-        <select name="category" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold">
+        <select name="category" onchange="toggleInventoryCustomCategory(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold">
+          <option value="Custom Fabrication" ${cat === 'Custom Fabrication' ? 'selected' : ''}>✨ Custom Fabrication</option>
+          <option value="Storage Systems" ${cat === 'Storage Systems' ? 'selected' : ''}>Storage Systems & Racks</option>
           <option value="Structural Steel" ${cat === 'Structural Steel' ? 'selected' : ''}>Structural Steel</option>
           <option value="Stainless Steel" ${cat === 'Stainless Steel' ? 'selected' : ''}>Stainless Steel</option>
           <option value="Pipes & Tubes" ${cat === 'Pipes & Tubes' ? 'selected' : ''}>Pipes & Tubes</option>
           <option value="Plates & Sheets" ${cat === 'Plates & Sheets' ? 'selected' : ''}>Plates & Sheets</option>
-          <option value="Storage Systems" ${cat === 'Storage Systems' ? 'selected' : ''}>Storage Systems</option>
-          <option value="Custom Fabrication" ${cat === 'Custom Fabrication' ? 'selected' : ''}>Custom Fabrication</option>
           <option value="Consumables" ${cat === 'Consumables' ? 'selected' : ''}>Consumables & Rods</option>
           <option value="Hardware" ${cat === 'Hardware' ? 'selected' : ''}>Hardware & Fasteners</option>
+          <option value="CUSTOM" ${isCustom ? 'selected' : ''}>+ Other Custom Category...</option>
         </select>
+        <div id="inventory-custom-category-wrap" class="${isCustom ? '' : 'hidden'} mt-2">
+          <input type="text" name="custom_category" value="${isCustom ? cat : ''}" placeholder="Type custom category name..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/70 text-amber-300 text-xs font-semibold focus:outline-none focus:border-amber-400" />
+        </div>
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Current Stock Quantity & Unit <span class="text-orange-500">*</span></label>
@@ -4562,9 +4609,13 @@ async function handleCrudSubmit(e) {
       loadAttendance();
     } 
     else if (activeModalType === 'inventory') {
+      const selectedCat = formData.get('category');
+      const customCat = (formData.get('custom_category') || '').trim();
+      const finalCategory = (selectedCat === 'CUSTOM' && customCat) ? customCat : (selectedCat === 'CUSTOM' ? 'Custom Fabrication' : (selectedCat || 'Structural Steel'));
+
       const item = {
         item_name: formData.get('item_name'),
-        category: formData.get('category'),
+        category: finalCategory,
         quantity: parseFloat(formData.get('quantity')) || 0,
         unit: formData.get('unit'),
         unit_price: parseFloat(formData.get('unit_price')) || 0,
