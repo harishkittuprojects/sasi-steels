@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS orders (
   order_number TEXT,
   company_name TEXT NOT NULL DEFAULT 'General Client',
   customer_name TEXT NOT NULL,
-  customer_phone TEXT NOT NULL,
+  customer_phone TEXT DEFAULT '',
   customer_email TEXT,
   delivery_address TEXT,
   inventory_item_id BIGINT,
@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS orders (
 -- Migration support if table already exists
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS company_name TEXT DEFAULT 'General Client';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_amount NUMERIC DEFAULT 0;
+ALTER TABLE orders ALTER COLUMN customer_phone DROP NOT NULL;
 
 -- 10. GENERATED OFFICIAL QUOTATIONS TABLE
 CREATE TABLE IF NOT EXISTS quotations (
@@ -157,7 +158,7 @@ CREATE TABLE IF NOT EXISTS quotations (
   validity_days INTEGER DEFAULT 15,
   customer_name TEXT NOT NULL,
   company_name TEXT,
-  customer_phone TEXT NOT NULL,
+  customer_phone TEXT DEFAULT '',
   customer_email TEXT,
   customer_address TEXT,
   customer_gst TEXT,

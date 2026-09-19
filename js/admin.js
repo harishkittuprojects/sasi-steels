@@ -1690,8 +1690,8 @@ async function getQuotationFormData() {
   const customerName = document.getElementById('quote-input-customer')?.value.trim();
   const phone = document.getElementById('quote-input-phone')?.value.trim();
 
-  if (!quoteNumber || !customerName || !phone) {
-    alert("Please fill required fields: Quotation Number, Customer Name, and Phone Number.");
+  if (!quoteNumber || !customerName) {
+    alert("Please fill required fields: Quotation Number and Customer Name.");
     return null;
   }
 
@@ -3802,8 +3802,8 @@ async function openOrderModal(id = null) {
     <!-- Customer Contact & WhatsApp -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
-        <label class="block text-slate-300 font-bold mb-1 text-xs"><i class="fa-solid fa-phone text-emerald-400 mr-1"></i> Customer Phone / WhatsApp <span class="text-orange-500">*</span></label>
-        <input type="text" name="customer_phone" required value="${existing ? existing.customer_phone : ''}" placeholder="+91 98480 12345" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+        <label class="block text-slate-300 font-bold mb-1 text-xs"><i class="fa-solid fa-phone text-emerald-400 mr-1"></i> Customer Phone / WhatsApp <span class="text-slate-500 font-normal text-[10px]">(Optional)</span></label>
+        <input type="text" name="customer_phone" value="${existing ? (existing.customer_phone || '') : ''}" placeholder="+91 98480 12345 (Optional)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1 text-xs"><i class="fa-solid fa-envelope text-cyan-400 mr-1"></i> Customer Email</label>
