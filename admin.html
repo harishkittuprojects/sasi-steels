@@ -1297,6 +1297,9 @@
           <span class="text-xs text-slate-400">Corporate Quotation Preview</span>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
+          <button id="preview-confirm-order-btn" onclick="confirmQuotationOrderFromPreview()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow transition-all">
+            <i class="fa-solid fa-cart-arrow-down"></i> Confirm Order
+          </button>
           <button onclick="printQuotationDocument()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold inline-flex items-center gap-1.5 border border-slate-700">
             <i class="fa-solid fa-print text-orange-400"></i> Print / Save PDF
           </button>
@@ -1628,8 +1631,11 @@
     </div>
   </div>
 
+  <!-- Toast Notifications Container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-md w-full px-4"></div>
+
   <!-- Scripts -->
-  <script src="js/backend-config.js?v=20260919_2"></script>
-  <script src="js/admin.js?v=20260919_2"></script>
+  <script src="js/backend-config.js?v=20260919_3"></script>
+  <script src="js/admin.js?v=20260919_3"></script>
 </body>
 </html>

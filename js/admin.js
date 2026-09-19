@@ -698,6 +698,15 @@ async function loadQuotations() {
     const quotes = await dbGetQuotations();
     allQuotationsRecords = quotes || [];
 
+    // Auto-sync any approved or completed quotations to orders
+    if (typeof syncQuotationToOrder === 'function') {
+      for (const q of allQuotationsRecords) {
+        if (q.status === 'Approved' || q.status === 'Completed') {
+          await syncQuotationToOrder(q);
+        }
+      }
+    }
+
     // Load Inquiries
     const inquiries = await dbGetInquiries();
     allInquiriesRecords = inquiries || [];
@@ -825,15 +834,24 @@ function filterQuotationsData() {
           ${grandTotalFormatted}
         </td>
         <td class="py-3 px-4">
-          <select onchange="handleQuotationStatusChange('${q.id || q.quote_number}', this.value)" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-bold outline-none focus:border-orange-500">
+          <select onchange="handleQuotationStatusChange('${q.id || q.quote_number}', this.value)" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-bold outline-none focus:border-orange-500 cursor-pointer">
             <option value="Draft" ${q.status === 'Draft' ? 'selected' : ''}>Draft</option>
             <option value="Sent" ${q.status === 'Sent' ? 'selected' : ''}>Sent</option>
-            <option value="Approved" ${q.status === 'Approved' ? 'selected' : ''}>Approved</option>
+            <option value="Approved" ${q.status === 'Approved' ? 'selected' : ''}>Approved (Confirmed)</option>
             <option value="Rejected" ${q.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
             <option value="Completed" ${q.status === 'Completed' ? 'selected' : ''}>Completed</option>
           </select>
         </td>
         <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+          ${(q.status === 'Approved' || q.status === 'Completed') ? `
+            <button onclick="viewLinkedOrder('${q.quote_number}')" class="p-1.5 px-2.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs font-bold inline-flex items-center gap-1 border border-emerald-500/30 transition-all" title="Order Confirmed! Click to view in Orders & Bookings">
+              <i class="fa-solid fa-cart-shopping text-emerald-400"></i> <span class="hidden sm:inline">Booked</span>
+            </button>
+          ` : `
+            <button onclick="confirmQuotationOrder('${q.id || q.quote_number}')" class="p-1.5 px-2.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-bold inline-flex items-center gap-1 border border-emerald-500/30 transition-all" title="Confirm Order & Book to Orders & Bookings">
+              <i class="fa-solid fa-cart-arrow-down"></i> <span class="hidden sm:inline">Confirm</span>
+            </button>
+          `}
           <button onclick="openQuotationPreview('${q.id || q.quote_number}')" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs" title="Live Preview">
             <i class="fa-solid fa-eye text-orange-400"></i>
           </button>
@@ -876,15 +894,78 @@ function resetQuotationsFilter() {
   filterQuotationsData();
 }
 
+async function confirmQuotationOrder(id) {
+  const quote = allQuotationsRecords.find(q => String(q.id) === String(id) || String(q.quote_number) === String(id));
+  if (!quote) return;
+
+  await dbUpdateQuotation(quote.id || quote.quote_number, { status: 'Approved' });
+  const updatedQuote = { ...quote, status: 'Approved' };
+  
+  if (typeof syncQuotationToOrder === 'function') {
+    await syncQuotationToOrder(updatedQuote);
+  }
+
+  await loadQuotations();
+  await loadOrders();
+  loadInitialCounts();
+
+  showDashboardToast(`🎉 Quotation #${quote.quote_number} confirmed! Order booked in Orders & Bookings.`, 'success', 'View in Orders', () => {
+    viewLinkedOrder(quote.quote_number);
+  });
+}
+
 async function handleQuotationStatusChange(id, newStatus) {
+  const quote = allQuotationsRecords.find(q => String(q.id) === String(id) || String(q.quote_number) === String(id));
   await dbUpdateQuotation(id, { status: newStatus });
-  loadQuotations();
+  
+  if (quote) {
+    const updatedQuote = { ...quote, status: newStatus };
+    if (typeof syncQuotationToOrder === 'function') {
+      await syncQuotationToOrder(updatedQuote);
+    }
+    
+    if (newStatus === 'Approved' || newStatus === 'Completed') {
+      showDashboardToast(`🎉 Quotation #${quote.quote_number} marked as ${newStatus}! Booked in Orders & Bookings.`, 'success', 'View in Orders', () => {
+        viewLinkedOrder(quote.quote_number);
+      });
+    } else if (newStatus === 'Rejected' || newStatus === 'Cancelled') {
+      showDashboardToast(`Quotation #${quote.quote_number} marked as ${newStatus}.`, 'info');
+    }
+  }
+
+  await loadQuotations();
+  await loadOrders();
+  loadInitialCounts();
+}
+
+function viewLinkedOrder(quoteNumber) {
+  closeQuotationPreviewModal();
+  switchTab('orders');
+  setTimeout(() => {
+    const statusSelect = document.getElementById('order-filter-status');
+    const paymentSelect = document.getElementById('order-filter-payment');
+    const fromInput = document.getElementById('order-filter-from');
+    const toInput = document.getElementById('order-filter-to');
+    if (statusSelect) statusSelect.value = 'ALL';
+    if (paymentSelect) paymentSelect.value = 'ALL';
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
+    if (typeof setDateFilterPreset === 'function') setDateFilterPreset('order', 'all');
+
+    const searchInput = document.getElementById('order-filter-search');
+    if (searchInput) {
+      searchInput.value = quoteNumber;
+      filterOrdersData();
+    }
+  }, 250);
 }
 
 async function handleDeleteQuotation(id) {
   if (confirm("Are you sure you want to delete this quotation record?")) {
     await dbDeleteQuotation(id);
     await loadQuotations();
+    await loadOrders();
+    loadInitialCounts();
   }
 }
 
@@ -1561,8 +1642,18 @@ async function saveQuotationFormData() {
     await dbAddQuotation(data);
   }
 
+  // Automatic sync to Orders & Bookings when marked as Approved / Confirmed
+  if (data.status === 'Approved' || data.status === 'Completed') {
+    if (typeof syncQuotationToOrder === 'function') {
+      await syncQuotationToOrder(data);
+    }
+  }
+
   closeQuotationModal();
-  loadQuotations();
+  await loadQuotations();
+  await loadOrders();
+  loadInitialCounts();
+  showDashboardToast(`Quotation #${data.quote_number} saved successfully!`, 'success');
 }
 
 // ================= 5. CORPORATE LIVE A4 PREVIEW ENGINE (MATCHING REFERENCE IMAGE) =================
@@ -1781,8 +1872,38 @@ async function openQuotationPreview(quoteId) {
   if (docEl) docEl.innerHTML = generateQuotationPaperHTML(quote, settings);
   if (modalQuoteNo) modalQuoteNo.textContent = quote.quote_number;
 
+  const confirmBtn = document.getElementById('preview-confirm-order-btn');
+  if (confirmBtn) {
+    if (quote.status === 'Approved' || quote.status === 'Completed') {
+      confirmBtn.className = 'px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs font-bold inline-flex items-center gap-1.5 border border-emerald-500/30 transition-all';
+      confirmBtn.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> View in Orders`;
+      confirmBtn.onclick = () => viewLinkedOrder(quote.quote_number);
+    } else {
+      confirmBtn.className = 'px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow transition-all';
+      confirmBtn.innerHTML = `<i class="fa-solid fa-cart-arrow-down"></i> Confirm Order`;
+      confirmBtn.onclick = () => confirmQuotationOrderFromPreview();
+    }
+  }
+
   const modal = document.getElementById('quotation-preview-modal');
   if (modal) modal.classList.remove('hidden');
+}
+
+async function confirmQuotationOrderFromPreview() {
+  if (!previewingQuotationData) return;
+  const qId = previewingQuotationData.id || previewingQuotationData.quote_number;
+  await confirmQuotationOrder(qId);
+  
+  const updatedQuote = allQuotationsRecords.find(q => String(q.id) === String(qId) || String(q.quote_number) === String(qId));
+  if (updatedQuote) {
+    previewingQuotationData = updatedQuote;
+    const confirmBtn = document.getElementById('preview-confirm-order-btn');
+    if (confirmBtn) {
+      confirmBtn.className = 'px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs font-bold inline-flex items-center gap-1.5 border border-emerald-500/30 transition-all';
+      confirmBtn.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> View in Orders`;
+      confirmBtn.onclick = () => viewLinkedOrder(updatedQuote.quote_number);
+    }
+  }
 }
 
 function closeQuotationPreviewModal() {
@@ -2717,7 +2838,13 @@ function filterOrdersData() {
       const matchCust = (ord.customer_name || '').toLowerCase().includes(searchVal);
       const matchPhone = (ord.customer_phone || '').toLowerCase().includes(searchVal);
       const matchItem = (ord.item_name || '').toLowerCase().includes(searchVal);
-      if (!matchNum && !matchCust && !matchPhone && !matchItem) return false;
+      const matchNotes = (ord.notes || '').toLowerCase().includes(searchVal);
+      const cleanSearch = searchVal.replace(/[^a-z0-9]/g, '');
+      const cleanNum = (ord.order_number || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cleanNotes = (ord.notes || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matchClean = cleanSearch ? (cleanNum.includes(cleanSearch) || cleanNotes.includes(cleanSearch)) : false;
+
+      if (!matchNum && !matchCust && !matchPhone && !matchItem && !matchNotes && !matchClean) return false;
     }
     return true;
   });
@@ -4193,7 +4320,12 @@ async function loadGallery() {
 
   try {
     const items = await dbGetGallery();
-    allGalleryRecords = items || [];
+    allGalleryRecords = (items || []).sort((a, b) => {
+      const numA = parseInt(a.tag_number, 10);
+      const numB = parseInt(b.tag_number, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return String(a.tag_number || '').localeCompare(String(b.tag_number || ''));
+    });
 
     if (!allGalleryRecords || allGalleryRecords.length === 0) {
       grid.innerHTML = `

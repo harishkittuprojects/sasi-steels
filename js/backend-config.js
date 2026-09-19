@@ -127,18 +127,34 @@ async function uploadToCloudinary(file) {
   }
 }
 
-// Smart Local-Remote Collection Merger to guarantee 100% data persistence
+// Smart Local-Remote Collection Merger to guarantee 100% data persistence & tag stability
 function mergeCollections(remoteList, localList, idKey = 'id') {
   if (!remoteList || !Array.isArray(remoteList)) remoteList = [];
   if (!localList || !Array.isArray(localList)) localList = [];
 
-  const remoteIds = new Set(remoteList.map(item => String(item[idKey])));
-  const unsyncedLocal = localList.filter(item => {
-    if (!item || !item[idKey]) return true;
-    return !remoteIds.has(String(item[idKey]));
+  const localMap = new Map();
+  localList.forEach(item => {
+    if (item && item[idKey] !== undefined && item[idKey] !== null) {
+      localMap.set(String(item[idKey]), item);
+    }
   });
 
-  return [...unsyncedLocal, ...remoteList];
+  const mergedRemote = remoteList.map(remoteItem => {
+    const key = String(remoteItem[idKey]);
+    if (localMap.has(key)) {
+      const localItem = localMap.get(key);
+      localMap.delete(key);
+      return {
+        ...localItem,
+        ...remoteItem,
+        tag_number: remoteItem.tag_number || localItem.tag_number || String(localItem.id || '')
+      };
+    }
+    return remoteItem;
+  });
+
+  const unsyncedLocal = Array.from(localMap.values());
+  return [...unsyncedLocal, ...mergedRemote];
 }
 
 // 2. INQUIRIES & QUOTATIONS CRUD (Cloud-First Sync)
@@ -762,11 +778,11 @@ async function dbGetGallery() {
     local = DEFAULT_GALLERY;
   }
   
-  // Ensure every item has a tag_number if missing from older data
+  // Ensure every item has a fixed persistent tag_number
   let updatedLocal = false;
   local = (local || []).map((item, idx) => {
     if (!item.tag_number) {
-      item.tag_number = String(idx + 1);
+      item.tag_number = String(item.id || (idx + 1));
       updatedLocal = true;
     }
     return item;
@@ -778,17 +794,36 @@ async function dbGetGallery() {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { data, error } = await client.from('gallery').select('*').order('created_at', { ascending: false });
+      const { data, error } = await client.from('gallery').select('*');
       if (!error && data && data.length > 0) {
-        const merged = mergeCollections(data, local);
-        saveLocalCollection('sasi_gallery', merged);
-        return merged;
+        const sanitizedRemote = data.map((rem, idx) => {
+          if (!rem.tag_number) {
+            const loc = local.find(l => String(l.id) === String(rem.id) || l.title === rem.title);
+            rem.tag_number = (loc && loc.tag_number) ? loc.tag_number : String(rem.id || (idx + 1));
+          }
+          return rem;
+        });
+        const merged = mergeCollections(sanitizedRemote, local);
+        const sorted = (merged || []).sort((a, b) => {
+          const numA = parseInt(a.tag_number, 10);
+          const numB = parseInt(b.tag_number, 10);
+          if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+          return String(a.tag_number || '').localeCompare(String(b.tag_number || ''));
+        });
+        saveLocalCollection('sasi_gallery', sorted);
+        return sorted;
       }
     } catch (e) {
       console.warn("Supabase fetch gallery error:", e);
     }
   }
-  return local || [];
+
+  return (local || []).sort((a, b) => {
+    const numA = parseInt(a.tag_number, 10);
+    const numB = parseInt(b.tag_number, 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return String(a.tag_number || '').localeCompare(String(b.tag_number || ''));
+  });
 }
 
 async function dbAddGalleryItem(item) {
@@ -1804,6 +1839,93 @@ async function dbDeleteAllQuotations() {
     }
   }
   return true;
+}
+
+// -------------------------------------------------------------
+// CENTRAL QUOTATION TO ORDER AUTOMATIC CONVERSION ENGINE
+// -------------------------------------------------------------
+async function syncQuotationToOrder(quote) {
+  if (!quote || !quote.quote_number) return null;
+
+  const quoteNum = quote.quote_number;
+  const orderNum = `ORD-${quoteNum.replace(/[^A-Za-z0-9]/g, '-')}`;
+
+  // Summarize item scope & quantities
+  let itemDesc = 'Custom Steel Fabrication';
+  let totalQty = 1;
+  let category = 'Quotation Order';
+  if (Array.isArray(quote.items) && quote.items.length > 0) {
+    const descriptions = quote.items
+      .filter(it => it && it.description)
+      .map(it => `${it.description}${it.quantity ? ' (Qty: ' + it.quantity + (it.finish ? ' ' + it.finish : '') + ')' : ''}`);
+    if (descriptions.length > 0) {
+      itemDesc = descriptions.join('; ');
+      category = quote.items[0].description || 'Quotation Order';
+    }
+    totalQty = quote.items.reduce((sum, it) => sum + (parseFloat(it.quantity) || 1), 0);
+  }
+
+  const grandTotal = parseFloat(quote.grand_total) || 0;
+  const unitPrice = totalQty > 0 ? Math.round((grandTotal / totalQty) * 100) / 100 : grandTotal;
+  const customerName = quote.customer_name + (quote.company_name ? ` (${quote.company_name})` : '');
+  const notesText = `Official Order booked from Quotation #${quoteNum}${quote.notes ? ' | ' + quote.notes : ''}`;
+
+  // Find if an order matching this quotation already exists
+  const existingOrders = (await dbGetOrders()) || [];
+  const existingOrder = existingOrders.find(o => 
+    (o.order_number && (o.order_number === orderNum || o.order_number === `ORD-${quoteNum}` || o.order_number.endsWith(quoteNum))) ||
+    (o.notes && o.notes.includes(quoteNum))
+  );
+
+  const isApproved = quote.status === 'Approved' || quote.status === 'Completed';
+  const isCancelledOrRejected = quote.status === 'Rejected' || quote.status === 'Cancelled';
+
+  if (existingOrder) {
+    let targetOrderStatus = existingOrder.order_status;
+    if (isCancelledOrRejected) {
+      targetOrderStatus = 'Cancelled';
+    } else if (isApproved && targetOrderStatus === 'Cancelled') {
+      targetOrderStatus = 'Confirmed';
+    }
+
+    const updatedOrder = {
+      customer_name: customerName,
+      customer_phone: quote.customer_phone || existingOrder.customer_phone,
+      customer_email: quote.customer_email || existingOrder.customer_email || null,
+      delivery_address: quote.customer_address || existingOrder.delivery_address || null,
+      item_name: itemDesc,
+      category: category,
+      quantity: totalQty,
+      unit_price: unitPrice,
+      total_amount: grandTotal,
+      order_status: targetOrderStatus,
+      order_date: quote.quote_date || existingOrder.order_date || new Date().toISOString().split('T')[0],
+      notes: notesText
+    };
+    await dbUpdateOrder(existingOrder.id, updatedOrder);
+    return { order: { ...existingOrder, ...updatedOrder }, isNew: false };
+  } else if (isApproved) {
+    const newOrder = {
+      order_number: orderNum,
+      customer_name: customerName,
+      customer_phone: quote.customer_phone || 'N/A',
+      customer_email: quote.customer_email || null,
+      delivery_address: quote.customer_address || null,
+      item_name: itemDesc,
+      category: category,
+      quantity: totalQty,
+      unit: 'Units',
+      unit_price: unitPrice,
+      total_amount: grandTotal,
+      payment_status: 'Pending',
+      order_status: 'Confirmed',
+      order_date: quote.quote_date || new Date().toISOString().split('T')[0],
+      notes: notesText
+    };
+    const res = await dbAddOrder(newOrder);
+    return { order: (res && res.data && res.data[0]) || newOrder, isNew: true };
+  }
+  return null;
 }
 
 // =========================================================

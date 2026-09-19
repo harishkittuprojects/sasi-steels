@@ -271,7 +271,7 @@
       }
 
       container.innerHTML = filtered.map((item, idx) => {
-        const tagDisplay = item.tag_number || (idx + 1);
+        const tagDisplay = item.tag_number || String(item.id || (idx + 1));
         return `
           <div class="group relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 hover:border-orange-500/60 transition-all duration-300 shadow-xl aspect-square cursor-pointer flex flex-col justify-end p-4" onclick="openLightbox(${idx})" data-aos="fade-up" data-aos-delay="${(idx % 4) * 50}">
             <img src="${item.image_url}" alt="${item.title}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -320,7 +320,7 @@
       const item = filtered[index];
       if (!item) return;
 
-      const tagLabel = `Tag No: ${item.tag_number || (index + 1)}`;
+      const tagLabel = `Tag No: ${item.tag_number || String(item.id || (index + 1))}`;
       document.getElementById('lightbox-img').src = item.image_url;
       document.getElementById('lightbox-title').textContent = item.title;
       document.getElementById('lightbox-tag').innerHTML = `<i class="fa-solid fa-tag text-[10px]"></i> ${tagLabel}`;
