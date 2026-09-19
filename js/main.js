@@ -231,12 +231,6 @@ function createServiceCardHTML(service, animationDelay = 0) {
         <img src="${service.image}" alt="${service.name}" 
              onerror="this.onerror=null;this.src='welding-works.jpg'"
              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-
-        <div class="absolute bottom-2 right-3">
-          <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-900/80 text-white backdrop-blur-sm">
-            ${service.priceFormatted}
-          </span>
-        </div>
       </div>
 
       <!-- Bottom Content: Circular Icon Badge & Title -->
@@ -312,9 +306,8 @@ function openServiceModal(serviceId) {
             <span class="section-tag mb-1">Service Details</span>
             <h2 class="text-2xl md:text-3xl font-black text-slate-900 mt-1">${service.name}</h2>
             
-            <div class="mt-3 flex items-baseline gap-2">
-              <span class="text-3xl font-black text-orange-600">${service.priceFormatted}</span>
-              <span class="text-xs font-medium text-slate-500">${service.unit}</span>
+            <div class="mt-3 flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 text-orange-700 font-bold text-xs"><i class="fa-solid fa-file-invoice"></i> Custom Fabrication & Quote Basis</span>
             </div>
 
             <p class="mt-4 text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -413,7 +406,7 @@ function openQuoteModal(serviceName = '') {
           <label class="block text-slate-700 font-bold mb-1">Service Required</label>
           <select id="quote-service" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500">
             ${servicesData.map(s => `
-              <option value="${s.name}" ${serviceName === s.name ? 'selected' : ''}>${s.name} (${s.priceFormatted})</option>
+              <option value="${s.name}" ${serviceName === s.name ? 'selected' : ''}>${s.name}</option>
             `).join('')}
             <option value="Custom Project" ${!serviceName ? 'selected' : ''}>Turnkey Structure / Interior Works</option>
           </select>

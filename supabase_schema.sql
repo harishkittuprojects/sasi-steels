@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS products (
   name TEXT NOT NULL,
   category TEXT NOT NULL,
   category_slug TEXT NOT NULL,
-  price_formatted TEXT NOT NULL,
+  price_formatted TEXT DEFAULT '',
   badge TEXT,
   image_url TEXT NOT NULL, -- Cloudinary or static URL
   specs TEXT,
@@ -254,3 +254,7 @@ VALUES
 ('Heavy-Duty Warehouse Pallet Racks', 'Storage Systems', 'storage-systems', '₹4,200 / bay level', '3.5 Ton Capacity', 'product-racks.jpg', 'Upright Height: 2m to 10m | Beam Length: 2.7m | Powder Coated', 'Multi-tier selective pallet racking systems engineered for forklift loading, high-density warehousing, and extreme seismic resistance.', true),
 ('Galvalume Corrugated Roofing Sheets', 'PEB & Roofing', 'peb-roofing', '₹380 / sq.meter', 'AZ-150 Coating', 'product-sheets.jpg', 'Thickness: 0.45 - 0.60 mm | Color Coated | Wind Tested', 'Weather-resistant, corrosion-proof profiled steel roofing and wall cladding sheets for industrial factory sheds and commercial buildings.', false)
 ON CONFLICT DO NOTHING;
+
+-- Schema update for optional price_formatted:
+ALTER TABLE IF EXISTS products ALTER COLUMN price_formatted DROP NOT NULL;
+ALTER TABLE IF EXISTS products ALTER COLUMN price_formatted SET DEFAULT '';

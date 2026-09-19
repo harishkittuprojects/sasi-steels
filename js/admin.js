@@ -5010,9 +5010,6 @@ function renderProductsList(list) {
           <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">${p.category}</span>
         </td>
         <td class="py-3 px-4">
-          <div class="font-bold text-emerald-400 font-mono text-xs">${p.price_formatted}</div>
-        </td>
-        <td class="py-3 px-4">
           <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">
             ${p.badge || 'Available'}
           </span>
@@ -5076,12 +5073,11 @@ async function exportProductsCSV() {
     allProductsRecords = await dbGetProducts() || [];
   }
 
-  const headers = ['Product ID', 'Name', 'Category', 'Price Formatted', 'Stock Badge', 'Specifications', 'Description', 'Image URL', 'Featured On Website'];
+  const headers = ['Product ID', 'Name', 'Category', 'Stock Badge', 'Specifications', 'Description', 'Image URL', 'Featured On Website'];
   const rows = allProductsRecords.map(p => [
     p.id || '',
     p.name || '',
     p.category || '',
-    p.price_formatted || '',
     p.badge || '',
     p.specs || '',
     p.description || '',
@@ -5124,13 +5120,6 @@ function openProductModal(id = null) {
         </select>
       </div>
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Catalog Pricing / Rate Display</label>
-        <input type="text" name="price_formatted" required value="${existing ? existing.price_formatted : '₹4,200 / Ton'}" placeholder="e.g. ₹4,200 / Ton or ₹380 / Sheet" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-emerald-400" />
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-3">
-      <div>
         <label class="block text-slate-300 font-bold mb-1">Stock / Availability Badge</label>
         <select name="badge" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold">
           <option value="In Stock" ${!existing || existing.badge === 'In Stock' ? 'selected' : ''}>In Stock</option>
@@ -5142,6 +5131,9 @@ function openProductModal(id = null) {
           <option value="Out of Stock" ${existing && existing.badge === 'Out of Stock' ? 'selected' : ''}>Out of Stock</option>
         </select>
       </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Feature on Web Homepage?</label>
         <select name="is_featured" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
@@ -5149,11 +5141,10 @@ function openProductModal(id = null) {
           <option value="false" ${existing && !existing.is_featured ? 'selected' : ''}>No - Catalog Only</option>
         </select>
       </div>
-    </div>
-
-    <div>
-      <label class="block text-slate-300 font-bold mb-1">Technical Specifications / Key Features</label>
-      <input type="text" name="specs" value="${existing && existing.specs ? existing.specs : 'Heavy Load Capacity / IS 2062 Grade Steel / Custom Heights'}" placeholder="e.g. 0.50mm TCT / AZ150 Zinc Coating / Custom Lengths" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      <div>
+        <label class="block text-slate-300 font-bold mb-1">Technical Specifications</label>
+        <input type="text" name="specs" value="${existing && existing.specs ? existing.specs : 'Heavy Load Capacity / IS 2062 Grade Steel / Custom Specs'}" placeholder="e.g. 0.50mm TCT / AZ150 Zinc Coating / Custom Lengths" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      </div>
     </div>
 
     <div>
@@ -5521,7 +5512,7 @@ async function handleCrudSubmit(e) {
         name: formData.get('name'),
         category: formData.get('category'),
         category_slug: (formData.get('category') || '').toLowerCase().replace(/[^a-z0-9]/g, '-'),
-        price_formatted: formData.get('price_formatted'),
+        price_formatted: formData.get('price_formatted') || '',
         badge: formData.get('badge') || 'In Stock',
         specs: formData.get('specs') || '',
         description: formData.get('description') || '',
