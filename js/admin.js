@@ -4327,13 +4327,37 @@ async function exportAttendanceCSV() {
 }
 
 function onAttendanceEmpSelect(empName) {
-  if (!empName) return;
   const nameInput = document.querySelector('#crud-form-fields input[name="employee_name"]');
+  const roleSelect = document.querySelector('#crud-form-fields select[name="role"]');
+  const customRoleContainer = document.getElementById('custom-role-container');
+  const customRoleInput = document.getElementById('employee-custom-role');
+
+  if (!empName) {
+    if (nameInput) nameInput.value = '';
+    return;
+  }
+
+  if (empName === '__CUSTOM_WORKER__') {
+    if (nameInput) {
+      nameInput.value = '';
+      nameInput.placeholder = 'Type custom worker / helper name...';
+      nameInput.focus();
+    }
+    if (roleSelect) {
+      roleSelect.value = '__CUSTOM__';
+      handleRoleSelectChange(roleSelect);
+      if (customRoleInput) {
+        customRoleInput.value = '';
+        customRoleInput.placeholder = 'e.g. Daily Helper / Fabricator / Welder';
+      }
+    }
+    return;
+  }
+
   if (nameInput) nameInput.value = empName;
 
-  const match = allEmployeesRecords.find(e => e.name === empName);
+  const match = (allEmployeesRecords || []).find(e => e.name === empName);
   if (match) {
-    const roleSelect = document.querySelector('#crud-form-fields select[name="role"]');
     if (roleSelect) {
       if (WORKSHOP_EMPLOYEE_ROLES.includes(match.role)) {
         roleSelect.value = match.role;
@@ -4341,8 +4365,7 @@ function onAttendanceEmpSelect(empName) {
       } else {
         roleSelect.value = '__CUSTOM__';
         handleRoleSelectChange(roleSelect);
-        const customInput = document.getElementById('employee-custom-role');
-        if (customInput) customInput.value = match.role;
+        if (customRoleInput) customRoleInput.value = match.role;
       }
     }
   }
@@ -4355,10 +4378,10 @@ async function openAttendanceModal() {
   document.getElementById('crud-modal-subtitle').textContent = 'Record daily presence & overtime hours for workshop crew.';
 
   if (!allEmployeesRecords || allEmployeesRecords.length === 0) {
-    allEmployeesRecords = await dbGetEmployees();
+    allEmployeesRecords = (await dbGetEmployees()) || [];
   }
 
-  const empOptions = allEmployeesRecords
+  const empOptions = (allEmployeesRecords || [])
     .filter(e => e.status === 'Active')
     .map(e => `<option value="${e.name}">${e.name} (${e.role})</option>`)
     .join('');
@@ -4366,27 +4389,28 @@ async function openAttendanceModal() {
   const roleOptionsHtml = WORKSHOP_EMPLOYEE_ROLES.map(role => `
     <option value="${role}">${role}</option>
   `).join('') + `
-    <option value="__CUSTOM__">+ Other / Manual Entry</option>
+    <option value="__CUSTOM__">+ Other / Custom Role</option>
   `;
 
   document.getElementById('crud-form-fields').innerHTML = `
     <div>
       <label class="block text-slate-300 font-bold mb-1">Quick Select Registered Staff</label>
-      <select onchange="onAttendanceEmpSelect(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-cyan-400 font-bold focus:outline-none focus:border-cyan-500 mb-2">
+      <select onchange="onAttendanceEmpSelect(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-cyan-400 font-bold focus:outline-none focus:border-cyan-500 mb-2 cursor-pointer">
         <option value="">-- Choose from Registered Staff --</option>
         ${empOptions}
+        <option value="__CUSTOM_WORKER__" class="text-orange-400 font-bold">+ Other / Custom Worker (Unregistered)</option>
       </select>
-      <label class="block text-slate-300 font-bold mb-1">Employee Name</label>
-      <input type="text" name="employee_name" required placeholder="e.g. Ramesh Kumar" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      <label class="block text-slate-300 font-bold mb-1">Employee / Worker Name <span class="text-orange-500">*</span></label>
+      <input type="text" name="employee_name" required placeholder="e.g. Ramesh Kumar (or custom worker name)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label class="block text-slate-300 font-bold mb-1">Role</label>
-        <select name="role" id="employee-role-select" onchange="handleRoleSelectChange(this)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
+        <label class="block text-slate-300 font-bold mb-1">Role / Designation</label>
+        <select name="role" id="employee-role-select" onchange="handleRoleSelectChange(this)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 cursor-pointer">
           ${roleOptionsHtml}
         </select>
         <div id="custom-role-container" class="hidden mt-2">
-          <input type="text" name="custom_role" id="employee-custom-role" placeholder="Type custom role..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-orange-500 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-400 placeholder:text-slate-500" />
+          <input type="text" name="custom_role" id="employee-custom-role" placeholder="Type custom role (e.g. Daily Helper)..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-orange-500 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-400 placeholder:text-slate-500" />
         </div>
       </div>
       <div>
