@@ -4630,7 +4630,11 @@ function filterInventoryData() {
     if (searchVal) {
       const matchName = (item.item_name || '').toLowerCase().includes(searchVal);
       const matchLoc = (item.storage_location || '').toLowerCase().includes(searchVal);
-      if (!matchName && !matchLoc) return false;
+      const matchCat = (item.category || '').toLowerCase().includes(searchVal);
+      const matchId = String(item.id || '').toLowerCase().includes(searchVal);
+      const matchStatus = (item.status || '').toLowerCase().includes(searchVal);
+      const matchUnit = (item.unit || '').toLowerCase().includes(searchVal);
+      if (!matchName && !matchLoc && !matchCat && !matchId && !matchStatus && !matchUnit) return false;
     }
     return true;
   });
@@ -4660,40 +4664,40 @@ function filterInventoryData() {
 
     return `
     <tr class="hover:bg-slate-800/50 transition-colors">
-      <td class="py-3 px-4">
-        <div class="flex items-center gap-3">
-          <!-- Stock Image Thumbnail with Click-to-Zoom Lightbox -->
+      <td class="py-2.5 px-3.5">
+        <div class="flex items-center gap-2.5">
+          <!-- Compact Stock Image Thumbnail with Click-to-Zoom Lightbox -->
           <div class="relative group flex-shrink-0 cursor-pointer" onclick="showImageLightbox('${itemImg}', '${escapedName}', '${infoSubtitle}', '${statusText}')" title="Click to view full photo">
-            <img src="${itemImg}" alt="${escapedName}" onerror="this.onerror=null; this.src='product-beams.jpg';" class="w-12 h-12 rounded-xl object-cover border border-slate-700 bg-slate-950 shadow-md group-hover:scale-105 group-hover:border-orange-500/70 transition-all" />
-            <div class="absolute inset-0 bg-slate-950/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-              <i class="fa-solid fa-magnifying-glass-plus text-white text-xs"></i>
+            <img src="${itemImg}" alt="${escapedName}" onerror="this.onerror=null; this.src='product-beams.jpg';" class="w-8 h-8 rounded-lg object-cover border border-slate-700 bg-slate-950 shadow-sm group-hover:scale-110 group-hover:border-orange-500/80 transition-all" />
+            <div class="absolute inset-0 bg-slate-950/60 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <i class="fa-solid fa-magnifying-glass text-white text-[9px]"></i>
             </div>
           </div>
           <div class="min-w-0">
             <div class="font-bold text-white text-xs hover:text-orange-400 cursor-pointer transition-colors" onclick="openInventoryModal('${item.id}')" title="Click to edit stock item">${item.item_name}</div>
             <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <span class="text-slate-500">ID: #${item.id}</span>
-              ${item.storage_location ? `<span class="bg-slate-800/80 px-1.5 py-0.5 rounded text-slate-300 text-[9px] border border-slate-700/50"><i class="fa-solid fa-location-dot text-orange-400 mr-0.5"></i>${item.storage_location}</span>` : ''}
+              <span class="text-slate-500 text-[9px]">#${item.id}</span>
+              ${item.storage_location ? `<span class="bg-slate-800/80 px-1.5 py-0.2 rounded text-slate-300 text-[9px] border border-slate-700/50"><i class="fa-solid fa-location-dot text-orange-400 mr-0.5"></i>${item.storage_location}</span>` : ''}
             </div>
           </div>
         </div>
       </td>
-      <td class="py-3 px-4 text-slate-300">${item.category}</td>
-      <td class="py-3 px-4 font-bold text-orange-400 font-mono">${item.quantity} ${item.unit}</td>
-      <td class="py-3 px-4 text-emerald-400 font-bold">₹${(parseFloat(item.unit_price) || 0).toLocaleString('en-IN')}</td>
-      <td class="py-3 px-4 text-slate-400">${item.storage_location || 'Main Yard'}</td>
-      <td class="py-3 px-4">
-        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+      <td class="py-2.5 px-3.5 text-slate-300">${item.category}</td>
+      <td class="py-2.5 px-3.5 font-bold text-orange-400 font-mono">${item.quantity} ${item.unit}</td>
+      <td class="py-2.5 px-3.5 text-emerald-400 font-bold">₹${(parseFloat(item.unit_price) || 0).toLocaleString('en-IN')}</td>
+      <td class="py-2.5 px-3.5 text-slate-400">${item.storage_location || 'Main Yard'}</td>
+      <td class="py-2.5 px-3.5">
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
           item.quantity <= 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
           item.quantity <= (item.min_reorder_level || 5) ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
           'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
         }">${statusText}</span>
       </td>
-      <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-        <button onclick="openInventoryModal('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-xs font-bold transition-all" title="Edit Stock / Photo / Price / Location">
-          <i class="fa-solid fa-pen-to-square mr-1"></i> Edit Stock
+      <td class="py-2.5 px-3.5 text-right space-x-1.5 whitespace-nowrap">
+        <button onclick="openInventoryModal('${item.id}')" class="px-2 py-1 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px] font-bold transition-all" title="Edit Stock / Photo / Price / Location">
+          <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
         </button>
-        <button onclick="deleteInventoryItem('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-xs font-bold transition-all" title="Delete Item">
+        <button onclick="deleteInventoryItem('${item.id}')" class="px-2 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] font-bold transition-all" title="Delete Item">
           <i class="fa-solid fa-trash"></i>
         </button>
       </td>
@@ -4753,7 +4757,9 @@ async function exportInventoryCSV() {
     if (searchVal) {
       const matchName = (item.item_name || '').toLowerCase().includes(searchVal);
       const matchLoc = (item.storage_location || '').toLowerCase().includes(searchVal);
-      if (!matchName && !matchLoc) return false;
+      const matchCat = (item.category || '').toLowerCase().includes(searchVal);
+      const matchId = String(item.id || '').toLowerCase().includes(searchVal);
+      if (!matchName && !matchLoc && !matchCat && !matchId) return false;
     }
     return true;
   });
@@ -4829,44 +4835,48 @@ function openInventoryModal(id = null) {
       <input type="text" name="item_name" required value="${existing ? existing.item_name : ''}" placeholder="e.g. ISMB 200 Heavy I-Beams" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold" />
     </div>
 
-    <!-- Stock Item Photo / Visual Identifier Section -->
-    <div class="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+    <!-- Compact Stock Photo Section with Quick Preset Chooser -->
+    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-2">
       <div class="flex items-center justify-between">
-        <label class="block text-slate-200 font-bold text-xs flex items-center gap-1.5">
-          <i class="fa-solid fa-camera text-orange-400"></i> Stock Item Image / Photo
-          <span class="text-[10px] font-normal text-slate-400">(Identifies item easily in yard)</span>
+        <label class="block text-slate-200 font-bold text-[11px] flex items-center gap-1.5">
+          <i class="fa-solid fa-camera text-orange-400"></i> Stock Photo
+          <span class="text-[9px] font-normal text-slate-400">(Identifies item easily in yard)</span>
         </label>
-        ${imgUrl ? `<button type="button" onclick="clearInventoryImagePreview()" class="text-[10px] text-red-400 hover:text-red-300 font-semibold flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Remove Photo</button>` : ''}
+        ${imgUrl ? `<button type="button" onclick="clearInventoryImagePreview()" class="text-[10px] text-red-400 hover:text-red-300 font-semibold flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Remove</button>` : ''}
       </div>
       
-      <div class="flex items-start gap-3">
-        <!-- Preview Box -->
-        <div id="inv-img-preview-box" class="w-16 h-16 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center relative group">
+      <div class="flex items-center gap-2.5">
+        <!-- Compact Preview Box -->
+        <div id="inv-img-preview-box" class="w-10 h-10 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center relative group">
           ${imgUrl ? `
             <img id="inv-preview-thumb" src="${imgUrl}" alt="Preview" class="w-full h-full object-cover" />
             <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" onclick="showImageLightbox('${imgUrl}', '${existing ? existing.item_name.replace(/'/g, "\\'") : 'Stock Item Photo'}', 'Visual Preview')">
-              <i class="fa-solid fa-magnifying-glass-plus text-white text-xs"></i>
+              <i class="fa-solid fa-magnifying-glass text-white text-[10px]"></i>
             </div>
           ` : `
             <div id="inv-preview-placeholder" class="text-slate-500 flex flex-col items-center justify-center">
-              <i class="fa-solid fa-image text-xl text-slate-600"></i>
-              <span class="text-[8px] text-slate-500 mt-0.5">No image</span>
+              <i class="fa-solid fa-image text-xs text-slate-500"></i>
             </div>
           `}
         </div>
 
-        <div class="flex-1 space-y-2">
-          <!-- File Input -->
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Upload Photo (Camera / Storage):</label>
-            <input type="file" id="inventory-img-file" accept="image/*" onchange="previewInventorySelectedImage(this)" class="w-full text-slate-400 text-xs file:mr-2.5 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[11px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-500 cursor-pointer" />
-          </div>
-
-          <!-- URL Input fallback -->
-          <div>
-            <input type="text" name="image_url" id="inventory-image-url-input" value="${imgUrl}" placeholder="Or paste image URL (e.g. Cloudinary or local image)" oninput="updateInventoryPreviewFromUrl(this.value)" class="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-xs font-mono focus:outline-none focus:border-orange-500" />
-          </div>
+        <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input type="file" id="inventory-img-file" accept="image/*" onchange="previewInventorySelectedImage(this)" class="w-full text-slate-400 text-[11px] file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-500 cursor-pointer" />
+          <input type="text" name="image_url" id="inventory-image-url-input" value="${imgUrl}" placeholder="Or paste image URL" oninput="updateInventoryPreviewFromUrl(this.value)" class="w-full px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-[11px] font-mono focus:outline-none focus:border-orange-500" />
         </div>
+      </div>
+
+      <!-- Quick Preset Search / Chooser -->
+      <div class="pt-1.5 border-t border-slate-800/80 flex items-center gap-1.5 flex-wrap">
+        <span class="text-[10px] text-slate-400 font-semibold flex items-center gap-1"><i class="fa-solid fa-wand-magic-sparkles text-amber-400 text-[9px]"></i> Quick Presets:</span>
+        <button type="button" onclick="selectInventoryPresetImage('product-beams.jpg')" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:text-white">Beams</button>
+        <button type="button" onclick="selectInventoryPresetImage('storage-racks.jpg')" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:text-white">Pallet Racks</button>
+        <button type="button" onclick="selectInventoryPresetImage('product-sheets.jpg')" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:text-white">Roof Sheets</button>
+        <button type="button" onclick="selectInventoryPresetImage('custom-fabrication.jpg')" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:text-white">Pipes/Tubes</button>
+        <button type="button" onclick="selectInventoryPresetImage('product-gold-partition-divider.png')" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30">Partition</button>
+        <button type="button" onclick="selectInventoryPresetImage('product-island-display-rack.png')" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:text-white">Island Rack</button>
+        <button type="button" onclick="selectInventoryPresetImage('product-gratings.jpg')" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:text-white">Gratings</button>
+        <button type="button" onclick="selectInventoryPresetImage('welding-works.jpg')" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:text-white">Welding</button>
       </div>
     </div>
 
@@ -4926,6 +4936,14 @@ function openInventoryModal(id = null) {
     </div>
   `;
   document.getElementById('crud-modal').classList.remove('hidden');
+}
+
+function selectInventoryPresetImage(url) {
+  const urlInput = document.getElementById('inventory-image-url-input');
+  if (urlInput) {
+    urlInput.value = url;
+    updateInventoryPreviewFromUrl(url);
+  }
 }
 
 function previewInventorySelectedImage(input) {

@@ -854,16 +854,20 @@
           </div>
         </div>
 
-        <!-- Filter Bar -->
-        <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
-          <div class="flex flex-wrap items-center gap-3">
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-magnifying-glass text-orange-400"></i> Search:</span>
-              <input type="text" id="inventory-filter-search" placeholder="Search item / location..." class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none w-44" oninput="filterInventoryData()" />
+        <!-- Filter Bar with Live Search -->
+        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div class="flex flex-wrap items-center gap-2.5 flex-1">
+            <!-- Enhanced Search Box -->
+            <div class="relative flex-1 min-w-[200px] max-w-sm">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 text-xs pointer-events-none"></i>
+              <input type="text" id="inventory-filter-search" placeholder="Search steel items, categories, yard bays, ID..." class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl pl-8 pr-7 py-2 focus:border-orange-500 outline-none transition-all focus:bg-slate-900" oninput="filterInventoryData()" />
+              <button onclick="document.getElementById('inventory-filter-search').value=''; filterInventoryData();" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs" title="Clear Search">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400 font-semibold">Category:</span>
-              <select id="inventory-filter-category" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none cursor-pointer" onchange="filterInventoryData()">
+            
+            <div class="flex items-center gap-1.5">
+              <select id="inventory-filter-category" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:border-orange-500 outline-none cursor-pointer" onchange="filterInventoryData()">
                 <option value="ALL">All Categories</option>
                 <option value="Custom Fabrication">✨ Custom Fabrication</option>
                 <option value="Storage Systems">Storage Systems & Racks</option>
@@ -875,13 +879,14 @@
                 <option value="Hardware">Hardware & Fasteners</option>
               </select>
             </div>
+
             <!-- Quick Filter Buttons -->
             <div class="flex items-center gap-1.5 flex-wrap">
               <button onclick="setInventoryCategoryFilter('ALL')" id="inv-pill-all" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow">All</button>
-              <button onclick="setInventoryCategoryFilter('Custom Fabrication')" id="inv-pill-custom" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30">✨ Custom Fabrication</button>
+              <button onclick="setInventoryCategoryFilter('Custom Fabrication')" id="inv-pill-custom" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30">✨ Custom</button>
               <button onclick="setInventoryCategoryFilter('Storage Systems')" id="inv-pill-storage" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300">Storage & Racks</button>
               <button onclick="setInventoryCategoryFilter('Structural Steel')" id="inv-pill-structural" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300">Structural</button>
-              <button onclick="setInventoryCategoryFilter('Stainless Steel')" id="inv-pill-ss" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300">Stainless Steel</button>
+              <button onclick="setInventoryCategoryFilter('Stainless Steel')" id="inv-pill-ss" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300">Stainless</button>
               <button onclick="resetInventoryFilter()" class="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700" title="Reset Filters"><i class="fa-solid fa-rotate-right"></i></button>
             </div>
           </div>
