@@ -100,9 +100,21 @@ CREATE TABLE IF NOT EXISTS admin_users (
   role TEXT DEFAULT 'Admin'
 );
 
--- Insert Default Admin (Username: admin, Password: 123456789)
+-- Insert Default Admin Users
 INSERT INTO admin_users (username, password_hash, role)
 VALUES ('admin', '123456789', 'Super Admin')
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO admin_users (username, password_hash, role)
+VALUES ('sasisteels863@gmail.com', 'sasi833399', 'Super Admin')
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO admin_users (username, password_hash, role)
+VALUES ('sasiadmin', 'sasi833399', 'Admin')
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO admin_users (username, password_hash, role)
+VALUES ('manager', 'sasi1234', 'Manager')
 ON CONFLICT (username) DO NOTHING;
 
 -- 8. EMPLOYEES / WORKSHOP WORKERS TABLE

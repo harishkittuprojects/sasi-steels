@@ -80,21 +80,79 @@ function checkAdminAuth() {
   }
 }
 
-function handleAdminLogin(e) {
-  e.preventDefault();
+async function handleAdminLogin(e) {
+  if (e) e.preventDefault();
   const user = document.getElementById('admin-user').value.trim();
   const pass = document.getElementById('admin-pass').value.trim();
 
-  // Master password check
-  if ((user === 'admin' || user === 'sasisteels863@gmail.com') && (pass === '123456789' || pass === 'sasi833399')) {
+  if (!user || !pass) {
+    alert('Please enter both username and password.');
+    return;
+  }
+
+  // Pre-configured admin accounts (Offline / Failover Support)
+  const allowedAdmins = [
+    { username: 'admin', passwords: ['123456789', 'sasi833399', 'sasi1234'], role: 'Super Admin' },
+    { username: 'sasisteels863@gmail.com', passwords: ['sasi833399', '123456789'], role: 'Super Admin' },
+    { username: 'sasiadmin', passwords: ['sasi833399', '123456789', 'sasi1234'], role: 'Admin' },
+    { username: 'manager', passwords: ['sasi1234', 'sasi833399', '123456789'], role: 'Manager' },
+    { username: 'admin2', passwords: ['sasi833399', '123456789', 'sasi1234'], role: 'Admin' }
+  ];
+
+  let authenticated = false;
+  let loggedInRole = 'Admin';
+  let loggedInUser = user;
+
+  // 1. Check local / static admin users
+  const staticMatch = allowedAdmins.find(acc => 
+    acc.username.toLowerCase() === user.toLowerCase() && acc.passwords.includes(pass)
+  );
+
+  if (staticMatch) {
+    authenticated = true;
+    loggedInRole = staticMatch.role;
+    loggedInUser = staticMatch.username;
+  }
+
+  // 2. Check Supabase DB admin_users table if not matched statically
+  if (!authenticated) {
+    const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+    if (client) {
+      try {
+        const { data, error } = await client
+          .from('admin_users')
+          .select('*')
+          .ilike('username', user)
+          .limit(1);
+
+        if (!error && data && data.length > 0) {
+          const dbUser = data[0];
+          if (dbUser.password_hash === pass) {
+            authenticated = true;
+            loggedInRole = dbUser.role || 'Admin';
+            loggedInUser = dbUser.username;
+          }
+        }
+      } catch (err) {
+        console.warn("Database admin auth verification error:", err);
+      }
+    }
+  }
+
+  if (authenticated) {
     sessionStorage.setItem('sasi_admin_auth', 'true');
+    sessionStorage.setItem('sasi_admin_user', loggedInUser);
+    sessionStorage.setItem('sasi_admin_role', loggedInRole);
     document.getElementById('auth-modal').classList.add('hidden');
     initHeaderTodayDate();
     updateAllLockBadges();
     switchTab('employees');
     loadInitialCounts();
+    if (typeof showDashboardToast === 'function') {
+      showDashboardToast(`Welcome back, ${loggedInUser} (${loggedInRole})!`, 'success');
+    }
   } else {
-    alert('Incorrect credentials! Please enter the correct password.');
+    alert('Incorrect credentials! Please enter the correct username and password.');
   }
 }
 
@@ -181,6 +239,8 @@ function lockAllProtectedSections() {
 
 function adminLogout() {
   sessionStorage.removeItem('sasi_admin_auth');
+  sessionStorage.removeItem('sasi_admin_user');
+  sessionStorage.removeItem('sasi_admin_role');
   sessionStorage.removeItem('sasi_sections_unlocked');
   window.location.reload();
 }
@@ -2603,7 +2663,7 @@ async function generatePdfDocument(quote, settings) {
     } catch (e) {}
   }
 
-  // Create an isolated fixed off-screen wrapper to avoid window.scrollY coordinate offsets
+  // Create an isolated fixed wrapper behind viewport to avoid window.scrollY coordinate offsets
   const wrapper = document.createElement('div');
   wrapper.id = 'sasi-pdf-render-isolation-wrapper';
   wrapper.style.position = 'fixed';
@@ -2613,8 +2673,9 @@ async function generatePdfDocument(quote, settings) {
   wrapper.style.maxWidth = '740px';
   wrapper.style.background = '#ffffff';
   wrapper.style.color = '#000000';
-  wrapper.style.zIndex = '999999';
-  wrapper.style.opacity = '0';
+  wrapper.style.zIndex = '-9999';
+  wrapper.style.opacity = '1';
+  wrapper.style.visibility = 'visible';
   wrapper.style.pointerEvents = 'none';
   wrapper.style.margin = '0';
   wrapper.style.padding = '0';
@@ -3611,8 +3672,9 @@ async function exportCompanyOrdersPDF(specificCompany = null) {
   printContainer.style.left = '0';
   printContainer.style.width = '800px';
   printContainer.style.background = '#ffffff';
-  printContainer.style.zIndex = '999999';
-  printContainer.style.opacity = '0';
+  printContainer.style.zIndex = '-9999';
+  printContainer.style.opacity = '1';
+  printContainer.style.visibility = 'visible';
   printContainer.style.pointerEvents = 'none';
 
   if (typeof html2pdf !== 'undefined') {
