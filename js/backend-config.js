@@ -1635,27 +1635,32 @@ function numberToIndianWords(num) {
   return result.replace(/\s+/g, ' ');
 }
 
-// Helper: Generate next Quotation Number (SS/QTN/YYYY/001)
+// Helper: Generate next sequential Bill / Quotation Number (1, 2, 3... in series)
 function generateNextQuoteNumber(existingQuotations = []) {
-  const currentYear = new Date().getFullYear();
-  const prefix = `SS/QTN/${currentYear}/`;
   let highestNum = 0;
 
-  if (Array.isArray(existingQuotations)) {
+  if (Array.isArray(existingQuotations) && existingQuotations.length > 0) {
     existingQuotations.forEach(q => {
-      if (q && q.quote_number && typeof q.quote_number === 'string') {
-        if (q.quote_number.startsWith(prefix)) {
-          const numPart = parseInt(q.quote_number.replace(prefix, ''), 10);
-          if (!isNaN(numPart) && numPart > highestNum) {
-            highestNum = numPart;
+      if (q && q.quote_number !== undefined && q.quote_number !== null) {
+        const str = String(q.quote_number).trim();
+        // If it is a pure integer like "1", "2", "3"
+        const pureNum = parseInt(str, 10);
+        if (!isNaN(pureNum) && String(pureNum) === str) {
+          if (pureNum > highestNum) highestNum = pureNum;
+        } else {
+          // Extract trailing digits if formatted like "SS/QTN/2026/001" or "BILL-1"
+          const matches = str.match(/\d+$/);
+          if (matches) {
+            const num = parseInt(matches[0], 10);
+            if (!isNaN(num) && num > highestNum) highestNum = num;
           }
         }
       }
     });
   }
 
-  const nextNum = highestNum + 1;
-  return `${prefix}${String(nextNum).padStart(3, '0')}`;
+  const nextNum = highestNum > 0 ? highestNum + 1 : 1;
+  return String(nextNum);
 }
 
 // Helper to ensure official 7 terms are always preserved

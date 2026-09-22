@@ -1886,11 +1886,13 @@ function generateQuotationPaperHTML(quote, settings) {
       </div>
 
       <!-- 2. DATE & CLIENT DETAILS BAR -->
-      <div style="display: grid; grid-template-columns: 2fr 1.2fr 2.8fr; border-bottom: 1px solid #333333; background: #FCE4D6; font-size: 9.5px; line-height: 1.25; page-break-inside: avoid;">
+      <div style="display: grid; grid-template-columns: 2fr 1.3fr 2.8fr; border-bottom: 1px solid #333333; background: #FCE4D6; font-size: 9.5px; line-height: 1.25; page-break-inside: avoid;">
         <div style="padding: 4px 8px; font-weight: 700; border-right: 1px solid #333333; display: flex; align-items: center;">
           Date : ${displayDate}
         </div>
-        <div style="border-right: 1px solid #333333; background: #FCE4D6;"></div>
+        <div style="padding: 4px 6px; font-weight: 800; border-right: 1px solid #333333; background: #FCE4D6; display: flex; align-items: center; justify-content: center; font-size: 9.5px; text-transform: uppercase;">
+          Bill No : ${quote.quote_number || '1'}
+        </div>
         <div style="padding: 4px 8px; font-weight: 700; font-size: 9.5px;">
           <div>Client : ${quote.customer_name}${quote.company_name ? ' (' + quote.company_name + ')' : ''}</div>
           <div style="font-weight: 600; text-transform: uppercase;">${quote.customer_address || 'KHAMMAM'}</div>
@@ -2210,7 +2212,9 @@ async function generateExcelQuotationWorkbook(quote, settings) {
     dateCell.alignment = { vertical: 'middle', horizontal: 'left' };
     dateCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorPeach } };
 
-    sheet.getCell('D2').value = '';
+    sheet.getCell('D2').value = `Bill No : ${quote.quote_number || '1'}`;
+    sheet.getCell('D2').font = { name: 'Calibri', size: 10, bold: true };
+    sheet.getCell('D2').alignment = { vertical: 'middle', horizontal: 'center' };
     sheet.getCell('D2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorPeach } };
 
     sheet.mergeCells('E2:G2');
