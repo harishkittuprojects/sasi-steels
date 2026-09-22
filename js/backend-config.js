@@ -448,19 +448,40 @@ async function dbDeleteAllAttendance() {
 }
 
 const DEFAULT_INVENTORY = [
-  { id: 1, item_name: 'Heavy-Duty Warehouse Pallet Racks', category: 'Structural Steel', quantity: 45, unit: 'Tons', unit_price: 4200, min_reorder_level: 10, storage_location: 'Yard A - Bay 1', status: 'In Stock' },
-  { id: 2, item_name: 'Galvalume Corrugated Roofing Sheets', category: 'Plates & Sheets', quantity: 350, unit: 'Sheets', unit_price: 380, min_reorder_level: 50, storage_location: 'Shed 2 - Rack B', status: 'In Stock' },
-  { id: 3, item_name: 'Architectural Gold Metal Interior Room Divider & Partition Screen', category: 'Custom Fabrication', quantity: 20, unit: 'Units', unit_price: 14500, min_reorder_level: 5, storage_location: 'Showroom Bay', status: 'In Stock' },
-  { id: 4, item_name: 'Showroom Saree & Apparel Display Island Racks', category: 'Stainless Steel', quantity: 25, unit: 'Units', unit_price: 12500, min_reorder_level: 5, storage_location: 'Yard B - Bay 3', status: 'In Stock' },
-  { id: 5, item_name: 'Commercial Showroom & Apparel Steel Display Racks', category: 'Storage Systems', quantity: 40, unit: 'Units', unit_price: 6500, min_reorder_level: 8, storage_location: 'Yard A - Bay 4', status: 'In Stock' },
-  { id: 6, item_name: 'Stainless Steel Showroom Mirror Trolleys & Retail Fixtures', category: 'Stainless Steel', quantity: 18, unit: 'Units', unit_price: 8800, min_reorder_level: 4, storage_location: 'Showroom Bay', status: 'In Stock' },
-  { id: 7, item_name: 'Electro-Forged Industrial Steel Gratings', category: 'Plates & Sheets', quantity: 120, unit: 'Meters', unit_price: 1850, min_reorder_level: 20, storage_location: 'Yard C - Heavy Deck', status: 'In Stock' },
-  { id: 8, item_name: 'Prefabricated Industrial Steel Staircases', category: 'Structural Steel', quantity: 12, unit: 'Units', unit_price: 28000, min_reorder_level: 2, storage_location: 'Assembly Bay 1', status: 'In Stock' },
-  { id: 9, item_name: 'CNC Precision Laser Cut Base Plates & Brackets', category: 'Hardware', quantity: 500, unit: 'Units', unit_price: 95, min_reorder_level: 100, storage_location: 'Parts Bin 12', status: 'In Stock' },
-  { id: 10, item_name: 'ISMB 200 Heavy I-Beams', category: 'Structural Steel', quantity: 60, unit: 'Tons', unit_price: 5500, min_reorder_level: 15, storage_location: 'Main Yard - Section 1', status: 'In Stock' },
-  { id: 11, item_name: 'MS Hollow Square Pipes 50x50mm', category: 'Pipes & Tubes', quantity: 200, unit: 'Meters', unit_price: 450, min_reorder_level: 30, storage_location: 'Yard B - Pipe Rack', status: 'In Stock' },
-  { id: 12, item_name: 'Welding Electrodes E6013 3.15mm', category: 'Consumables', quantity: 80, unit: 'Boxes', unit_price: 650, min_reorder_level: 15, storage_location: 'Consumables Store', status: 'In Stock' }
+  { id: 1, item_name: 'Heavy-Duty Warehouse Pallet Racks', category: 'Structural Steel', quantity: 45, unit: 'Tons', unit_price: 4200, min_reorder_level: 10, storage_location: 'Yard A - Bay 1', status: 'In Stock', image_url: 'storage-racks.jpg' },
+  { id: 2, item_name: 'Galvalume Corrugated Roofing Sheets', category: 'Plates & Sheets', quantity: 350, unit: 'Sheets', unit_price: 380, min_reorder_level: 50, storage_location: 'Shed 2 - Rack B', status: 'In Stock', image_url: 'product-sheets.jpg' },
+  { id: 3, item_name: 'Architectural Gold Metal Interior Room Divider & Partition Screen', category: 'Custom Fabrication', quantity: 20, unit: 'Units', unit_price: 14500, min_reorder_level: 5, storage_location: 'Showroom Bay', status: 'In Stock', image_url: 'product-gold-partition-divider.png' },
+  { id: 4, item_name: 'Showroom Saree & Apparel Display Island Racks', category: 'Stainless Steel', quantity: 25, unit: 'Units', unit_price: 12500, min_reorder_level: 5, storage_location: 'Yard B - Bay 3', status: 'In Stock', image_url: 'product-island-display-rack.png' },
+  { id: 5, item_name: 'Commercial Showroom & Apparel Steel Display Racks', category: 'Storage Systems', quantity: 40, unit: 'Units', unit_price: 6500, min_reorder_level: 8, storage_location: 'Yard A - Bay 4', status: 'In Stock', image_url: 'product-display-racks.png' },
+  { id: 6, item_name: 'Stainless Steel Showroom Mirror Trolleys & Retail Fixtures', category: 'Stainless Steel', quantity: 18, unit: 'Units', unit_price: 8800, min_reorder_level: 4, storage_location: 'Showroom Bay', status: 'In Stock', image_url: 'product-ss-display-mirror.png' },
+  { id: 7, item_name: 'Electro-Forged Industrial Steel Gratings', category: 'Plates & Sheets', quantity: 120, unit: 'Meters', unit_price: 1850, min_reorder_level: 20, storage_location: 'Yard C - Heavy Deck', status: 'In Stock', image_url: 'product-gratings.jpg' },
+  { id: 8, item_name: 'Prefabricated Industrial Steel Staircases', category: 'Structural Steel', quantity: 12, unit: 'Units', unit_price: 28000, min_reorder_level: 2, storage_location: 'Assembly Bay 1', status: 'In Stock', image_url: 'gallery-stairs-1.jpg' },
+  { id: 9, item_name: 'CNC Precision Laser Cut Base Plates & Brackets', category: 'Hardware', quantity: 500, unit: 'Units', unit_price: 95, min_reorder_level: 100, storage_location: 'Parts Bin 12', status: 'In Stock', image_url: 'gallery-laser-1.jpg' },
+  { id: 10, item_name: 'ISMB 200 Heavy I-Beams', category: 'Structural Steel', quantity: 60, unit: 'Tons', unit_price: 5500, min_reorder_level: 15, storage_location: 'Main Yard - Section 1', status: 'In Stock', image_url: 'product-beams.jpg' },
+  { id: 11, item_name: 'MS Hollow Square Pipes 50x50mm', category: 'Pipes & Tubes', quantity: 200, unit: 'Meters', unit_price: 450, min_reorder_level: 30, storage_location: 'Yard B - Pipe Rack', status: 'In Stock', image_url: 'custom-fabrication.jpg' },
+  { id: 12, item_name: 'Welding Electrodes E6013 3.15mm', category: 'Consumables', quantity: 80, unit: 'Boxes', unit_price: 650, min_reorder_level: 15, storage_location: 'Consumables Store', status: 'In Stock', image_url: 'welding-works.jpg' }
 ];
+
+// Helper to get a sensible default image based on category / item name
+function getDefaultInventoryImage(item) {
+  if (!item) return 'product-racks.jpg';
+  const name = (item.item_name || '').toLowerCase();
+  const cat = (item.category || '').toLowerCase();
+  
+  if (name.includes('divider') || name.includes('partition') || cat.includes('custom')) return 'product-gold-partition-divider.png';
+  if (name.includes('island') || name.includes('saree')) return 'product-island-display-rack.png';
+  if (name.includes('mirror') || name.includes('trolley')) return 'product-ss-display-mirror.png';
+  if (name.includes('grating')) return 'product-gratings.jpg';
+  if (name.includes('sheet') || name.includes('roofing')) return 'product-sheets.jpg';
+  if (name.includes('beam') || name.includes('ismb') || name.includes('column')) return 'product-beams.jpg';
+  if (name.includes('stair')) return 'gallery-stairs-1.jpg';
+  if (name.includes('laser') || name.includes('bracket') || name.includes('plate') || cat.includes('hardware')) return 'gallery-laser-1.jpg';
+  if (name.includes('pipe') || name.includes('tube') || name.includes('square')) return 'custom-fabrication.jpg';
+  if (name.includes('weld') || name.includes('electrode') || cat.includes('consumable')) return 'welding-works.jpg';
+  if (cat.includes('storage') || name.includes('rack') || name.includes('pallet') || name.includes('shelv')) return 'product-display-racks.png';
+  if (cat.includes('stainless') || name.includes('ss')) return 'product-ss-display-mirror.png';
+  return 'product-beams.jpg';
+}
 
 // 4. INVENTORY CRUD (Cloud-First Sync)
 async function dbGetInventory() {
@@ -468,6 +489,19 @@ async function dbGetInventory() {
   if (local === null) {
     saveLocalCollection('sasi_inventory', DEFAULT_INVENTORY);
     local = DEFAULT_INVENTORY;
+  }
+
+  // Ensure items have image_url populated
+  let updatedLocal = false;
+  local = (local || []).map(item => {
+    if (!item.image_url) {
+      item.image_url = getDefaultInventoryImage(item);
+      updatedLocal = true;
+    }
+    return item;
+  });
+  if (updatedLocal) {
+    saveLocalCollection('sasi_inventory', local);
   }
 
   const client = getSupabaseClient();
@@ -497,6 +531,7 @@ async function dbAddInventory(item) {
     min_reorder_level: parseFloat(item.min_reorder_level) || 5,
     unit_price: parseFloat(item.unit_price) || 0,
     storage_location: item.storage_location || 'Main Yard',
+    image_url: item.image_url || getDefaultInventoryImage(item),
     status: (parseFloat(item.quantity) <= 0) ? 'Out of Stock' : ((parseFloat(item.quantity) <= (parseFloat(item.min_reorder_level) || 5)) ? 'Low Stock' : 'In Stock')
   };
 
@@ -537,6 +572,10 @@ async function dbUpdateInventory(id, updatedData) {
     min_reorder_level: minL,
     status: status
   };
+
+  if (updatedData.image_url !== undefined && updatedData.image_url !== null) {
+    payload.image_url = updatedData.image_url;
+  }
 
   let localList = getLocalCollection('sasi_inventory') || [];
   const idx = localList.findIndex(x => String(x.id) === String(id));

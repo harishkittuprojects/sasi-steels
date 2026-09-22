@@ -4652,9 +4652,32 @@ function filterInventoryData() {
     return;
   }
 
-  tbody.innerHTML = filtered.map(item => `
+  tbody.innerHTML = filtered.map(item => {
+    const itemImg = item.image_url || (typeof getDefaultInventoryImage === 'function' ? getDefaultInventoryImage(item) : 'product-beams.jpg');
+    const escapedName = (item.item_name || '').replace(/'/g, "\\'");
+    const infoSubtitle = `${item.category || 'Steel'} • ${item.quantity || 0} ${item.unit || ''} @ ₹${(parseFloat(item.unit_price) || 0).toLocaleString('en-IN')}`;
+    const statusText = item.status || (item.quantity <= 0 ? 'Out of Stock' : (item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'));
+
+    return `
     <tr class="hover:bg-slate-800/50 transition-colors">
-      <td class="py-3 px-4 font-bold text-white">${item.item_name}</td>
+      <td class="py-3 px-4">
+        <div class="flex items-center gap-3">
+          <!-- Stock Image Thumbnail with Click-to-Zoom Lightbox -->
+          <div class="relative group flex-shrink-0 cursor-pointer" onclick="showImageLightbox('${itemImg}', '${escapedName}', '${infoSubtitle}', '${statusText}')" title="Click to view full photo">
+            <img src="${itemImg}" alt="${escapedName}" onerror="this.onerror=null; this.src='product-beams.jpg';" class="w-12 h-12 rounded-xl object-cover border border-slate-700 bg-slate-950 shadow-md group-hover:scale-105 group-hover:border-orange-500/70 transition-all" />
+            <div class="absolute inset-0 bg-slate-950/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <i class="fa-solid fa-magnifying-glass-plus text-white text-xs"></i>
+            </div>
+          </div>
+          <div class="min-w-0">
+            <div class="font-bold text-white text-xs hover:text-orange-400 cursor-pointer transition-colors" onclick="openInventoryModal('${item.id}')" title="Click to edit stock item">${item.item_name}</div>
+            <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <span class="text-slate-500">ID: #${item.id}</span>
+              ${item.storage_location ? `<span class="bg-slate-800/80 px-1.5 py-0.5 rounded text-slate-300 text-[9px] border border-slate-700/50"><i class="fa-solid fa-location-dot text-orange-400 mr-0.5"></i>${item.storage_location}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      </td>
       <td class="py-3 px-4 text-slate-300">${item.category}</td>
       <td class="py-3 px-4 font-bold text-orange-400 font-mono">${item.quantity} ${item.unit}</td>
       <td class="py-3 px-4 text-emerald-400 font-bold">₹${(parseFloat(item.unit_price) || 0).toLocaleString('en-IN')}</td>
@@ -4664,10 +4687,10 @@ function filterInventoryData() {
           item.quantity <= 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
           item.quantity <= (item.min_reorder_level || 5) ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
           'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-        }">${item.status || (item.quantity <= 0 ? 'Out of Stock' : (item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'))}</span>
+        }">${statusText}</span>
       </td>
       <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-        <button onclick="openInventoryModal('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-xs font-bold transition-all" title="Edit Stock / Price / Location">
+        <button onclick="openInventoryModal('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-xs font-bold transition-all" title="Edit Stock / Photo / Price / Location">
           <i class="fa-solid fa-pen-to-square mr-1"></i> Edit Stock
         </button>
         <button onclick="deleteInventoryItem('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-xs font-bold transition-all" title="Delete Item">
@@ -4675,7 +4698,8 @@ function filterInventoryData() {
         </button>
       </td>
     </tr>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function setInventoryCategoryFilter(cat) {
@@ -4736,7 +4760,7 @@ async function exportInventoryCSV() {
 
   if (exportList.length === 0) exportList = allInventoryRecords;
 
-  const headers = ['Item Name', 'Category', 'Current Stock', 'Unit', 'Unit Price (INR)', 'Location', 'Status'];
+  const headers = ['Item Name', 'Category', 'Current Stock', 'Unit', 'Unit Price (INR)', 'Location', 'Status', 'Image URL'];
   const rows = exportList.map(item => [
     item.item_name || '',
     item.category || '',
@@ -4744,7 +4768,8 @@ async function exportInventoryCSV() {
     item.unit || '',
     item.unit_price || 0,
     item.storage_location || 'Main Yard',
-    item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock'
+    item.quantity <= (item.min_reorder_level || 5) ? 'Low Stock' : 'In Stock',
+    item.image_url || ''
   ]);
   const dateStr = new Date().toISOString().split('T')[0];
   downloadCSV(`SASI_Steels_Inventory_${dateStr}.csv`, headers, rows);
@@ -4786,7 +4811,7 @@ function openInventoryModal(id = null) {
   }
 
   document.getElementById('crud-modal-title').textContent = existing ? `Edit Stock: ${existing.item_name}` : 'Add New Inventory Stock Item';
-  document.getElementById('crud-modal-subtitle').textContent = 'Enter quantity, rate per unit, storage yard location and minimum reorder alert level.';
+  document.getElementById('crud-modal-subtitle').textContent = 'Upload item photo, enter quantity, rate per unit, storage yard location and reorder alert level.';
 
   const standardCats = ['Structural Steel', 'Stainless Steel', 'Pipes & Tubes', 'Plates & Sheets', 'Storage Systems', 'Custom Fabrication', 'Consumables', 'Hardware'];
   const cat = existing ? existing.category : 'Structural Steel';
@@ -4796,11 +4821,55 @@ function openInventoryModal(id = null) {
   const unit = existing ? existing.unit : 'Tons';
   const isCustomUnit = existing && !standardUnits.includes(unit);
 
+  const imgUrl = existing ? (existing.image_url || '') : '';
+
   document.getElementById('crud-form-fields').innerHTML = `
     <div>
       <label class="block text-slate-300 font-bold mb-1">Item / Material Name <span class="text-orange-500">*</span></label>
       <input type="text" name="item_name" required value="${existing ? existing.item_name : ''}" placeholder="e.g. ISMB 200 Heavy I-Beams" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold" />
     </div>
+
+    <!-- Stock Item Photo / Visual Identifier Section -->
+    <div class="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <label class="block text-slate-200 font-bold text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-camera text-orange-400"></i> Stock Item Image / Photo
+          <span class="text-[10px] font-normal text-slate-400">(Identifies item easily in yard)</span>
+        </label>
+        ${imgUrl ? `<button type="button" onclick="clearInventoryImagePreview()" class="text-[10px] text-red-400 hover:text-red-300 font-semibold flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Remove Photo</button>` : ''}
+      </div>
+      
+      <div class="flex items-start gap-3">
+        <!-- Preview Box -->
+        <div id="inv-img-preview-box" class="w-16 h-16 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center relative group">
+          ${imgUrl ? `
+            <img id="inv-preview-thumb" src="${imgUrl}" alt="Preview" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" onclick="showImageLightbox('${imgUrl}', '${existing ? existing.item_name.replace(/'/g, "\\'") : 'Stock Item Photo'}', 'Visual Preview')">
+              <i class="fa-solid fa-magnifying-glass-plus text-white text-xs"></i>
+            </div>
+          ` : `
+            <div id="inv-preview-placeholder" class="text-slate-500 flex flex-col items-center justify-center">
+              <i class="fa-solid fa-image text-xl text-slate-600"></i>
+              <span class="text-[8px] text-slate-500 mt-0.5">No image</span>
+            </div>
+          `}
+        </div>
+
+        <div class="flex-1 space-y-2">
+          <!-- File Input -->
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Upload Photo (Camera / Storage):</label>
+            <input type="file" id="inventory-img-file" accept="image/*" onchange="previewInventorySelectedImage(this)" class="w-full text-slate-400 text-xs file:mr-2.5 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[11px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-500 cursor-pointer" />
+          </div>
+
+          <!-- URL Input fallback -->
+          <div>
+            <input type="text" name="image_url" id="inventory-image-url-input" value="${imgUrl}" placeholder="Or paste image URL (e.g. Cloudinary or local image)" oninput="updateInventoryPreviewFromUrl(this.value)" class="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-xs font-mono focus:outline-none focus:border-orange-500" />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Category</label>
@@ -4857,6 +4926,81 @@ function openInventoryModal(id = null) {
     </div>
   `;
   document.getElementById('crud-modal').classList.remove('hidden');
+}
+
+function previewInventorySelectedImage(input) {
+  if (input && input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const previewBox = document.getElementById('inv-img-preview-box');
+      if (previewBox) {
+        previewBox.innerHTML = `
+          <img id="inv-preview-thumb" src="${e.target.result}" alt="Selected Preview" class="w-full h-full object-cover" />
+        `;
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function updateInventoryPreviewFromUrl(url) {
+  const previewBox = document.getElementById('inv-img-preview-box');
+  if (!previewBox) return;
+  if (url && url.trim().length > 0) {
+    previewBox.innerHTML = `<img id="inv-preview-thumb" src="${url.trim()}" alt="URL Preview" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'text-red-400 text-[9px] p-1 text-center\\'>Invalid URL</div>';" />`;
+  } else {
+    previewBox.innerHTML = `
+      <div id="inv-preview-placeholder" class="text-slate-500 flex flex-col items-center justify-center">
+        <i class="fa-solid fa-image text-xl text-slate-600"></i>
+        <span class="text-[8px] text-slate-500 mt-0.5">No image</span>
+      </div>`;
+  }
+}
+
+function clearInventoryImagePreview() {
+  const fileInput = document.getElementById('inventory-img-file');
+  const urlInput = document.getElementById('inventory-image-url-input');
+  if (fileInput) fileInput.value = '';
+  if (urlInput) urlInput.value = '';
+  const previewBox = document.getElementById('inv-img-preview-box');
+  if (previewBox) {
+    previewBox.innerHTML = `
+      <div id="inv-preview-placeholder" class="text-slate-500 flex flex-col items-center justify-center">
+        <i class="fa-solid fa-image text-xl text-slate-600"></i>
+        <span class="text-[8px] text-slate-500 mt-0.5">No image</span>
+      </div>`;
+  }
+}
+
+function showImageLightbox(src, title = 'Stock Item Photo', subtitle = '', badge = 'In Stock') {
+  const modal = document.getElementById('image-lightbox-modal');
+  if (!modal) return;
+  const img = document.getElementById('lightbox-image');
+  const t = document.getElementById('lightbox-title');
+  const sub = document.getElementById('lightbox-subtitle');
+  const b = document.getElementById('lightbox-badge');
+
+  if (img) img.src = src || 'product-beams.jpg';
+  if (t) t.textContent = title;
+  if (sub) sub.textContent = subtitle;
+  if (b) {
+    b.textContent = badge;
+    if (badge.includes('Out')) {
+      b.className = 'px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 font-bold';
+    } else if (badge.includes('Low')) {
+      b.className = 'px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold';
+    } else {
+      b.className = 'px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold';
+    }
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeImageLightbox() {
+  const modal = document.getElementById('image-lightbox-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 async function deleteInventoryItem(id) {
@@ -5599,6 +5743,30 @@ async function handleCrudSubmit(e) {
       const customUnit = (formData.get('custom_unit') || '').trim();
       const finalUnit = (selectedUnit === 'CUSTOM_UNIT' && customUnit) ? customUnit : (selectedUnit === 'CUSTOM_UNIT' ? 'Units' : (selectedUnit || 'Units'));
 
+      let imgUrl = (formData.get('image_url') || '').trim();
+      const fileInput = document.getElementById('inventory-img-file');
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        try {
+          const uploaded = await uploadToCloudinary(fileInput.files[0]);
+          if (uploaded) imgUrl = uploaded;
+        } catch (e) {
+          console.warn("Cloudinary upload failed for inventory item, trying local fallback:", e);
+        }
+
+        if (!imgUrl && typeof fileToOptimizedDataUrl === 'function') {
+          const directDataUrl = await fileToOptimizedDataUrl(fileInput.files[0], 1200, 0.85);
+          if (directDataUrl) imgUrl = directDataUrl;
+        }
+      }
+
+      if (!imgUrl && editingItemId) {
+        const existingItem = (allInventoryRecords || []).find(i => String(i.id) === String(editingItemId));
+        if (existingItem && existingItem.image_url) imgUrl = existingItem.image_url;
+      }
+      if (!imgUrl) {
+        imgUrl = typeof getDefaultInventoryImage === 'function' ? getDefaultInventoryImage({ item_name: formData.get('item_name'), category: finalCategory }) : 'product-beams.jpg';
+      }
+
       const item = {
         item_name: formData.get('item_name'),
         category: finalCategory,
@@ -5606,6 +5774,7 @@ async function handleCrudSubmit(e) {
         unit: finalUnit,
         unit_price: parseFloat(formData.get('unit_price')) || 0,
         storage_location: formData.get('storage_location'),
+        image_url: imgUrl,
         min_reorder_level: parseFloat(formData.get('min_reorder_level')) || 5
       };
       if (editingItemId) {

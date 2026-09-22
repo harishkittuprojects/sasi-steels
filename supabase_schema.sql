@@ -29,9 +29,13 @@ CREATE TABLE IF NOT EXISTS inventory (
   min_reorder_level NUMERIC DEFAULT 5,
   unit_price NUMERIC DEFAULT 0.0,
   storage_location TEXT, -- 'Yard A', 'Rack 04', 'Shed 2'
+  image_url TEXT, -- Cloudinary URL or local asset image
   status TEXT DEFAULT 'In Stock', -- 'In Stock', 'Low Stock', 'Out of Stock'
   notes TEXT
 );
+
+-- Schema migration support for existing databases:
+ALTER TABLE IF EXISTS inventory ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 -- 3. INQUIRIES & QUOTATIONS TABLE
 CREATE TABLE IF NOT EXISTS inquiries (
