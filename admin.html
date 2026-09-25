@@ -115,11 +115,20 @@
       <form onsubmit="handleAdminLogin(event)" class="space-y-4 text-left">
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">Username</label>
-          <input type="text" id="admin-user" required placeholder="admin, manager, or sasiadmin" value="admin" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500" />
+          <input type="text" id="admin-user" required placeholder="admin or sasiadmin" value="admin" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500" />
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">Password / PIN</label>
           <input type="password" id="admin-pass" required placeholder="Enter password" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div class="flex items-center gap-2 pt-0.5 text-[11px]">
+          <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Quick Fill:</span>
+          <button type="button" onclick="fillAdminCredentials('admin', '123456789')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-semibold transition-all">
+            Main Admin
+          </button>
+          <button type="button" onclick="fillAdminCredentials('sasiadmin', 'sasi833399')" class="px-2.5 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[11px] font-semibold transition-all">
+            sasiadmin
+          </button>
         </div>
         <button type="submit" class="w-full py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-orange-600/30">
           Unlock Admin Portal
@@ -156,15 +165,20 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>Supabase RDS Connected</span>
         </div>
-        <button onclick="lockAllProtectedSections()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5" title="Relock All Protected Sections">
+        <div id="header-user-badge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs shadow-sm">
+          <i class="fa-solid fa-circle-user text-orange-400"></i>
+          <span id="header-username" class="font-bold text-white">admin</span>
+          <span id="header-role-badge" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-orange-500/20 text-orange-400">Super Admin</span>
+        </div>
+        <button id="btn-header-lock-sections" onclick="lockAllProtectedSections()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5" title="Relock All Protected Sections">
           <i class="fa-solid fa-lock text-amber-400 text-xs"></i>
           <span class="hidden sm:inline">Lock Sections</span>
         </button>
-        <button onclick="openChangePinModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5" title="Change Security PIN">
+        <button id="btn-header-change-pin" onclick="openChangePinModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5" title="Change Security PIN">
           <i class="fa-solid fa-key text-amber-400 text-xs"></i>
           <span class="hidden sm:inline">Change PIN</span>
         </button>
-        <button onclick="openSettingsModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800" title="Cloudinary & Supabase Settings">
+        <button id="btn-header-settings" onclick="openSettingsModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800" title="Cloudinary & Supabase Settings">
           <i class="fa-solid fa-gear text-sm"></i>
         </button>
         <button onclick="adminLogout()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 text-xs font-bold transition-all border border-slate-700">

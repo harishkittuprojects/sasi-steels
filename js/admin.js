@@ -18,30 +18,182 @@ const sectionLockState = {
 let previousActiveTab = 'employees';
 let pendingUnlockTab = null;
 
+// ================= ROLE-BASED ACCESS CONTROL (RBAC) =================
+// Second user credentials & restricted sections:
+// Username: sasiadmin | Password: sasi833399
+// Restricted sections: Income & Expenses, Quotations, Leads, Orders, Bookings
+const RESTRICTED_USERNAMES = ['sasiadmin'];
+const RESTRICTED_SECTIONS = [
+  'quotations', 'quote', 'quotes', 'quotation', 'estimates',
+  'orders', 'order', 'company-orders', 'bookings', 'booking',
+  'finance', 'income', 'expense', 'expenses', 'ledger', 'accounts',
+  'leads', 'lead', 'inquiries', 'inquiry', 'rfq'
+];
+
+function isRestrictedAdminUser() {
+  const user = (sessionStorage.getItem('sasi_admin_user') || '').toLowerCase().trim();
+  return RESTRICTED_USERNAMES.includes(user);
+}
+
+function normalizeTabName(tab) {
+  if (!tab) return '';
+  const clean = tab.toLowerCase().replace(/^[#?]/, '').trim();
+  if (['quotes', 'quote', 'quotations', 'quotation', 'estimates', 'leads', 'lead', 'inquiries', 'inquiry', 'rfq'].includes(clean)) return 'quotations';
+  if (['order', 'orders', 'bookings', 'booking', 'company-orders'].includes(clean)) return 'orders';
+  if (['income', 'expense', 'expenses', 'ledger', 'accounts', 'finance'].includes(clean)) return 'finance';
+  return clean;
+}
+
+function isRestrictedSection(tab) {
+  if (!tab) return false;
+  const clean = tab.toLowerCase().replace(/^[#?]/, '').trim();
+  return RESTRICTED_SECTIONS.includes(clean) || ['quotations', 'orders', 'finance'].includes(normalizeTabName(clean));
+}
+
+function getRequestedTabFromUrl() {
+  const hash = window.location.hash ? window.location.hash.substring(1).toLowerCase().trim() : '';
+  if (hash) return hash;
+
+  const params = new URLSearchParams(window.location.search);
+  const tabParam = params.get('tab') || params.get('section');
+  if (tabParam) return tabParam.toLowerCase().trim();
+
+  return '';
+}
+
+function fillAdminCredentials(user, pass) {
+  const u = document.getElementById('admin-user');
+  const p = document.getElementById('admin-pass');
+  if (u) u.value = user;
+  if (p) p.value = pass;
+}
+
+function applyUserAccessPermissions() {
+  const isAuth = sessionStorage.getItem('sasi_admin_auth');
+  if (!isAuth) return;
+
+  const isRestricted = isRestrictedAdminUser();
+  const currentUser = sessionStorage.getItem('sasi_admin_user') || 'admin';
+  const currentRole = sessionStorage.getItem('sasi_admin_role') || (isRestricted ? 'Admin' : 'Super Admin');
+
+  // Header user indicator badge
+  const usernameEl = document.getElementById('header-username');
+  const roleEl = document.getElementById('header-role-badge');
+  const userBadgeEl = document.getElementById('header-user-badge');
+  if (usernameEl) usernameEl.textContent = currentUser;
+  if (roleEl) {
+    roleEl.textContent = isRestricted ? 'Admin (Workshop)' : currentRole;
+    if (isRestricted) {
+      roleEl.className = 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+    } else {
+      roleEl.className = 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-orange-500/20 text-orange-400';
+    }
+  }
+  if (userBadgeEl) userBadgeEl.classList.remove('hidden');
+
+  // Sidebar navigation links for restricted sections
+  const navQuotations = document.getElementById('tab-btn-quotations');
+  const navOrders = document.getElementById('tab-btn-orders');
+  const navFinance = document.getElementById('tab-btn-finance');
+
+  // Header lock/PIN buttons
+  const lockBtn = document.getElementById('btn-header-lock-sections');
+  const pinBtn = document.getElementById('btn-header-change-pin');
+
+  // Content tab sections
+  const secQuotations = document.getElementById('section-quotations');
+  const secOrders = document.getElementById('section-orders');
+  const secFinance = document.getElementById('section-finance');
+
+  if (isRestricted) {
+    // Hide navigation completely from second user
+    if (navQuotations) navQuotations.classList.add('hidden');
+    if (navOrders) navOrders.classList.add('hidden');
+    if (navFinance) navFinance.classList.add('hidden');
+
+    if (lockBtn) lockBtn.classList.add('hidden');
+    if (pinBtn) pinBtn.classList.add('hidden');
+
+    // Force hidden on restricted sections
+    if (secQuotations) secQuotations.classList.add('hidden');
+    if (secOrders) secOrders.classList.add('hidden');
+    if (secFinance) secFinance.classList.add('hidden');
+  } else {
+    // Show navigation for main admin
+    if (navQuotations) navQuotations.classList.remove('hidden');
+    if (navOrders) navOrders.classList.remove('hidden');
+    if (navFinance) navFinance.classList.remove('hidden');
+
+    if (lockBtn) lockBtn.classList.remove('hidden');
+    if (pinBtn) pinBtn.classList.remove('hidden');
+  }
+}
+
+function handleUrlNavigation() {
+  const isAuth = sessionStorage.getItem('sasi_admin_auth');
+  if (!isAuth) return;
+
+  const rawRequested = getRequestedTabFromUrl();
+  if (!rawRequested) return;
+
+  const isRestricted = isRestrictedAdminUser();
+
+  if (isRestricted && isRestrictedSection(rawRequested)) {
+    // Second user is attempting direct URL access to restricted section -> DENY & REDIRECT
+    try {
+      history.replaceState(null, '', window.location.pathname + '#employees');
+    } catch (e) {
+      window.location.hash = 'employees';
+    }
+    applyUserAccessPermissions();
+    switchTab('employees');
+    showDashboardToast('⛔ Access Denied: You do not have authorization to view this section.', 'error');
+    return;
+  }
+
+  const normalized = normalizeTabName(rawRequested);
+  const validTabs = ['quotations', 'orders', 'employees', 'attendance', 'inventory', 'finance', 'products', 'gallery'];
+  if (validTabs.includes(normalized)) {
+    if (['leads', 'lead', 'inquiries', 'inquiry', 'rfq'].includes(rawRequested)) {
+      if (!isRestricted) {
+        switchTab('quotations');
+        if (typeof switchQuotationSubTab === 'function') {
+          switchQuotationSubTab('inquiries');
+        }
+      }
+    } else {
+      switchTab(normalized);
+    }
+  }
+}
+
 // Auth check on load
 async function loadInitialCounts() {
+  const isRestricted = isRestrictedAdminUser();
   try {
-    const quotes = await dbGetQuotations();
-    if (quotes) {
-      allQuotationsRecords = quotes;
-      const b = document.getElementById('badge-quotes-count');
-      if (b) b.textContent = quotes.length;
-    }
-    const inq = await dbGetInquiries();
-    if (inq) {
-      allInquiriesRecords = inq;
-      const unread = inq.filter(i => i.status === 'New').length;
-      const b = document.getElementById('badge-inquiries-count');
-      if (b) b.textContent = allQuotationsRecords.length;
-      const bSub = document.getElementById('badge-inquiries-subtab-count');
-      if (bSub) bSub.textContent = inq.length;
-    }
-    const orders = await dbGetOrders();
-    if (orders) {
-      allOrdersRecords = orders;
-      const activeOrd = orders.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
-      const b = document.getElementById('badge-orders-count');
-      if (b) b.textContent = activeOrd;
+    if (!isRestricted) {
+      const quotes = await dbGetQuotations();
+      if (quotes) {
+        allQuotationsRecords = quotes;
+        const b = document.getElementById('badge-quotes-count');
+        if (b) b.textContent = quotes.length;
+      }
+      const inq = await dbGetInquiries();
+      if (inq) {
+        allInquiriesRecords = inq;
+        const unread = inq.filter(i => i.status === 'New').length;
+        const b = document.getElementById('badge-inquiries-count');
+        if (b) b.textContent = allQuotationsRecords.length;
+        const bSub = document.getElementById('badge-inquiries-subtab-count');
+        if (bSub) bSub.textContent = inq.length;
+      }
+      const orders = await dbGetOrders();
+      if (orders) {
+        allOrdersRecords = orders;
+        const activeOrd = orders.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
+        const b = document.getElementById('badge-orders-count');
+        if (b) b.textContent = activeOrd;
+      }
     }
     const emp = await dbGetEmployees();
     if (emp) {
@@ -62,22 +214,55 @@ function checkAdminAuth() {
   const authModal = document.getElementById('auth-modal');
   if (!isAuth) {
     if (authModal) authModal.classList.remove('hidden');
-  } else {
-    if (authModal) authModal.classList.add('hidden');
-    initHeaderTodayDate();
-
-    // Check if session has already unlocked the protected sections
-    const isUnlocked = sessionStorage.getItem('sasi_sections_unlocked') === 'true';
-    PROTECTED_SECTIONS.forEach(sec => {
-      sectionLockState[sec] = !isUnlocked;
-    });
-
-    updateAllLockBadges();
-    
-    // Navigate to default tab
-    switchTab(isUnlocked ? 'quotations' : 'employees');
-    loadInitialCounts();
+    return;
   }
+
+  if (authModal) authModal.classList.add('hidden');
+  initHeaderTodayDate();
+
+  // Apply user role permissions to show/hide sections
+  applyUserAccessPermissions();
+
+  const isRestricted = isRestrictedAdminUser();
+
+  // Check if session has already unlocked the protected sections (Super Admin only)
+  const isUnlocked = !isRestricted && sessionStorage.getItem('sasi_sections_unlocked') === 'true';
+  PROTECTED_SECTIONS.forEach(sec => {
+    sectionLockState[sec] = !isUnlocked;
+  });
+
+  if (!isRestricted) {
+    updateAllLockBadges();
+  }
+
+  // Check if URL specified a section (hash or query)
+  const requestedTab = getRequestedTabFromUrl();
+  if (requestedTab) {
+    if (isRestricted && isRestrictedSection(requestedTab)) {
+      try {
+        history.replaceState(null, '', window.location.pathname + '#employees');
+      } catch (e) {
+        window.location.hash = 'employees';
+      }
+      switchTab('employees');
+      showDashboardToast('⛔ Access Denied: You do not have permission to access this section.', 'error');
+    } else {
+      const normalized = normalizeTabName(requestedTab);
+      switchTab(normalized || 'employees');
+      if (['leads', 'lead', 'inquiries', 'inquiry', 'rfq'].includes(requestedTab) && !isRestricted) {
+        if (typeof switchQuotationSubTab === 'function') switchQuotationSubTab('inquiries');
+      }
+    }
+  } else {
+    // Navigate to default tab
+    if (isRestricted) {
+      switchTab('employees');
+    } else {
+      switchTab(isUnlocked ? 'quotations' : 'employees');
+    }
+  }
+
+  loadInitialCounts();
 }
 
 async function handleAdminLogin(e) {
@@ -91,10 +276,12 @@ async function handleAdminLogin(e) {
   }
 
   // Pre-configured admin accounts (Offline / Failover Support)
+  // 1. Main Admin (admin / sasisteels863@gmail.com): Full access to all modules
+  // 2. Second Admin (sasiadmin / sasi833399): Restricted from Quotations, Leads, Orders, Bookings, Finance
   const allowedAdmins = [
     { username: 'admin', passwords: ['123456789', 'sasi833399', 'sasi1234'], role: 'Super Admin' },
     { username: 'sasisteels863@gmail.com', passwords: ['sasi833399', '123456789'], role: 'Super Admin' },
-    { username: 'sasiadmin', passwords: ['sasi833399', '123456789', 'sasi1234'], role: 'Admin' },
+    { username: 'sasiadmin', passwords: ['sasi833399'], role: 'Admin' },
     { username: 'manager', passwords: ['sasi1234', 'sasi833399', '123456789'], role: 'Manager' },
     { username: 'admin2', passwords: ['sasi833399', '123456789', 'sasi1234'], role: 'Admin' }
   ];
@@ -145,11 +332,39 @@ async function handleAdminLogin(e) {
     sessionStorage.setItem('sasi_admin_role', loggedInRole);
     document.getElementById('auth-modal').classList.add('hidden');
     initHeaderTodayDate();
-    updateAllLockBadges();
-    switchTab('employees');
-    loadInitialCounts();
-    if (typeof showDashboardToast === 'function') {
-      showDashboardToast(`Welcome back, ${loggedInUser} (${loggedInRole})!`, 'success');
+
+    // Apply permissions immediately upon login
+    applyUserAccessPermissions();
+
+    const isRestricted = isRestrictedAdminUser();
+    if (isRestricted) {
+      sessionStorage.removeItem('sasi_sections_unlocked');
+      const requested = getRequestedTabFromUrl();
+      if (requested && isRestrictedSection(requested)) {
+        try {
+          history.replaceState(null, '', window.location.pathname + '#employees');
+        } catch (err) {
+          window.location.hash = 'employees';
+        }
+        showDashboardToast('⛔ Access Denied: You do not have permission to access that section.', 'error');
+      }
+      switchTab('employees');
+      loadInitialCounts();
+      if (typeof showDashboardToast === 'function') {
+        showDashboardToast(`Welcome, ${loggedInUser}! Access set to Workshop & Catalog operations.`, 'info');
+      }
+    } else {
+      updateAllLockBadges();
+      const requested = getRequestedTabFromUrl();
+      if (requested && !isRestrictedSection(requested)) {
+        switchTab(normalizeTabName(requested));
+      } else {
+        switchTab('employees');
+      }
+      loadInitialCounts();
+      if (typeof showDashboardToast === 'function') {
+        showDashboardToast(`Welcome back, ${loggedInUser} (${loggedInRole})!`, 'success');
+      }
     }
   } else {
     alert('Incorrect credentials! Please enter the correct username and password.');
@@ -242,6 +457,9 @@ function adminLogout() {
   sessionStorage.removeItem('sasi_admin_user');
   sessionStorage.removeItem('sasi_admin_role');
   sessionStorage.removeItem('sasi_sections_unlocked');
+  try {
+    history.replaceState(null, '', window.location.pathname);
+  } catch (e) {}
   window.location.reload();
 }
 
@@ -271,6 +489,10 @@ function updateAllLockBadges() {
 }
 
 function openPinLockModal(targetTab) {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to access this section.', 'error');
+    return;
+  }
   pendingUnlockTab = targetTab;
   const modal = document.getElementById('pin-lock-modal');
   const titleEl = document.getElementById('pin-lock-section-title');
@@ -335,6 +557,11 @@ function cancelPinUnlockModal() {
 
 async function handlePinUnlockSubmit(e) {
   if (e) e.preventDefault();
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: Unauthorized account.', 'error');
+    closePinLockModal();
+    return;
+  }
   const inputEl = document.getElementById('pin-input');
   const errorEl = document.getElementById('pin-lock-error');
   const errorTextEl = document.getElementById('pin-lock-error-text');
@@ -444,6 +671,10 @@ function togglePinInputVisibility(inputId, btnEl) {
 
 // Change PIN Modal Handlers
 function openChangePinModal() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: Only Super Admin can change security PIN.', 'error');
+    return;
+  }
   const modal = document.getElementById('change-pin-modal');
   const msgEl = document.getElementById('change-pin-msg');
   if (msgEl) {
@@ -524,14 +755,40 @@ async function handleChangePinSubmit(e) {
 
 // Tab Switching Controller (Keeps unlocked sections accessible throughout session)
 function switchTab(tabName) {
-  // If target section is protected and still locked, intercept and show PIN modal
+  const isRestricted = isRestrictedAdminUser();
+
+  // STRICT ACCESS CONTROL: Completely block second user from accessing restricted sections
+  if (isRestricted && isRestrictedSection(tabName)) {
+    console.warn(`[Security Alert] Access denied to restricted tab "${tabName}" for user: ${sessionStorage.getItem('sasi_admin_user')}`);
+    showDashboardToast(`⛔ Access Denied: You do not have permission to access "${tabName}".`, 'error');
+    applyUserAccessPermissions();
+    try {
+      history.replaceState(null, '', window.location.pathname + '#employees');
+    } catch (e) {
+      window.location.hash = 'employees';
+    }
+    tabName = 'employees';
+  }
+
+  // If target section is protected and still locked (for main admin), intercept and show PIN modal
   if (PROTECTED_SECTIONS.includes(tabName) && sectionLockState[tabName] === true) {
+    if (isRestricted) {
+      showDashboardToast('⛔ Access Denied: Restricted section.', 'error');
+      return;
+    }
     openPinLockModal(tabName);
     return;
   }
 
   previousActiveTab = currentActiveTab;
   currentActiveTab = tabName;
+
+  // Sync hash in URL for navigation & bookmarking
+  try {
+    if (window.location.hash !== `#${tabName}`) {
+      history.replaceState(null, '', window.location.pathname + `#${tabName}`);
+    }
+  } catch (e) {}
 
   document.querySelectorAll('.sidebar-link').forEach(btn => btn.classList.remove('active'));
   const activeBtn = document.getElementById(`tab-btn-${tabName}`);
@@ -545,6 +802,10 @@ function switchTab(tabName) {
 }
 
 function loadCurrentTab() {
+  if (isRestrictedAdminUser() && isRestrictedSection(currentActiveTab)) {
+    switchTab('employees');
+    return;
+  }
   switch (currentActiveTab) {
     case 'quotations': loadQuotations(); break;
     case 'orders': loadOrders(); break;
@@ -839,6 +1100,7 @@ function switchQuotationSubTab(subTab) {
 }
 
 async function loadQuotations() {
+  if (isRestrictedAdminUser()) return;
   const tbodyQuotes = document.getElementById('table-official-quotations');
   const tbodyInq = document.getElementById('table-inquiries');
   if (tbodyQuotes) tbodyQuotes.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading quotations...</td></tr>`;
@@ -1325,6 +1587,10 @@ async function convertInquiryToQuotation(inquiryId) {
 
 
 function exportInquiriesCSV() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to export leads.', 'error');
+    return;
+  }
   if (!allInquiriesRecords || allInquiriesRecords.length === 0) {
     alert("No inquiries to export.");
     return;
@@ -1354,6 +1620,10 @@ function exportInquiriesCSV() {
 // ================= 2. QUOTATION BUILDER & MODAL LOGIC =================
 
 async function openQuotationModal(editId = null, isDuplicate = false) {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to manage quotations.', 'error');
+    return;
+  }
   activeQuotationEditingId = isDuplicate ? null : editId;
   const settings = activeQuotationSettings || (await dbGetQuotationSettings());
 
@@ -2506,6 +2776,10 @@ async function generateExcelQuotationWorkbook(quote, settings) {
 
 // Master Excel Exporter for All Quotations
 async function exportAllQuotationsExcel() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to export quotations.', 'error');
+    return;
+  }
   if (typeof ExcelJS === 'undefined') return;
   const settings = activeQuotationSettings || (await dbGetQuotationSettings());
 
@@ -2795,6 +3069,10 @@ async function generatePdfDocument(quote, settings) {
 // ================= 8. QUOTATION SETTINGS MODAL =================
 
 async function openQuotationSettingsModal() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to view quotation settings.', 'error');
+    return;
+  }
   const settings = activeQuotationSettings || (await dbGetQuotationSettings());
   const modal = document.getElementById('quotation-settings-modal');
   if (!modal) return;
@@ -2872,6 +3150,10 @@ async function handleSaveQuotationSettings(event) {
 
 
 function openNewInquiryModal() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to create leads.', 'error');
+    return;
+  }
   activeModalType = 'inquiry';
   editingItemId = null;
 
@@ -2953,6 +3235,7 @@ function openNewInquiryModal() {
 let currentSelectedOrderCompany = 'ALL';
 
 async function loadOrders() {
+  if (isRestrictedAdminUser()) return;
   const tbody = document.getElementById('table-orders');
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & company ledgers...</td></tr>`;
@@ -3269,6 +3552,10 @@ function resetOrdersFilter() {
 // EXPORT COMPANY ORDERS STATEMENT TO EXCEL (EXCELJS)
 // -------------------------------------------------------------
 async function exportCompanyOrdersExcel(specificCompany = null) {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to export orders.', 'error');
+    return;
+  }
   const targetCompany = specificCompany || currentSelectedOrderCompany || document.getElementById('order-filter-company')?.value || 'ALL';
   const fromVal = document.getElementById('order-filter-from')?.value || '';
   const toVal = document.getElementById('order-filter-to')?.value || '';
@@ -3516,6 +3803,10 @@ async function exportCompanyOrdersExcel(specificCompany = null) {
 // EXPORT COMPANY ORDERS STATEMENT TO PDF
 // -------------------------------------------------------------
 async function exportCompanyOrdersPDF(specificCompany = null) {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to export orders.', 'error');
+    return;
+  }
   const targetCompany = specificCompany || currentSelectedOrderCompany || document.getElementById('order-filter-company')?.value || 'ALL';
   const fromVal = document.getElementById('order-filter-from')?.value || '';
   const toVal = document.getElementById('order-filter-to')?.value || '';
@@ -3712,6 +4003,10 @@ async function exportCompanyOrdersPDF(specificCompany = null) {
 }
 
 async function exportOrdersCSV() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to export orders.', 'error');
+    return;
+  }
   if (!allOrdersRecords || allOrdersRecords.length === 0) {
     allOrdersRecords = (await dbGetOrders()) || [];
   }
@@ -3855,6 +4150,10 @@ function calculateOrderTotal() {
 }
 
 async function openOrderModal(id = null) {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to manage orders.', 'error');
+    return;
+  }
   activeModalType = 'order';
   editingItemId = id;
 
@@ -5034,6 +5333,7 @@ async function deleteInventoryItem(id) {
 
 // ================= 4. FINANCE (INCOME & EXPENSES) =================
 async function loadFinance() {
+  if (isRestrictedAdminUser()) return;
   const tbody = document.getElementById('table-finance');
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading finance book...</td></tr>`;
@@ -5137,6 +5437,10 @@ function resetFinanceFilter() {
 }
 
 async function exportFinanceCSV() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to export financial data.', 'error');
+    return;
+  }
   if (!allFinanceRecords || allFinanceRecords.length === 0) {
     allFinanceRecords = await dbGetFinance() || [];
   }
@@ -5169,6 +5473,10 @@ async function exportFinanceCSV() {
 }
 
 function openFinanceModal() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: You do not have permission to manage finance entries.', 'error');
+    return;
+  }
   activeModalType = 'finance';
   editingItemId = null;
   document.getElementById('crud-modal-title').textContent = 'Add Income or Expense';
@@ -5954,5 +6262,6 @@ function saveSettings() {
   closeSettingsModal();
 }
 
-// Initialize Admin on DOM Ready
+// Initialize Admin on DOM Ready & Hash Change Navigation
 document.addEventListener('DOMContentLoaded', checkAdminAuth);
+window.addEventListener('hashchange', handleUrlNavigation);
