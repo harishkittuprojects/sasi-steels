@@ -1,0 +1,13 @@
+{
+  "name": "sasi-steels",
+  "version": "1.0.0",
+  "description": "SASI Steel Engineering website with Admin panel and SMTP Email service",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.13",
+    "@supabase/supabase-js": "^2.43.4"
+  }
+}

@@ -324,6 +324,13 @@ async function handleAdminLogin(e) {
         console.warn("Database admin auth verification error:", err);
       }
     }
+    // 1.5. Check custom reset password stored locally
+    const customPass = localStorage.getItem('sasi_custom_admin_password');
+    if (customPass && pass === customPass && (user.toLowerCase() === 'admin' || user.toLowerCase() === 'sasisteels863@gmail.com' || user.toLowerCase() === 'sasiadmin')) {
+      authenticated = true;
+      loggedInRole = 'Super Admin';
+      loggedInUser = user;
+    }
   }
 
   if (authenticated) {
@@ -368,6 +375,196 @@ async function handleAdminLogin(e) {
     }
   } else {
     alert('Incorrect credentials! Please enter the correct username and password.');
+  }
+}
+
+// ================= FORGOT PASSWORD & SMTP EMAIL RESET LOGIC =================
+function openForgotPasswordModal() {
+  const modal = document.getElementById('forgot-password-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  backToStep1();
+}
+
+function closeForgotPasswordModal() {
+  const modal = document.getElementById('forgot-password-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function backToStep1() {
+  const s1 = document.getElementById('fp-step-1');
+  const s2 = document.getElementById('fp-step-2');
+  const err1 = document.getElementById('fp-error-msg');
+  const succ1 = document.getElementById('fp-success-msg');
+  const err2 = document.getElementById('fp-step2-error-msg');
+  const succ2 = document.getElementById('fp-step2-success-msg');
+
+  if (s1) s1.classList.remove('hidden');
+  if (s2) s2.classList.add('hidden');
+  if (err1) err1.classList.add('hidden');
+  if (succ1) succ1.classList.add('hidden');
+  if (err2) err2.classList.add('hidden');
+  if (succ2) succ2.classList.add('hidden');
+}
+
+async function handleSendResetOtp(e) {
+  if (e) e.preventDefault();
+  const emailInput = document.getElementById('fp-email');
+  const email = (emailInput ? emailInput.value : '').trim().toLowerCase();
+  const btn = document.getElementById('btn-send-otp');
+  const errBox = document.getElementById('fp-error-msg');
+  const succBox = document.getElementById('fp-success-msg');
+
+  if (!email) {
+    if (errBox) {
+      errBox.textContent = 'Please enter your administrator email.';
+      errBox.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (errBox) errBox.classList.add('hidden');
+  if (succBox) succBox.classList.add('hidden');
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Sending OTP via Gmail SMTP...</span>';
+  }
+
+  try {
+    const res = await fetch('/api/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'send_otp', email: email })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      document.getElementById('fp-step-1').classList.add('hidden');
+      document.getElementById('fp-step-2').classList.remove('hidden');
+      const targetSpan = document.getElementById('fp-sent-target');
+      if (targetSpan) targetSpan.textContent = email;
+      const otpInput = document.getElementById('fp-otp');
+      if (otpInput) {
+        otpInput.value = '';
+        otpInput.focus();
+      }
+      showDashboardToast(`📧 6-digit OTP sent to ${email}`, 'success');
+    } else {
+      if (errBox) {
+        errBox.textContent = data.message || 'Failed to send OTP. Please check your internet connection.';
+        errBox.classList.remove('hidden');
+      }
+    }
+  } catch (err) {
+    console.error('SMTP Request Error:', err);
+    if (errBox) {
+      errBox.textContent = 'Failed to connect to email server. Ensure your site is deployed or try again.';
+      errBox.classList.remove('hidden');
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Send OTP to Email</span> <i class="fa-solid fa-paper-plane"></i>';
+    }
+  }
+}
+
+async function handleVerifyAndResetPassword(e) {
+  if (e) e.preventDefault();
+  const emailInput = document.getElementById('fp-email');
+  const email = (emailInput ? emailInput.value : '').trim().toLowerCase();
+  const otp = document.getElementById('fp-otp').value.trim();
+  const newPass = document.getElementById('fp-new-pass').value.trim();
+  const confirmPass = document.getElementById('fp-confirm-pass').value.trim();
+  const btn = document.getElementById('btn-verify-reset');
+  const errBox = document.getElementById('fp-step2-error-msg');
+  const succBox = document.getElementById('fp-step2-success-msg');
+
+  if (errBox) errBox.classList.add('hidden');
+  if (succBox) succBox.classList.add('hidden');
+
+  if (!otp || otp.length < 6) {
+    if (errBox) {
+      errBox.textContent = 'Please enter the complete 6-digit OTP code sent to your Gmail.';
+      errBox.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (!newPass || newPass.length < 6) {
+    if (errBox) {
+      errBox.textContent = 'New password must be at least 6 characters.';
+      errBox.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    if (errBox) {
+      errBox.textContent = 'Passwords do not match! Please check and retry.';
+      errBox.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Verifying & Resetting...</span>';
+  }
+
+  try {
+    const res = await fetch('/api/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'verify_reset',
+        email: email,
+        otp: otp,
+        newPassword: newPass
+      })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      // Store new password locally for immediate offline/online sync
+      localStorage.setItem('sasi_custom_admin_password', newPass);
+
+      // Auto-fill login form
+      const passInput = document.getElementById('admin-pass');
+      const userInput = document.getElementById('admin-user');
+      if (passInput) passInput.value = newPass;
+      if (userInput) userInput.value = email;
+
+      if (succBox) {
+        succBox.textContent = '✅ Password reset successfully! Redirecting to login...';
+        succBox.classList.remove('hidden');
+      }
+
+      showDashboardToast('🎉 Admin password successfully changed!', 'success');
+
+      setTimeout(() => {
+        closeForgotPasswordModal();
+      }, 1500);
+    } else {
+      if (errBox) {
+        errBox.textContent = data.message || 'Verification failed. Incorrect or expired OTP.';
+        errBox.classList.remove('hidden');
+      }
+    }
+  } catch (err) {
+    console.error('Reset Error:', err);
+    if (errBox) {
+      errBox.textContent = 'Server connection error during reset. Please try again.';
+      errBox.classList.remove('hidden');
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Reset Password</span> <i class="fa-solid fa-check"></i>';
+    }
   }
 }
 
