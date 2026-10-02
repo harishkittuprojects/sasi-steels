@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /admin.html
 
-Sitemap: https://YOUR_DOMAIN/sitemap.xml
+Sitemap: https://www.sasisteels.in/sitemap.xml
