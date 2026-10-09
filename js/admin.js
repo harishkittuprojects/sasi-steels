@@ -4693,6 +4693,49 @@ function handleRoleSelectChange(selectEl) {
 }
 window.handleRoleSelectChange = handleRoleSelectChange;
 
+function getEmployeeAttendanceSummary(empName) {
+  if (!empName) return { totalHours: 0, regularHours: 0, overtimeHours: 0, presentDays: 0, halfDays: 0, absentDays: 0, totalShifts: 0 };
+  
+  const normName = empName.trim().toLowerCase();
+  const empRecords = (allAttendanceRecords || []).filter(a => (a.employee_name || '').trim().toLowerCase() === normName);
+
+  let regularHours = 0;
+  let overtimeHours = 0;
+  let presentDays = 0;
+  let halfDays = 0;
+  let absentDays = 0;
+
+  empRecords.forEach(att => {
+    const reg = parseFloat(att.hours_worked) !== undefined && !isNaN(parseFloat(att.hours_worked)) ? parseFloat(att.hours_worked) : (att.status === 'Half Day' ? 4 : 8);
+    const ot = parseFloat(att.overtime_hours) || 0;
+
+    if (att.status === 'Present' || att.status === 'Overtime') {
+      presentDays++;
+      regularHours += reg;
+      overtimeHours += ot;
+    } else if (att.status === 'Half Day') {
+      halfDays++;
+      regularHours += reg;
+      overtimeHours += ot;
+    } else if (att.status === 'Absent') {
+      absentDays++;
+    }
+  });
+
+  const totalShifts = presentDays + halfDays;
+  const totalHours = regularHours + overtimeHours;
+
+  return {
+    totalHours,
+    regularHours,
+    overtimeHours,
+    presentDays,
+    halfDays,
+    absentDays,
+    totalShifts
+  };
+}
+
 function filterEmployeesData() {
   const tbody = document.getElementById('table-employees');
   if (!tbody) return;
@@ -4735,7 +4778,7 @@ function filterEmployeesData() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="py-12 text-center text-slate-400">
+        <td colspan="8" class="py-12 text-center text-slate-400">
           <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-cyan-400">
             <i class="fa-solid fa-users-slash"></i>
           </div>
@@ -4752,6 +4795,7 @@ function filterEmployeesData() {
   tbody.innerHTML = filtered.map(emp => {
     const rawPhone = (emp.phone || '').replace(/[^0-9]/g, '');
     const phoneLink = rawPhone.startsWith('91') ? rawPhone : (rawPhone ? '91' + rawPhone : '');
+    const summary = getEmployeeAttendanceSummary(emp.name);
     
     return `
       <tr class="hover:bg-slate-800/50 transition-colors">
@@ -4765,7 +4809,15 @@ function filterEmployeesData() {
         <td class="py-3 px-4 text-slate-300 font-mono text-xs">
           ${emp.phone ? `<span>${emp.phone}</span>` : '<span class="text-slate-600">N/A</span>'}
         </td>
-        <td class="py-3 px-4 font-bold text-emerald-400">₹${(parseFloat(emp.daily_wage) || 0).toLocaleString('en-IN')} / day</td>
+        <td class="py-3 px-4 font-bold text-emerald-400 font-mono">₹${(parseFloat(emp.daily_wage) || 0).toLocaleString('en-IN')} / day</td>
+        <td class="py-3 px-4">
+          <div class="flex items-center gap-1.5">
+            <span class="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 font-mono font-bold text-xs">
+              <i class="fa-regular fa-clock mr-1"></i> ${summary.totalHours} hrs
+            </span>
+          </div>
+          <div class="text-[10px] text-slate-500 mt-0.5">${summary.totalShifts} shifts • ${summary.overtimeHours}h OT</div>
+        </td>
         <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${emp.join_date || 'N/A'}</td>
         <td class="py-3 px-4">
           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -4778,10 +4830,10 @@ function filterEmployeesData() {
             <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(emp.name)},%20this%20is%20SASI%20Steel%20Engineering." target="_blank" class="px-2 py-1 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white text-[11px] font-bold inline-flex items-center gap-1">
               <i class="fa-brands fa-whatsapp"></i>
             </a>` : ''}
-          <button onclick="openEmployeeModal('${emp.id}')" class="px-2 py-1 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px]">
+          <button onclick="openEmployeeModal('${emp.id}')" class="px-2 py-1 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px]" title="Edit Employee">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
-          <button onclick="deleteEmployeeItem('${emp.id}')" class="px-2 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]">
+          <button onclick="deleteEmployeeItem('${emp.id}')" class="px-2 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px]" title="Delete Employee">
             <i class="fa-solid fa-trash"></i>
           </button>
         </td>
@@ -4801,16 +4853,20 @@ function resetEmployeesFilter() {
 }
 
 function exportEmployeesCSV() {
-  const headers = ['Employee Name', 'Role', 'Contact Phone', 'Daily Wage (INR)', 'Join Date', 'Status', 'Notes'];
-  const rows = allEmployeesRecords.map(emp => [
-    emp.name || '',
-    emp.role || '',
-    emp.phone || '',
-    emp.daily_wage || 0,
-    emp.join_date || '',
-    emp.status || 'Active',
-    emp.notes || ''
-  ]);
+  const headers = ['Employee Name', 'Role', 'Contact Phone', 'Daily Wage (INR)', 'Total Hours Worked', 'Join Date', 'Status', 'Notes'];
+  const rows = allEmployeesRecords.map(emp => {
+    const summary = getEmployeeAttendanceSummary(emp.name);
+    return [
+      emp.name || '',
+      emp.role || '',
+      emp.phone || '',
+      emp.daily_wage || 0,
+      `${summary.totalHours} hrs`,
+      emp.join_date || '',
+      emp.status || 'Active',
+      emp.notes || ''
+    ];
+  });
   const dateStr = new Date().toISOString().split('T')[0];
   downloadCSV(`SASI_Steels_Staff_Directory_${dateStr}.csv`, headers, rows);
 }
@@ -4834,13 +4890,43 @@ function openEmployeeModal(id = null) {
     <option value="__CUSTOM__" ${selectedRoleOption === '__CUSTOM__' ? 'selected' : ''}>+ Other / Manual Entry</option>
   `;
 
-  document.getElementById('crud-modal-title').textContent = existing ? 'Edit Employee Details' : 'Add New Employee / Worker';
-  document.getElementById('crud-modal-subtitle').textContent = 'Manage workshop employee role, phone number, and daily wage rate.';
+  const summary = existing ? getEmployeeAttendanceSummary(existing.name) : null;
+
+  document.getElementById('crud-modal-title').textContent = existing ? `Edit Employee Details: ${existing.name}` : 'Add New Employee / Worker';
+  document.getElementById('crud-modal-subtitle').textContent = 'Manage workshop employee role, phone number, hours worked, and wage rates.';
 
   document.getElementById('crud-form-fields').innerHTML = `
+    ${existing ? `
+      <div class="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-700/80 shadow-inner">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
+          <span class="text-[11px] font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-simple"></i> Attendance & Work Record
+          </span>
+          <span class="text-[10px] text-slate-400 font-mono">Live calculation</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Hours Worked</span>
+            <span class="text-base font-black text-amber-400 font-mono mt-0.5 block">${summary.totalHours} hrs</span>
+            <span class="text-[10px] text-slate-500 block">${summary.regularHours}h reg • ${summary.overtimeHours}h OT</span>
+          </div>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total Shifts</span>
+            <span class="text-base font-black text-emerald-400 font-mono mt-0.5 block">${summary.totalShifts} Days</span>
+            <span class="text-[10px] text-slate-400 block">${summary.presentDays} full • ${summary.halfDays} half</span>
+          </div>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Absences</span>
+            <span class="text-base font-black text-red-400 font-mono mt-0.5 block">${summary.absentDays} Days</span>
+            <span class="text-[10px] text-slate-500 block">Recorded</span>
+          </div>
+        </div>
+      </div>
+    ` : ''}
+
     <div>
       <label class="block text-slate-300 font-bold mb-1">Full Name</label>
-      <input type="text" name="name" required value="${existing ? existing.name : ''}" placeholder="e.g. Ramesh Kumar" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
+      <input type="text" name="name" required value="${existing ? existing.name : ''}" placeholder="e.g. Ramesh Kumar" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold" />
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
@@ -4854,35 +4940,39 @@ function openEmployeeModal(id = null) {
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Daily Wage Rate (₹)</label>
-        <input type="number" name="daily_wage" required value="${existing ? existing.daily_wage : '850'}" placeholder="e.g. 850" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
+        <input type="number" name="daily_wage" required value="${existing ? existing.daily_wage : '850'}" placeholder="e.g. 850" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold" />
       </div>
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
+        <label class="block text-slate-300 font-bold mb-1">Standard Shift (Hours)</label>
+        <input type="number" step="0.5" min="1" max="24" name="standard_hours" value="${existing && existing.standard_hours ? existing.standard_hours : '8'}" placeholder="e.g. 8" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold" />
+      </div>
+      <div>
         <label class="block text-slate-300 font-bold mb-1">Phone / WhatsApp</label>
         <input type="text" name="phone" value="${existing && existing.phone ? existing.phone : ''}" placeholder="+91 98480 12345" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
       </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Status</label>
-        <select name="status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500">
+        <select name="status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold">
           <option value="Active" ${!existing || existing.status === 'Active' ? 'selected' : ''}>Active</option>
           <option value="On Leave" ${existing && existing.status === 'On Leave' ? 'selected' : ''}>On Leave</option>
           <option value="Inactive" ${existing && existing.status === 'Inactive' ? 'selected' : ''}>Inactive / Left</option>
         </select>
       </div>
-    </div>
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <label class="block text-slate-300 font-bold text-xs"><i class="fa-regular fa-calendar text-cyan-400 mr-1"></i> Joining Date</label>
-          <button type="button" onclick="document.querySelector('#crud-form-fields input[name=\\'join_date\\']').value = getLocalDateStr()" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold underline cursor-pointer">Set Today</button>
-        </div>
-        <input type="date" name="join_date" value="${existing && existing.join_date ? existing.join_date : getLocalDateStr()}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold cursor-pointer" onclick="if(this.showPicker) this.showPicker()" />
-      </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1 text-xs">Emergency Contact</label>
         <input type="text" name="emergency_contact" value="${existing && existing.emergency_contact ? existing.emergency_contact : ''}" placeholder="Contact / Relation" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500" />
       </div>
+    </div>
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <label class="block text-slate-300 font-bold text-xs"><i class="fa-regular fa-calendar text-cyan-400 mr-1"></i> Joining Date</label>
+        <button type="button" onclick="document.querySelector('#crud-form-fields input[name=\\'join_date\\']').value = getLocalDateStr()" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold underline cursor-pointer">Set Today</button>
+      </div>
+      <input type="date" name="join_date" value="${existing && existing.join_date ? existing.join_date : getLocalDateStr()}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold cursor-pointer" onclick="if(this.showPicker) this.showPicker()" />
     </div>
     <div>
       <label class="block text-slate-300 font-bold mb-1">Notes / Skill Details</label>
@@ -6314,6 +6404,7 @@ async function handleCrudSubmit(e) {
         name: formData.get('name'),
         role: role,
         daily_wage: parseFloat(formData.get('daily_wage')) || 800,
+        standard_hours: parseFloat(formData.get('standard_hours')) || 8,
         phone: formData.get('phone') || '',
         status: formData.get('status') || 'Active',
         join_date: formData.get('join_date') || getLocalDateStr(),
