@@ -1919,7 +1919,9 @@ function renderQuotationItemRows() {
   tbody.innerHTML = activeQuotationItems.map((item, idx) => {
     const sno = idx + 1;
     item.sno = sno;
-    const amount = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0);
+    const q = parseFloat(item.quantity) || 0;
+    const r = parseFloat(item.rate) || 0;
+    const amount = q * r;
     item.amount = amount;
 
     const imgPreview = item.image_url 
@@ -1927,7 +1929,7 @@ function renderQuotationItemRows() {
       : `<div class="w-12 h-12 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 text-xs"><i class="fa-solid fa-image"></i></div>`;
 
     return `
-      <tr class="hover:bg-slate-900/50 transition-colors">
+      <tr class="hover:bg-slate-900/50 transition-colors quote-item-row" data-index="${idx}">
         <td class="py-2.5 px-3 text-center font-bold text-slate-400">${sno}</td>
         <td class="py-2.5 px-3">
           <div class="flex items-center gap-2">
@@ -1942,21 +1944,21 @@ function renderQuotationItemRows() {
           </div>
         </td>
         <td class="py-2.5 px-3">
-          <textarea rows="2" placeholder="Item description, dimensions, thickness & specs..." class="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'description', this.value)">${item.description || ''}</textarea>
+          <textarea rows="2" placeholder="Item description, dimensions, thickness & specs..." class="quote-input-desc w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'description', this.value)">${item.description || ''}</textarea>
         </td>
         <td class="py-2.5 px-3">
-          <input type="text" placeholder="Finish (e.g. Powder Coat)" value="${item.finish || ''}" class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-orange-500 outline-none font-semibold uppercase" oninput="updateItemField(${idx}, 'finish', this.value)" />
+          <input type="text" placeholder="Finish (e.g. Powder Coat)" value="${item.finish || ''}" class="quote-input-finish w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-orange-500 outline-none font-semibold uppercase" oninput="updateItemField(${idx}, 'finish', this.value)" />
         </td>
         <td class="py-2.5 px-3">
-          <input type="number" min="0" step="any" value="${item.quantity !== undefined ? item.quantity : 1}" class="w-full px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-center text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'quantity', this.value)" onchange="updateItemField(${idx}, 'quantity', this.value)" onkeyup="updateItemField(${idx}, 'quantity', this.value)" />
+          <input type="number" min="0" step="any" value="${item.quantity !== undefined ? item.quantity : 1}" class="quote-input-qty w-full px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-center text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'quantity', this.value)" onchange="updateItemField(${idx}, 'quantity', this.value)" onkeyup="updateItemField(${idx}, 'quantity', this.value)" />
         </td>
         <td class="py-2.5 px-3">
           <div class="flex items-center gap-1">
             <span class="text-slate-500 font-bold">₹</span>
-            <input type="number" min="0" step="any" value="${item.rate !== undefined ? item.rate : 0}" class="w-full px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-right text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'rate', this.value)" onchange="updateItemField(${idx}, 'rate', this.value)" onkeyup="updateItemField(${idx}, 'rate', this.value)" />
+            <input type="number" min="0" step="any" value="${item.rate !== undefined ? item.rate : 0}" class="quote-input-rate w-full px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-right text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'rate', this.value)" onchange="updateItemField(${idx}, 'rate', this.value)" onkeyup="updateItemField(${idx}, 'rate', this.value)" />
           </div>
         </td>
-        <td id="quote-item-amount-${idx}" class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400 text-xs whitespace-nowrap">
+        <td id="quote-item-amount-${idx}" class="quote-item-amount py-2.5 px-3 text-right font-mono font-bold text-emerald-400 text-xs whitespace-nowrap">
           ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </td>
         <td class="py-2.5 px-3 text-center">
@@ -1967,6 +1969,47 @@ function renderQuotationItemRows() {
       </tr>
     `;
   }).join('');
+
+  setupQuotationItemListeners();
+}
+
+function setupQuotationItemListeners() {
+  const tbody = document.getElementById('quote-items-tbody');
+  if (!tbody || tbody.dataset.calcBound === 'true') return;
+  tbody.dataset.calcBound = 'true';
+
+  const handler = function(e) {
+    const tr = e.target.closest('tr.quote-item-row');
+    if (!tr) return;
+    const idx = parseInt(tr.dataset.index, 10);
+    if (isNaN(idx) || !activeQuotationItems[idx]) return;
+
+    const qtyEl = tr.querySelector('.quote-input-qty');
+    const rateEl = tr.querySelector('.quote-input-rate');
+    const descEl = tr.querySelector('.quote-input-desc');
+    const finishEl = tr.querySelector('.quote-input-finish');
+    const amountEl = tr.querySelector('.quote-item-amount');
+
+    const q = parseFloat(qtyEl ? qtyEl.value : activeQuotationItems[idx].quantity) || 0;
+    const r = parseFloat(rateEl ? rateEl.value : activeQuotationItems[idx].rate) || 0;
+    const total = q * r;
+
+    activeQuotationItems[idx].quantity = q;
+    activeQuotationItems[idx].rate = r;
+    activeQuotationItems[idx].amount = total;
+    if (descEl) activeQuotationItems[idx].description = descEl.value;
+    if (finishEl) activeQuotationItems[idx].finish = finishEl.value;
+
+    if (amountEl) {
+      amountEl.textContent = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    recalculateQuotationTotals();
+  };
+
+  tbody.addEventListener('input', handler);
+  tbody.addEventListener('change', handler);
+  tbody.addEventListener('keyup', handler);
 }
 
 function addNewQuotationItemRow(prefill = null) {
