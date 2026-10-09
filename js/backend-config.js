@@ -415,6 +415,26 @@ async function dbAddAttendance(record) {
   return { success: true, data: [newRow] };
 }
 
+async function dbUpdateAttendance(id, updates) {
+  let localList = getLocalCollection('sasi_attendance') || [];
+  const idx = localList.findIndex(r => String(r.id) === String(id));
+  if (idx !== -1) {
+    localList[idx] = { ...localList[idx], ...updates };
+    saveLocalCollection('sasi_attendance', localList);
+  }
+
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { id: dummyId, created_at, ...cleanUpdates } = updates;
+      await client.from('attendance').update(cleanUpdates).eq('id', id);
+    } catch (e) {
+      console.warn("Supabase update attendance error:", e);
+    }
+  }
+  return true;
+}
+
 async function dbDeleteAttendance(id) {
   let localList = getLocalCollection('sasi_attendance') || [];
   localList = localList.filter(r => String(r.id) !== String(id));

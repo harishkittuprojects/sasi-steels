@@ -1052,7 +1052,8 @@ function formatDisplayDate(val) {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const mIndex = parseInt(month, 10) - 1;
     const mName = (mIndex >= 0 && mIndex < 12) ? monthNames[mIndex] : month;
-    return `${parseInt(day, 10)} ${mName} ${year}`;
+    const paddedDay = String(parseInt(day, 10)).padStart(2, '0');
+    return `${paddedDay} ${mName} ${year}`;
   } catch (e) {
     return String(val);
   }
@@ -4960,10 +4961,20 @@ function filterAttendanceData() {
     return;
   }
 
+  // Sort chronologically (newest date first descending), and by employee name ascending
+  filtered.sort((a, b) => {
+    const dateA = getRecordDateStr(a.attendance_date || a.date || a.created_at);
+    const dateB = getRecordDateStr(b.attendance_date || b.date || b.created_at);
+    if (dateA !== dateB) {
+      return dateB.localeCompare(dateA);
+    }
+    return (a.employee_name || '').localeCompare(b.employee_name || '');
+  });
+
   tbody.innerHTML = filtered.map(r => `
     <tr class="hover:bg-slate-800/50 transition-colors">
-      <td class="py-3 px-4 text-slate-300 font-mono text-[11px] font-semibold">
-        <div class="flex items-center gap-1"><i class="fa-regular fa-calendar text-blue-400"></i> ${formatDisplayDate(r.attendance_date || r.date || r.created_at)}</div>
+      <td class="py-3 px-4 text-slate-300 font-mono text-[11px] font-semibold whitespace-nowrap">
+        <div class="flex items-center gap-1.5"><i class="fa-regular fa-calendar text-blue-400"></i> ${formatDisplayDate(r.attendance_date || r.date || r.created_at)}</div>
       </td>
       <td class="py-3 px-4 font-bold text-white">${r.employee_name}</td>
       <td class="py-3 px-4 text-slate-300">${r.role}</td>
@@ -4976,8 +4987,13 @@ function filterAttendanceData() {
       </td>
       <td class="py-3 px-4 text-slate-300">${r.hours_worked || 8} hrs</td>
       <td class="py-3 px-4 text-amber-400 font-bold">${r.overtime_hours || 0} hrs</td>
-      <td class="py-3 px-4 text-right space-x-2">
-        <button onclick="deleteAttendanceItem('${r.id}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+      <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+        <button onclick="openAttendanceModal('${r.id}')" class="px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-white text-xs font-semibold transition-all inline-flex items-center gap-1" title="Edit Attendance Record">
+          <i class="fa-solid fa-pen-to-square"></i> <span>Edit</span>
+        </button>
+        <button onclick="deleteAttendanceItem('${r.id}')" class="px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs font-semibold transition-all inline-flex items-center" title="Delete Attendance Record">
+          <i class="fa-solid fa-trash"></i>
+        </button>
       </td>
     </tr>
   `).join('');
@@ -5070,11 +5086,17 @@ function onAttendanceEmpSelect(empName) {
   }
 }
 
-async function openAttendanceModal() {
+async function openAttendanceModal(id = null) {
   activeModalType = 'attendance';
-  editingItemId = null;
-  document.getElementById('crud-modal-title').textContent = 'Mark Worker Attendance';
-  document.getElementById('crud-modal-subtitle').textContent = 'Record daily presence & overtime hours for workshop crew.';
+  editingItemId = id;
+
+  let existing = null;
+  if (id) {
+    existing = allAttendanceRecords.find(r => String(r.id) === String(id));
+  }
+
+  document.getElementById('crud-modal-title').textContent = existing ? `Edit Attendance: ${existing.employee_name}` : 'Mark Worker Attendance';
+  document.getElementById('crud-modal-subtitle').textContent = existing ? 'Modify presence status, date, or overtime hours.' : 'Record daily presence & overtime hours for workshop crew.';
 
   if (!allEmployeesRecords || allEmployeesRecords.length === 0) {
     allEmployeesRecords = (await dbGetEmployees()) || [];
@@ -5082,14 +5104,22 @@ async function openAttendanceModal() {
 
   const empOptions = (allEmployeesRecords || [])
     .filter(e => e.status === 'Active')
-    .map(e => `<option value="${e.name}">${e.name} (${e.role})</option>`)
+    .map(e => `<option value="${e.name}" ${existing && existing.employee_name === e.name ? 'selected' : ''}>${e.name} (${e.role})</option>`)
     .join('');
 
+  const isRoleStandard = existing && WORKSHOP_EMPLOYEE_ROLES.includes(existing.role);
+  const selectedRole = existing ? (isRoleStandard ? existing.role : '__CUSTOM__') : WORKSHOP_EMPLOYEE_ROLES[0];
+  const customRoleVal = existing && !isRoleStandard ? existing.role : '';
+
   const roleOptionsHtml = WORKSHOP_EMPLOYEE_ROLES.map(role => `
-    <option value="${role}">${role}</option>
+    <option value="${role}" ${selectedRole === role ? 'selected' : ''}>${role}</option>
   `).join('') + `
-    <option value="__CUSTOM__">+ Other / Custom Role</option>
+    <option value="__CUSTOM__" ${selectedRole === '__CUSTOM__' ? 'selected' : ''}>+ Other / Custom Role</option>
   `;
+
+  const existingDate = existing ? getRecordDateStr(existing.attendance_date || existing.date || existing.created_at) : getLocalDateStr();
+  const existingStatus = existing ? existing.status : 'Present';
+  const existingOvertime = existing ? (existing.overtime_hours !== undefined ? existing.overtime_hours : 0) : 0;
 
   document.getElementById('crud-form-fields').innerHTML = `
     <div>
@@ -5100,7 +5130,7 @@ async function openAttendanceModal() {
         <option value="__CUSTOM_WORKER__" class="text-orange-400 font-bold">+ Other / Custom Worker (Unregistered)</option>
       </select>
       <label class="block text-slate-300 font-bold mb-1">Employee / Worker Name <span class="text-orange-500">*</span></label>
-      <input type="text" name="employee_name" required placeholder="e.g. Ramesh Kumar (or custom worker name)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+      <input type="text" name="employee_name" required value="${existing ? existing.employee_name : ''}" placeholder="e.g. Ramesh Kumar (or custom worker name)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold" />
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
@@ -5108,17 +5138,17 @@ async function openAttendanceModal() {
         <select name="role" id="employee-role-select" onchange="handleRoleSelectChange(this)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 cursor-pointer">
           ${roleOptionsHtml}
         </select>
-        <div id="custom-role-container" class="hidden mt-2">
-          <input type="text" name="custom_role" id="employee-custom-role" placeholder="Type custom role (e.g. Daily Helper)..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-orange-500 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-400 placeholder:text-slate-500" />
+        <div id="custom-role-container" class="${selectedRole === '__CUSTOM__' ? '' : 'hidden'} mt-2">
+          <input type="text" name="custom_role" id="employee-custom-role" value="${customRoleVal}" placeholder="Type custom role (e.g. Daily Helper)..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-orange-500 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-400 placeholder:text-slate-500" />
         </div>
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Status</label>
-        <select name="status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500">
-          <option value="Present">Present</option>
-          <option value="Overtime">Overtime</option>
-          <option value="Half Day">Half Day</option>
-          <option value="Absent">Absent</option>
+        <select name="status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold">
+          <option value="Present" ${existingStatus === 'Present' ? 'selected' : ''}>Present</option>
+          <option value="Overtime" ${existingStatus === 'Overtime' ? 'selected' : ''}>Overtime</option>
+          <option value="Half Day" ${existingStatus === 'Half Day' ? 'selected' : ''}>Half Day</option>
+          <option value="Absent" ${existingStatus === 'Absent' ? 'selected' : ''}>Absent</option>
         </select>
       </div>
     </div>
@@ -5128,11 +5158,11 @@ async function openAttendanceModal() {
           <label class="block text-slate-300 font-bold text-xs"><i class="fa-regular fa-calendar text-blue-400 mr-1"></i> Attendance Date <span class="text-orange-500">*</span></label>
           <button type="button" onclick="document.querySelector('#crud-form-fields input[name=\\'attendance_date\\']').value = getLocalDateStr()" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold underline cursor-pointer">Set Today</button>
         </div>
-        <input type="date" name="attendance_date" required value="${getLocalDateStr()}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer" onclick="if(this.showPicker) this.showPicker()" />
+        <input type="date" name="attendance_date" required value="${existingDate}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer" onclick="if(this.showPicker) this.showPicker()" />
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1 text-xs">Overtime (Hours)</label>
-        <input type="number" step="0.5" name="overtime_hours" value="0" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+        <input type="number" step="0.5" min="0" name="overtime_hours" value="${existingOvertime}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
     </div>
   `;
@@ -6310,7 +6340,11 @@ async function handleCrudSubmit(e) {
         status: formData.get('status'),
         overtime_hours: parseFloat(formData.get('overtime_hours')) || 0
       };
-      await dbAddAttendance(record);
+      if (editingItemId) {
+        await dbUpdateAttendance(editingItemId, record);
+      } else {
+        await dbAddAttendance(record);
+      }
       loadAttendance();
     } 
     else if (activeModalType === 'inventory') {
