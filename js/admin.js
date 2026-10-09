@@ -5111,23 +5111,34 @@ async function exportAttendanceCSV() {
 
   let exportList = allAttendanceRecords.filter(r => {
     if (statusVal !== 'ALL' && r.status !== statusVal) return false;
-    if (fromVal && r.attendance_date < fromVal) return false;
-    if (toVal && r.attendance_date > toVal) return false;
+    const rDate = getRecordDateStr(r.attendance_date || r.date || r.created_at);
+    if (fromVal && rDate < fromVal) return false;
+    if (toVal && rDate > toVal) return false;
     return true;
   });
 
   if (exportList.length === 0) exportList = allAttendanceRecords;
 
+  // Sort chronologically (newest date first descending) matching the admin panel
+  exportList.sort((a, b) => {
+    const dateA = getRecordDateStr(a.attendance_date || a.date || a.created_at);
+    const dateB = getRecordDateStr(b.attendance_date || b.date || b.created_at);
+    if (dateA !== dateB) {
+      return dateB.localeCompare(dateA);
+    }
+    return (a.employee_name || '').localeCompare(b.employee_name || '');
+  });
+
   const headers = ['Date', 'Employee Name', 'Role', 'Status', 'Hours Worked', 'Overtime Hours'];
   const rows = exportList.map(r => [
-    r.attendance_date || '',
+    formatDisplayDate(r.attendance_date || r.date || r.created_at),
     r.employee_name || '',
     r.role || '',
-    r.status || '',
-    r.hours_worked || 8,
-    r.overtime_hours || 0
+    r.status || 'Present',
+    `${parseFloat(r.hours_worked) || (r.status === 'Half Day' ? 4 : 8)} hrs`,
+    `${parseFloat(r.overtime_hours) || 0} hrs`
   ]);
-  const dateStr = new Date().toISOString().split('T')[0];
+  const dateStr = getLocalDateStr();
   downloadCSV(`SASI_Steels_Attendance_${dateStr}.csv`, headers, rows);
 }
 
