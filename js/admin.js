@@ -1948,15 +1948,15 @@ function renderQuotationItemRows() {
           <input type="text" placeholder="Finish (e.g. Powder Coat)" value="${item.finish || ''}" class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-orange-500 outline-none font-semibold uppercase" oninput="updateItemField(${idx}, 'finish', this.value)" />
         </td>
         <td class="py-2.5 px-3">
-          <input type="number" min="1" step="any" value="${item.quantity || 1}" class="w-full px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-center text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'quantity', this.value)" />
+          <input type="number" min="0" step="any" value="${item.quantity !== undefined ? item.quantity : 1}" class="w-full px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-center text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'quantity', this.value)" onchange="updateItemField(${idx}, 'quantity', this.value)" onkeyup="updateItemField(${idx}, 'quantity', this.value)" />
         </td>
         <td class="py-2.5 px-3">
           <div class="flex items-center gap-1">
             <span class="text-slate-500 font-bold">₹</span>
-            <input type="number" min="0" step="any" value="${item.rate || 0}" class="w-full px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-right text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'rate', this.value)" />
+            <input type="number" min="0" step="any" value="${item.rate !== undefined ? item.rate : 0}" class="w-full px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-right text-xs focus:border-orange-500 outline-none" oninput="updateItemField(${idx}, 'rate', this.value)" onchange="updateItemField(${idx}, 'rate', this.value)" onkeyup="updateItemField(${idx}, 'rate', this.value)" />
           </div>
         </td>
-        <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400 text-xs whitespace-nowrap">
+        <td id="quote-item-amount-${idx}" class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400 text-xs whitespace-nowrap">
           ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </td>
         <td class="py-2.5 px-3 text-center">
@@ -1979,6 +1979,9 @@ function addNewQuotationItemRow(prefill = null) {
     rate: 0,
     amount: 0
   };
+  const q = parseFloat(newItem.quantity) || 0;
+  const r = parseFloat(newItem.rate) || 0;
+  newItem.amount = q * r;
   activeQuotationItems.push(newItem);
   renderQuotationItemRows();
   recalculateQuotationTotals();
@@ -2000,7 +2003,13 @@ function updateItemField(index, field, value) {
     if (field === 'quantity' || field === 'rate') {
       const q = parseFloat(activeQuotationItems[index].quantity) || 0;
       const r = parseFloat(activeQuotationItems[index].rate) || 0;
-      activeQuotationItems[index].amount = q * r;
+      const rowAmount = q * r;
+      activeQuotationItems[index].amount = rowAmount;
+
+      const amtEl = document.getElementById(`quote-item-amount-${index}`);
+      if (amtEl) {
+        amtEl.textContent = '₹' + rowAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
     }
     recalculateQuotationTotals();
   }
