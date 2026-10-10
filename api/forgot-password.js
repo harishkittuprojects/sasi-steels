@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIs
 
 // Gmail SMTP Configuration
 const SMTP_USER = process.env.SMTP_USER || 'sasisteels863@gmail.com';
-const SMTP_PASS = (process.env.SMTP_PASSWORD || 'ftaa yiuf jgxl fadf').replace(/\s+/g, '');
+const SMTP_PASS = (process.env.SMTP_PASSWORD || 'zvng buds bqyj usej').replace(/\s+/g, '');
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
 
