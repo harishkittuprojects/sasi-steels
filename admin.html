@@ -124,10 +124,10 @@
         <div class="flex items-center justify-between pt-0.5 text-[11px]">
           <div class="flex items-center gap-1.5">
             <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Quick:</span>
-            <button type="button" onclick="fillAdminCredentials('admin', '123456789')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-semibold transition-all">
+            <button type="button" onclick="fillAdminCredentials('admin')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-semibold transition-all">
               Main
             </button>
-            <button type="button" onclick="fillAdminCredentials('sasiadmin', 'sasi833399')" class="px-2 py-0.5 rounded bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] font-semibold transition-all">
+            <button type="button" onclick="fillAdminCredentials('sasiadmin')" class="px-2 py-0.5 rounded bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] font-semibold transition-all">
               sasiadmin
             </button>
           </div>
@@ -180,6 +180,13 @@
       <!-- Step 2: Verify OTP and Enter New Password -->
       <div id="fp-step-2" class="hidden">
         <form onsubmit="handleVerifyAndResetPassword(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">Select Account to Reset</label>
+            <select id="fp-account-target" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold">
+              <option value="admin">admin (Super Admin - Full Access)</option>
+              <option value="sasiadmin">sasiadmin (Second Admin - Workshop & Employees)</option>
+            </select>
+          </div>
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1">Enter 6-Digit OTP</label>
             <input type="text" id="fp-otp" required maxlength="6" inputmode="numeric" placeholder="Enter OTP code" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-center tracking-[6px] text-lg font-mono font-bold text-orange-400 focus:outline-none focus:border-orange-500" />
@@ -257,6 +264,10 @@
         <button id="btn-header-change-pin" onclick="openChangePinModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5" title="Change Security PIN">
           <i class="fa-solid fa-key text-amber-400 text-xs"></i>
           <span class="hidden sm:inline">Change PIN</span>
+        </button>
+        <button id="btn-header-change-passwords" onclick="openChangePasswordsModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-orange-400 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5" title="Manage Account Passwords">
+          <i class="fa-solid fa-user-lock text-orange-400 text-xs"></i>
+          <span class="hidden sm:inline">Change Passwords</span>
         </button>
         <button id="btn-header-settings" onclick="openSettingsModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800" title="Cloudinary & Supabase Settings">
           <i class="fa-solid fa-gear text-sm"></i>
@@ -1851,6 +1862,82 @@
     </div>
   </div>
 
+  <!-- ================= 11. MANAGE ADMIN PASSWORDS MODAL ================= -->
+  <div id="change-passwords-modal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative">
+      <button onclick="closeChangePasswordsModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center text-lg border border-orange-500/20">
+          <i class="fa-solid fa-user-lock"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white font-heading">Manage Account Passwords</h3>
+          <p class="text-xs text-slate-400">Update passwords for Admin & sasiadmin. Changes sync across all devices.</p>
+        </div>
+      </div>
+
+      <!-- Current Passwords Status Card -->
+      <div class="mb-5 p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="font-bold text-white">admin (Super Admin):</span>
+            <span id="active-pass-display-admin" class="font-mono text-orange-400 tracking-wider">••••••</span>
+          </div>
+          <button type="button" onclick="togglePassVisibility('admin', this)" class="text-[11px] text-slate-400 hover:text-white underline">Show</button>
+        </div>
+        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-700/50">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span class="font-bold text-white">sasiadmin (Second Admin):</span>
+            <span id="active-pass-display-sasiadmin" class="font-mono text-amber-400 tracking-wider">••••••</span>
+          </div>
+          <button type="button" onclick="togglePassVisibility('sasiadmin', this)" class="text-[11px] text-slate-400 hover:text-white underline">Show</button>
+        </div>
+      </div>
+
+      <div id="change-passwords-msg" class="hidden mb-4 p-3 rounded-xl text-xs font-semibold"></div>
+
+      <form onsubmit="handleChangePasswordsSubmit(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">Select Account to Change</label>
+          <select id="cp-target-account" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-semibold text-xs focus:outline-none focus:border-orange-500">
+            <option value="sasiadmin">sasiadmin (Second Admin - Workshop & Employees)</option>
+            <option value="admin">admin (Super Admin - Full Access)</option>
+          </select>
+          <p class="text-[11px] text-slate-500 mt-1">Changing this account will NOT affect the other account's password.</p>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">New Password (min 6 characters)</label>
+          <div class="relative">
+            <input type="password" id="cp-new-password" required minlength="6" placeholder="Enter new password" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-orange-500" />
+            <button type="button" onclick="togglePinInputVisibility('cp-new-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">Confirm New Password</label>
+          <div class="relative">
+            <input type="password" id="cp-confirm-password" required minlength="6" placeholder="Re-enter new password" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-orange-500" />
+            <button type="button" onclick="togglePinInputVisibility('cp-confirm-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-save-admin-password" class="w-full py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Save Password to Cloud (Supabase)
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- ================= IMAGE LIGHTBOX / PHOTO PREVIEW MODAL ================= -->
   <div id="image-lightbox-modal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" onclick="if(event.target === this) closeImageLightbox()">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-xl w-full shadow-2xl relative text-center animate-fade-in">
@@ -1877,7 +1964,7 @@
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-md w-full px-4"></div>
 
   <!-- Scripts -->
-  <script src="js/backend-config.js?v=20261009_6"></script>
-  <script src="js/admin.js?v=20261009_6"></script>
+  <script src="js/backend-config.js?v=20261014_2"></script>
+  <script src="js/admin.js?v=20261014_2"></script>
 </body>
 </html>

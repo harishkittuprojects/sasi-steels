@@ -213,26 +213,37 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Update password in Supabase for both target email & admin accounts
+    const targetAccount = (req.body.targetAccount || 'admin').toString().toLowerCase().trim();
+
+    // Update password in Supabase strictly for the selected account
     try {
-      // 1. Update email user
-      await supabase
-        .from('admin_users')
-        .upsert({
-          username: targetEmail,
-          password_hash: cleanPass,
-          role: 'Super Admin'
-        }, { onConflict: 'username' });
+      if (targetAccount === 'sasiadmin') {
+        // ONLY update sasiadmin account with role 'Admin' - do NOT touch admin!
+        await supabase
+          .from('admin_users')
+          .upsert({
+            username: 'sasiadmin',
+            password_hash: cleanPass,
+            role: 'Admin'
+          }, { onConflict: 'username' });
+      } else {
+        // Update master 'admin' & target email - do NOT touch sasiadmin!
+        await supabase
+          .from('admin_users')
+          .upsert({
+            username: targetEmail,
+            password_hash: cleanPass,
+            role: 'Super Admin'
+          }, { onConflict: 'username' });
 
-      // 2. Also update master 'admin' account so both logins work with the new password
-      await supabase
-        .from('admin_users')
-        .upsert({
-          username: 'admin',
-          password_hash: cleanPass,
-          role: 'Super Admin'
-        }, { onConflict: 'username' });
-
+        await supabase
+          .from('admin_users')
+          .upsert({
+            username: 'admin',
+            password_hash: cleanPass,
+            role: 'Super Admin'
+          }, { onConflict: 'username' });
+      }
     } catch (dbErr) {
       console.warn("Supabase password update notice:", dbErr.message);
     }
@@ -245,12 +256,12 @@ module.exports = async function handler(req, res) {
       await transporter.sendMail({
         from: `"SASI Steel Engineering" <${SMTP_USER}>`,
         to: targetEmail,
-        subject: `✅ Admin Password Successfully Changed - SASI Steels`,
+        subject: `✅ Admin Password Successfully Changed (${targetAccount}) - SASI Steels`,
         html: `
           <div style="font-family: sans-serif; background: #0f172a; color: #fff; padding: 24px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
             <h2 style="color: #22c55e; margin-top: 0;">Password Reset Successful</h2>
-            <p style="color: #cbd5e1; font-size: 14px;">Your SASI Steels admin portal password for <strong>${targetEmail}</strong> was successfully updated.</p>
-            <p style="color: #94a3b8; font-size: 12px;">You can now log in to the admin panel with your new password.</p>
+            <p style="color: #cbd5e1; font-size: 14px;">Your SASI Steels admin portal password for account <strong>${targetAccount}</strong> was successfully updated.</p>
+            <p style="color: #94a3b8; font-size: 12px;">You can now log in from any device to the admin panel with your new password.</p>
             <div style="margin-top: 20px; font-size: 11px; color: #64748b;">SASI Steel Engineering Security Team</div>
           </div>
         `

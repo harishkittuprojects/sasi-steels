@@ -61,11 +61,37 @@ function getRequestedTabFromUrl() {
   return '';
 }
 
-function fillAdminCredentials(user, pass) {
+async function fillAdminCredentials(user, explicitPass) {
   const u = document.getElementById('admin-user');
   const p = document.getElementById('admin-pass');
   if (u) u.value = user;
-  if (p) p.value = pass;
+
+  if (explicitPass) {
+    if (p) p.value = explicitPass;
+    return;
+  }
+
+  const userClean = (user || '').toLowerCase().trim();
+  let passToFill = localStorage.getItem('sasi_admin_pass_' + userClean);
+
+  if (!passToFill) {
+    try {
+      const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+      if (client) {
+        const { data } = await client.from('admin_users').select('password_hash').ilike('username', userClean).limit(1);
+        if (data && data.length > 0 && data[0].password_hash) {
+          passToFill = data[0].password_hash;
+          localStorage.setItem('sasi_admin_pass_' + userClean, passToFill);
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (!passToFill) {
+    passToFill = (userClean === 'sasiadmin') ? 'sasi833399' : '898989';
+  }
+
+  if (p) p.value = passToFill;
 }
 
 function applyUserAccessPermissions() {
@@ -113,6 +139,8 @@ function applyUserAccessPermissions() {
 
     if (lockBtn) lockBtn.classList.add('hidden');
     if (pinBtn) pinBtn.classList.add('hidden');
+    const passBtn = document.getElementById('btn-header-change-passwords');
+    if (passBtn) passBtn.classList.add('hidden');
 
     // Force hidden on restricted sections
     if (secQuotations) secQuotations.classList.add('hidden');
@@ -126,6 +154,8 @@ function applyUserAccessPermissions() {
 
     if (lockBtn) lockBtn.classList.remove('hidden');
     if (pinBtn) pinBtn.classList.remove('hidden');
+    const passBtn = document.getElementById('btn-header-change-passwords');
+    if (passBtn) passBtn.classList.remove('hidden');
   }
 }
 
@@ -214,6 +244,10 @@ function checkAdminAuth() {
   const authModal = document.getElementById('auth-modal');
   if (!isAuth) {
     if (authModal) authModal.classList.remove('hidden');
+    // Pre-fetch cloud passwords for quick login button assistance
+    if (typeof refreshCurrentPasswordsDisplay === 'function') {
+      refreshCurrentPasswordsDisplay().catch(() => {});
+    }
     return;
   }
 
@@ -275,60 +309,68 @@ async function handleAdminLogin(e) {
     return;
   }
 
-  // Pre-configured admin accounts (Offline / Failover Support)
-  // 1. Main Admin (admin / sasisteels863@gmail.com): Full access to all modules
-  // 2. Second Admin (sasiadmin / sasi833399): Restricted from Quotations, Leads, Orders, Bookings, Finance
-  const allowedAdmins = [
-    { username: 'admin', passwords: ['123456789', 'sasi833399', 'sasi1234'], role: 'Super Admin' },
-    { username: 'sasisteels863@gmail.com', passwords: ['sasi833399', '123456789'], role: 'Super Admin' },
-    { username: 'sasiadmin', passwords: ['sasi833399'], role: 'Admin' },
-    { username: 'manager', passwords: ['sasi1234', 'sasi833399', '123456789'], role: 'Manager' },
-    { username: 'admin2', passwords: ['sasi833399', '123456789', 'sasi1234'], role: 'Admin' }
-  ];
+  const userLower = user.toLowerCase();
+
+  // Clear legacy buggy single-shared password key
+  localStorage.removeItem('sasi_custom_admin_password');
 
   let authenticated = false;
-  let loggedInRole = 'Admin';
+  let loggedInRole = (userLower === 'sasiadmin') ? 'Admin' : 'Super Admin';
   let loggedInUser = user;
 
-  // 1. Check local / static admin users
-  const staticMatch = allowedAdmins.find(acc => 
-    acc.username.toLowerCase() === user.toLowerCase() && acc.passwords.includes(pass)
-  );
+  // PRIORITY 1: Authenticate with Supabase cloud database
+  // This is the source of truth across all devices / systems!
+  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+  let dbChecked = false;
 
-  if (staticMatch) {
-    authenticated = true;
-    loggedInRole = staticMatch.role;
-    loggedInUser = staticMatch.username;
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from('admin_users')
+        .select('*')
+        .ilike('username', userLower)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        dbChecked = true;
+        const dbUser = data[0];
+        if (dbUser.password_hash === pass) {
+          authenticated = true;
+          loggedInRole = dbUser.role || (userLower === 'sasiadmin' ? 'Admin' : 'Super Admin');
+          loggedInUser = dbUser.username;
+          // Cache successful cloud password for offline failover on this device
+          localStorage.setItem('sasi_admin_pass_' + userLower, pass);
+        }
+      }
+    } catch (err) {
+      console.warn("Database admin auth verification error:", err);
+    }
   }
 
-  // 2. Check Supabase DB admin_users table if not matched statically
-  if (!authenticated) {
-    const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
-    if (client) {
-      try {
-        const { data, error } = await client
-          .from('admin_users')
-          .select('*')
-          .ilike('username', user)
-          .limit(1);
-
-        if (!error && data && data.length > 0) {
-          const dbUser = data[0];
-          if (dbUser.password_hash === pass) {
-            authenticated = true;
-            loggedInRole = dbUser.role || 'Admin';
-            loggedInUser = dbUser.username;
-          }
-        }
-      } catch (err) {
-        console.warn("Database admin auth verification error:", err);
-      }
-    }
-    // 1.5. Check custom reset password stored locally
-    const customPass = localStorage.getItem('sasi_custom_admin_password');
-    if (customPass && pass === customPass && (user.toLowerCase() === 'admin' || user.toLowerCase() === 'sasisteels863@gmail.com' || user.toLowerCase() === 'sasiadmin')) {
+  // PRIORITY 2: Check user-specific cached password (offline fallback)
+  if (!authenticated && !dbChecked) {
+    const cachedPass = localStorage.getItem('sasi_admin_pass_' + userLower);
+    if (cachedPass && pass === cachedPass) {
       authenticated = true;
-      loggedInRole = 'Super Admin';
+      loggedInRole = (userLower === 'sasiadmin') ? 'Admin' : 'Super Admin';
+      loggedInUser = user;
+    }
+  }
+
+  // PRIORITY 3: Fallback defaults (only if user not in Supabase or completely offline)
+  if (!authenticated && !dbChecked) {
+    const fallbackDefaults = {
+      'admin': ['898989', '123456789', 'sasi833399'],
+      'sasisteels863@gmail.com': ['898989', 'sasi833399', '123456789'],
+      'sasiadmin': ['sasi833399'],
+      'manager': ['sasi1234', 'sasi833399'],
+      'admin2': ['sasi833399']
+    };
+
+    const allowed = fallbackDefaults[userLower];
+    if (allowed && allowed.includes(pass)) {
+      authenticated = true;
+      loggedInRole = (userLower === 'sasiadmin' || userLower === 'admin2') ? 'Admin' : (userLower === 'manager' ? 'Manager' : 'Super Admin');
       loggedInUser = user;
     }
   }
@@ -514,12 +556,15 @@ async function handleVerifyAndResetPassword(e) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Verifying & Resetting...</span>';
   }
 
+  const targetAccount = (document.getElementById('fp-account-target')?.value || 'admin').toLowerCase().trim();
+
   try {
     const res = await fetch('/api/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'verify_reset',
+        targetAccount: targetAccount,
         email: email,
         otp: otp,
         newPassword: newPass
@@ -529,21 +574,22 @@ async function handleVerifyAndResetPassword(e) {
     const data = await res.json();
 
     if (res.ok && data.success) {
-      // Store new password locally for immediate offline/online sync
-      localStorage.setItem('sasi_custom_admin_password', newPass);
+      // Store new password strictly for this account
+      localStorage.setItem('sasi_admin_pass_' + targetAccount, newPass);
+      localStorage.removeItem('sasi_custom_admin_password');
 
       // Auto-fill login form
       const passInput = document.getElementById('admin-pass');
       const userInput = document.getElementById('admin-user');
       if (passInput) passInput.value = newPass;
-      if (userInput) userInput.value = email;
+      if (userInput) userInput.value = targetAccount;
 
       if (succBox) {
-        succBox.textContent = '✅ Password reset successfully! Redirecting to login...';
+        succBox.textContent = `✅ Password for ${targetAccount} reset successfully! Redirecting to login...`;
         succBox.classList.remove('hidden');
       }
 
-      showDashboardToast('🎉 Admin password successfully changed!', 'success');
+      showDashboardToast(`🎉 Password for ${targetAccount} successfully changed!`, 'success');
 
       setTimeout(() => {
         closeForgotPasswordModal();
@@ -948,6 +994,216 @@ async function handleChangePinSubmit(e) {
       saveBtn.innerHTML = `<i class="fa-solid fa-shield-halved mr-1.5"></i> Verify & Save New PIN`;
     }
   }
+}
+
+// ================= MANAGE ADMIN PASSWORDS (SUPABASE SYNC) =================
+let activeCloudPasswords = {
+  admin: '••••••',
+  sasiadmin: '••••••'
+};
+let showPassState = {
+  admin: false,
+  sasiadmin: false
+};
+
+async function openChangePasswordsModal() {
+  if (isRestrictedAdminUser()) {
+    showDashboardToast('⛔ Access Denied: Only Super Admin can manage account passwords.', 'error');
+    return;
+  }
+  const modal = document.getElementById('change-passwords-modal');
+  const msgEl = document.getElementById('change-passwords-msg');
+  if (msgEl) {
+    msgEl.className = 'hidden mb-4 p-3 rounded-xl text-xs font-semibold';
+    msgEl.innerHTML = '';
+  }
+  const newPassEl = document.getElementById('cp-new-password');
+  const confPassEl = document.getElementById('cp-confirm-password');
+  if (newPassEl) newPassEl.value = '';
+  if (confPassEl) confPassEl.value = '';
+
+  await refreshCurrentPasswordsDisplay();
+
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeChangePasswordsModal() {
+  const modal = document.getElementById('change-passwords-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function refreshCurrentPasswordsDisplay() {
+  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from('admin_users')
+        .select('username, password_hash')
+        .in('username', ['admin', 'sasiadmin', 'sasisteels863@gmail.com']);
+
+      if (!error && data) {
+        data.forEach(row => {
+          const u = (row.username || '').toLowerCase();
+          if (u === 'admin') activeCloudPasswords.admin = row.password_hash;
+          if (u === 'sasiadmin') activeCloudPasswords.sasiadmin = row.password_hash;
+          localStorage.setItem('sasi_admin_pass_' + u, row.password_hash);
+        });
+      }
+    } catch (e) {
+      console.warn("Could not fetch cloud passwords:", e);
+    }
+  }
+
+  if (!activeCloudPasswords.admin || activeCloudPasswords.admin === '••••••') {
+    activeCloudPasswords.admin = localStorage.getItem('sasi_admin_pass_admin') || '898989';
+  }
+  if (!activeCloudPasswords.sasiadmin || activeCloudPasswords.sasiadmin === '••••••') {
+    activeCloudPasswords.sasiadmin = localStorage.getItem('sasi_admin_pass_sasiadmin') || 'sasi833399';
+  }
+
+  updatePassDisplays();
+}
+
+function updatePassDisplays() {
+  const adminDisp = document.getElementById('active-pass-display-admin');
+  const sasiDisp = document.getElementById('active-pass-display-sasiadmin');
+
+  if (adminDisp) {
+    adminDisp.textContent = showPassState.admin ? activeCloudPasswords.admin : '••••••';
+  }
+  if (sasiDisp) {
+    sasiDisp.textContent = showPassState.sasiadmin ? activeCloudPasswords.sasiadmin : '••••••';
+  }
+}
+
+function togglePassVisibility(account, btnEl) {
+  showPassState[account] = !showPassState[account];
+  if (btnEl) {
+    btnEl.textContent = showPassState[account] ? 'Hide' : 'Show';
+  }
+  updatePassDisplays();
+}
+
+async function handleChangePasswordsSubmit(e) {
+  e.preventDefault();
+  const targetAccount = (document.getElementById('cp-target-account')?.value || 'sasiadmin').toLowerCase().trim();
+  const newPass = document.getElementById('cp-new-password')?.value.trim();
+  const confirmPass = document.getElementById('cp-confirm-password')?.value.trim();
+  const msgEl = document.getElementById('change-passwords-msg');
+  const btn = document.getElementById('btn-save-admin-password');
+
+  if (newPass !== confirmPass) {
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-400 block';
+      msgEl.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1.5"></i> Passwords do not match!';
+    }
+    return;
+  }
+
+  if (newPass.length < 6) {
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-400 block';
+      msgEl.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1.5"></i> Password must be at least 6 characters.';
+    }
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Saving to Cloud (Supabase)...';
+  }
+
+  try {
+    await dbUpdateAdminPassword(targetAccount, newPass);
+
+    activeCloudPasswords[targetAccount] = newPass;
+    updatePassDisplays();
+
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 block';
+      msgEl.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i> Password for <strong>${targetAccount}</strong> successfully updated in Supabase cloud!`;
+    }
+
+    showDashboardToast(`🎉 Password for ${targetAccount} updated in cloud! Works on all systems.`, 'success');
+
+    setTimeout(() => {
+      closeChangePasswordsModal();
+    }, 1500);
+  } catch (err) {
+    if (msgEl) {
+      msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-400 block';
+      msgEl.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1.5"></i> ${err.message || 'Error updating password.'}`;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Save Password to Cloud (Supabase)';
+    }
+  }
+}
+
+async function dbUpdateAdminPassword(targetUser, newPassword) {
+  const userClean = (targetUser || '').toLowerCase().trim();
+  const passClean = (newPassword || '').trim();
+
+  if (!userClean || !passClean) {
+    throw new Error('Username and password are required.');
+  }
+  if (passClean.length < 6) {
+    throw new Error('Password must be at least 6 characters.');
+  }
+
+  const role = (userClean === 'sasiadmin') ? 'Admin' : 'Super Admin';
+
+  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+  if (!client) {
+    throw new Error('Supabase client is not available.');
+  }
+
+  // 1. Upsert target user to Supabase admin_users table
+  const { error } = await client
+    .from('admin_users')
+    .upsert({
+      username: userClean,
+      password_hash: passClean,
+      role: role
+    }, { onConflict: 'username' });
+
+  if (error) {
+    console.warn('Supabase upsert notice, trying direct update:', error);
+    const { error: updateErr } = await client
+      .from('admin_users')
+      .update({
+        password_hash: passClean,
+        role: role
+      })
+      .ilike('username', userClean);
+
+    if (updateErr) {
+      console.error('Supabase password update error:', updateErr);
+      throw new Error('Failed to update Supabase: ' + (updateErr.message || error.message));
+    }
+  }
+
+  // 2. If updating 'admin', also update 'sasisteels863@gmail.com' for consistency
+  if (userClean === 'admin') {
+    try {
+      await client
+        .from('admin_users')
+        .upsert({
+          username: 'sasisteels863@gmail.com',
+          password_hash: passClean,
+          role: 'Super Admin'
+        }, { onConflict: 'username' });
+      localStorage.setItem('sasi_admin_pass_sasisteels863@gmail.com', passClean);
+    } catch (e) {}
+  }
+
+  // 3. Save to account-specific local cache
+  localStorage.setItem('sasi_admin_pass_' + userClean, passClean);
+  localStorage.removeItem('sasi_custom_admin_password');
+
+  return true;
 }
 
 // Tab Switching Controller (Keeps unlocked sections accessible throughout session)

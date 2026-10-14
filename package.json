@@ -4,7 +4,8 @@
   "description": "SASI Steel Engineering website with Admin panel and SMTP Email service",
   "main": "index.html",
   "scripts": {
-    "start": "serve ."
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "dependencies": {
     "nodemailer": "^6.9.13",
