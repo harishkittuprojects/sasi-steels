@@ -61,6 +61,95 @@ function getRequestedTabFromUrl() {
   return '';
 }
 
+const SASI_CLOUD_CONFIG = {
+  url: "https://lgpaxncukijrfpyirgbn.supabase.co",
+  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxncGF4bmN1a2lqcmZweWlyZ2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMTAxMjAsImV4cCI6MjEwNDc4NjEyMH0.x9O_ow7avcp4cK2hm9xY9W6FZHj5gS7jSPEFjUdEI08"
+};
+
+async function cloudGetAdminUser(username) {
+  const u = (username || '').toLowerCase().trim();
+  // 1. Direct fetch (Zero library dependencies, works anywhere)
+  try {
+    const res = await fetch(`${SASI_CLOUD_CONFIG.url}/rest/v1/admin_users?username=ilike.${encodeURIComponent(u)}&limit=1`, {
+      headers: {
+        'apikey': SASI_CLOUD_CONFIG.key,
+        'Authorization': `Bearer ${SASI_CLOUD_CONFIG.key}`
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) return data[0];
+    }
+  } catch (err) {
+    console.warn("Direct cloud fetch error:", err);
+  }
+
+  // 2. Supabase SDK Client fallback
+  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+  if (client) {
+    try {
+      const { data, error } = await client.from('admin_users').select('*').ilike('username', u).limit(1);
+      if (!error && data && data.length > 0) return data[0];
+    } catch (err) {}
+  }
+  return null;
+}
+
+async function cloudUpdateAdminUser(username, password, role) {
+  const u = (username || '').toLowerCase().trim();
+  const p = (password || '').trim();
+
+  // 1. Direct fetch upsert
+  try {
+    const res = await fetch(`${SASI_CLOUD_CONFIG.url}/rest/v1/admin_users?on_conflict=username`, {
+      method: 'POST',
+      headers: {
+        'apikey': SASI_CLOUD_CONFIG.key,
+        'Authorization': `Bearer ${SASI_CLOUD_CONFIG.key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        username: u,
+        password_hash: p,
+        role: role
+      })
+    });
+    if (res.ok) return true;
+  } catch (err) {
+    console.warn("Direct cloud upsert error:", err);
+  }
+
+  // 2. Direct PATCH fallback if upsert failed
+  try {
+    const patchRes = await fetch(`${SASI_CLOUD_CONFIG.url}/rest/v1/admin_users?username=ilike.${encodeURIComponent(u)}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SASI_CLOUD_CONFIG.key,
+        'Authorization': `Bearer ${SASI_CLOUD_CONFIG.key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        password_hash: p,
+        role: role
+      })
+    });
+    if (patchRes.ok) return true;
+  } catch (err) {}
+
+  // 3. Supabase SDK Client fallback
+  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+  if (client) {
+    const { error } = await client.from('admin_users').upsert({
+      username: u,
+      password_hash: p,
+      role: role
+    }, { onConflict: 'username' });
+    if (!error) return true;
+  }
+  throw new Error("Could not update cloud database.");
+}
+
 async function fillAdminCredentials(user, explicitPass) {
   const u = document.getElementById('admin-user');
   const p = document.getElementById('admin-pass');
@@ -75,16 +164,11 @@ async function fillAdminCredentials(user, explicitPass) {
   let passToFill = localStorage.getItem('sasi_admin_pass_' + userClean);
 
   if (!passToFill) {
-    try {
-      const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
-      if (client) {
-        const { data } = await client.from('admin_users').select('password_hash').ilike('username', userClean).limit(1);
-        if (data && data.length > 0 && data[0].password_hash) {
-          passToFill = data[0].password_hash;
-          localStorage.setItem('sasi_admin_pass_' + userClean, passToFill);
-        }
-      }
-    } catch (e) {}
+    const cloudUser = await cloudGetAdminUser(userClean);
+    if (cloudUser && cloudUser.password_hash) {
+      passToFill = cloudUser.password_hash;
+      localStorage.setItem('sasi_admin_pass_' + userClean, passToFill);
+    }
   }
 
   if (!passToFill) {
@@ -318,32 +402,19 @@ async function handleAdminLogin(e) {
   let loggedInRole = (userLower === 'sasiadmin') ? 'Admin' : 'Super Admin';
   let loggedInUser = user;
 
-  // PRIORITY 1: Authenticate with Supabase cloud database
+  // PRIORITY 1: Authenticate directly with Supabase cloud database
   // This is the source of truth across all devices / systems!
-  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+  const cloudUser = await cloudGetAdminUser(userLower);
   let dbChecked = false;
 
-  if (client) {
-    try {
-      const { data, error } = await client
-        .from('admin_users')
-        .select('*')
-        .ilike('username', userLower)
-        .limit(1);
-
-      if (!error && data && data.length > 0) {
-        dbChecked = true;
-        const dbUser = data[0];
-        if (dbUser.password_hash === pass) {
-          authenticated = true;
-          loggedInRole = dbUser.role || (userLower === 'sasiadmin' ? 'Admin' : 'Super Admin');
-          loggedInUser = dbUser.username;
-          // Cache successful cloud password for offline failover on this device
-          localStorage.setItem('sasi_admin_pass_' + userLower, pass);
-        }
-      }
-    } catch (err) {
-      console.warn("Database admin auth verification error:", err);
+  if (cloudUser) {
+    dbChecked = true;
+    if (cloudUser.password_hash === pass) {
+      authenticated = true;
+      loggedInRole = cloudUser.role || (userLower === 'sasiadmin' ? 'Admin' : 'Super Admin');
+      loggedInUser = cloudUser.username;
+      // Cache successful cloud password for offline failover on this device
+      localStorage.setItem('sasi_admin_pass_' + userLower, pass);
     }
   }
 
@@ -1033,25 +1104,25 @@ function closeChangePasswordsModal() {
 }
 
 async function refreshCurrentPasswordsDisplay() {
-  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
-  if (client) {
-    try {
-      const { data, error } = await client
-        .from('admin_users')
-        .select('username, password_hash')
-        .in('username', ['admin', 'sasiadmin', 'sasisteels863@gmail.com']);
-
-      if (!error && data) {
-        data.forEach(row => {
-          const u = (row.username || '').toLowerCase();
-          if (u === 'admin') activeCloudPasswords.admin = row.password_hash;
-          if (u === 'sasiadmin') activeCloudPasswords.sasiadmin = row.password_hash;
-          localStorage.setItem('sasi_admin_pass_' + u, row.password_hash);
-        });
+  try {
+    const res = await fetch(`${SASI_CLOUD_CONFIG.url}/rest/v1/admin_users?select=username,password_hash`, {
+      headers: {
+        'apikey': SASI_CLOUD_CONFIG.key,
+        'Authorization': `Bearer ${SASI_CLOUD_CONFIG.key}`
       }
-    } catch (e) {
-      console.warn("Could not fetch cloud passwords:", e);
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      data.forEach(row => {
+        const u = (row.username || '').toLowerCase();
+        if (u === 'admin') activeCloudPasswords.admin = row.password_hash;
+        if (u === 'sasiadmin') activeCloudPasswords.sasiadmin = row.password_hash;
+        localStorage.setItem('sasi_admin_pass_' + u, row.password_hash);
+      });
     }
+  } catch (e) {
+    console.warn("Could not fetch cloud passwords:", e);
   }
 
   if (!activeCloudPasswords.admin || activeCloudPasswords.admin === '••••••') {
@@ -1155,46 +1226,13 @@ async function dbUpdateAdminPassword(targetUser, newPassword) {
 
   const role = (userClean === 'sasiadmin') ? 'Admin' : 'Super Admin';
 
-  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
-  if (!client) {
-    throw new Error('Supabase client is not available.');
-  }
-
-  // 1. Upsert target user to Supabase admin_users table
-  const { error } = await client
-    .from('admin_users')
-    .upsert({
-      username: userClean,
-      password_hash: passClean,
-      role: role
-    }, { onConflict: 'username' });
-
-  if (error) {
-    console.warn('Supabase upsert notice, trying direct update:', error);
-    const { error: updateErr } = await client
-      .from('admin_users')
-      .update({
-        password_hash: passClean,
-        role: role
-      })
-      .ilike('username', userClean);
-
-    if (updateErr) {
-      console.error('Supabase password update error:', updateErr);
-      throw new Error('Failed to update Supabase: ' + (updateErr.message || error.message));
-    }
-  }
+  // 1. Direct update to Supabase cloud
+  await cloudUpdateAdminUser(userClean, passClean, role);
 
   // 2. If updating 'admin', also update 'sasisteels863@gmail.com' for consistency
   if (userClean === 'admin') {
     try {
-      await client
-        .from('admin_users')
-        .upsert({
-          username: 'sasisteels863@gmail.com',
-          password_hash: passClean,
-          role: 'Super Admin'
-        }, { onConflict: 'username' });
+      await cloudUpdateAdminUser('sasisteels863@gmail.com', passClean, 'Super Admin');
       localStorage.setItem('sasi_admin_pass_sasisteels863@gmail.com', passClean);
     } catch (e) {}
   }

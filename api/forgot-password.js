@@ -1,5 +1,4 @@
 const nodemailer = require('nodemailer');
-const { createClient } = require('@supabase/supabase-js');
 
 // Supabase Configuration
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://lgpaxncukijrfpyirgbn.supabase.co";
@@ -79,13 +78,15 @@ module.exports = async function handler(req, res) {
 
     // Store in Supabase if table exists
     try {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      await supabase
-        .from('admin_users')
-        .update({ 
-          password_hash: `RESET_PENDING_${generatedOtp}` 
-        })
-        .ilike('username', targetEmail);
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_users?username=ilike.${encodeURIComponent(targetEmail)}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password_hash: `RESET_PENDING_${generatedOtp}` })
+      });
     } catch (e) {
       console.warn("Supabase OTP sync notice:", e.message);
     }
@@ -191,16 +192,18 @@ module.exports = async function handler(req, res) {
 
     // Supabase validation check
     let isDbValid = false;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     try {
-      const { data } = await supabase
-        .from('admin_users')
-        .select('*')
-        .or(`username.ilike.${targetEmail},username.eq.admin`)
-        .limit(2);
-
-      if (data && data.length > 0) {
-        isDbValid = data.some(u => u.password_hash === `RESET_PENDING_${inputOtp}`);
+      const dbRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_users?select=*&or=(username.ilike.${encodeURIComponent(targetEmail)},username.eq.admin)`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      if (dbRes.ok) {
+        const data = await dbRes.json();
+        if (data && data.length > 0) {
+          isDbValid = data.some(u => u.password_hash === `RESET_PENDING_${inputOtp}`);
+        }
       }
     } catch (e) {
       console.warn("DB check error:", e.message);
@@ -215,34 +218,33 @@ module.exports = async function handler(req, res) {
 
     const targetAccount = (req.body.targetAccount || 'admin').toString().toLowerCase().trim();
 
+    // Helper for direct Supabase REST upsert
+    async function directUpsertUser(uName, pass, uRole) {
+      return fetch(`${SUPABASE_URL}/rest/v1/admin_users?on_conflict=username`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          username: uName,
+          password_hash: pass,
+          role: uRole
+        })
+      });
+    }
+
     // Update password in Supabase strictly for the selected account
     try {
       if (targetAccount === 'sasiadmin') {
         // ONLY update sasiadmin account with role 'Admin' - do NOT touch admin!
-        await supabase
-          .from('admin_users')
-          .upsert({
-            username: 'sasiadmin',
-            password_hash: cleanPass,
-            role: 'Admin'
-          }, { onConflict: 'username' });
+        await directUpsertUser('sasiadmin', cleanPass, 'Admin');
       } else {
         // Update master 'admin' & target email - do NOT touch sasiadmin!
-        await supabase
-          .from('admin_users')
-          .upsert({
-            username: targetEmail,
-            password_hash: cleanPass,
-            role: 'Super Admin'
-          }, { onConflict: 'username' });
-
-        await supabase
-          .from('admin_users')
-          .upsert({
-            username: 'admin',
-            password_hash: cleanPass,
-            role: 'Super Admin'
-          }, { onConflict: 'username' });
+        await directUpsertUser(targetEmail, cleanPass, 'Super Admin');
+        await directUpsertUser('admin', cleanPass, 'Super Admin');
       }
     } catch (dbErr) {
       console.warn("Supabase password update notice:", dbErr.message);
