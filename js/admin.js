@@ -110,7 +110,7 @@ async function cloudUpdateAdminUser(username, password, role) {
 
   // Method 1: Direct fetch PATCH by username (updates existing row in database)
   try {
-    const patchRes = await fetch(`${SASI_CLOUD_CONFIG.url}/rest/v1/admin_users?username=ilike.${encodeURIComponent(u)}`, {
+    const patchRes = await fetch(`${SASI_CLOUD_CONFIG.url}/rest/v1/admin_users?username=eq.${encodeURIComponent(u)}`, {
       method: 'PATCH',
       headers: {
         'apikey': SASI_CLOUD_CONFIG.key,
@@ -472,10 +472,10 @@ async function handleAdminLogin(e) {
     // PRIORITY 3: Fallback defaults (only if user not in Supabase or completely offline)
     if (!authenticated && !dbChecked) {
       const fallbackDefaults = {
-        'admin': ['9030777', '898989', '123456789', 'sasi833399'],
-        'sasisteels863@gmail.com': ['9030777', '898989', 'sasi833399', '123456789'],
+        'admin': ['9030777', '898989'],
+        'sasisteels863@gmail.com': ['9030777', '898989'],
         'sasiadmin': ['sasi833399'],
-        'manager': ['sasi1234', 'sasi833399'],
+        'manager': ['sasi1234'],
         'admin2': ['sasi833399']
       };
 
@@ -1139,6 +1139,31 @@ let showPassState = {
   sasiadmin: false
 };
 
+function selectPasswordAccountTarget(account) {
+  const isRestricted = isRestrictedAdminUser();
+  if (isRestricted && account !== 'sasiadmin') {
+    showDashboardToast('⛔ Access Denied: Restricted accounts can only change sasiadmin password.', 'error');
+    return;
+  }
+  const targetInput = document.getElementById('cp-target-account');
+  const tabAdmin = document.getElementById('cp-tab-admin');
+  const tabSasi = document.getElementById('cp-tab-sasiadmin');
+  const targetName = document.getElementById('cp-target-name');
+  const btnLabel = document.getElementById('cp-btn-target-label');
+
+  if (targetInput) targetInput.value = account;
+  if (targetName) targetName.textContent = account;
+  if (btnLabel) btnLabel.textContent = account;
+
+  if (account === 'admin') {
+    if (tabAdmin) tabAdmin.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 bg-orange-600 text-white shadow-md cursor-pointer';
+    if (tabSasi) tabSasi.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 bg-slate-900 text-slate-400 hover:text-white cursor-pointer';
+  } else {
+    if (tabSasi) tabSasi.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 bg-orange-600 text-white shadow-md cursor-pointer';
+    if (tabAdmin) tabAdmin.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 bg-slate-900 text-slate-400 hover:text-white cursor-pointer';
+  }
+}
+
 async function openChangePasswordsModal() {
   const modal = document.getElementById('change-passwords-modal');
   const msgEl = document.getElementById('change-passwords-msg');
@@ -1151,14 +1176,19 @@ async function openChangePasswordsModal() {
   if (newPassEl) newPassEl.value = '';
   if (confPassEl) confPassEl.value = '';
 
-  const targetSelect = document.getElementById('cp-target-account');
   const isRestricted = isRestrictedAdminUser();
-  if (targetSelect) {
+  const currentLoggedIn = (sessionStorage.getItem('sasi_admin_user') || 'admin').toLowerCase();
+  const defaultTarget = isRestricted ? 'sasiadmin' : (currentLoggedIn === 'sasiadmin' ? 'sasiadmin' : 'admin');
+  selectPasswordAccountTarget(defaultTarget);
+
+  const tabAdmin = document.getElementById('cp-tab-admin');
+  if (tabAdmin) {
     if (isRestricted) {
-      targetSelect.value = 'sasiadmin';
-      targetSelect.disabled = true;
+      tabAdmin.disabled = true;
+      tabAdmin.classList.add('opacity-40', 'cursor-not-allowed');
     } else {
-      targetSelect.disabled = false;
+      tabAdmin.disabled = false;
+      tabAdmin.classList.remove('opacity-40', 'cursor-not-allowed');
     }
   }
 

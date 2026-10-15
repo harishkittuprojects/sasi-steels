@@ -1919,12 +1919,22 @@
 
       <form onsubmit="handleChangePasswordsSubmit(event)" class="space-y-4 text-xs">
         <div>
-          <label class="block text-slate-300 font-bold mb-1">Select Account to Change</label>
-          <select id="cp-target-account" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-semibold text-xs focus:outline-none focus:border-orange-500">
-            <option value="sasiadmin">sasiadmin (Second Admin - Workshop & Employees)</option>
-            <option value="admin">admin (Super Admin - Full Access)</option>
-          </select>
-          <p class="text-[11px] text-slate-500 mt-1">Changing this account will NOT affect the other account's password.</p>
+          <label class="block text-slate-300 font-bold mb-1.5">Select Account to Update Password:</label>
+          <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-800">
+            <button type="button" id="cp-tab-admin" onclick="selectPasswordAccountTarget('admin')" class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 bg-orange-600 text-white shadow-md cursor-pointer">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-amber-300 text-[11px]"></i> admin</span>
+              <span class="text-[10px] opacity-80 font-normal">Super Admin (All Sections)</span>
+            </button>
+            <button type="button" id="cp-tab-sasiadmin" onclick="selectPasswordAccountTarget('sasiadmin')" class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 bg-slate-900 text-slate-400 hover:text-white cursor-pointer">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-user-shield text-amber-400 text-[11px]"></i> sasiadmin</span>
+              <span class="text-[10px] opacity-80 font-normal">Workshop Admin</span>
+            </button>
+          </div>
+          <input type="hidden" id="cp-target-account" value="admin" />
+          <div id="cp-target-notice" class="mt-2 text-[11px] p-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-300 flex items-center gap-2">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>Updating password for: <strong id="cp-target-name" class="font-mono underline">admin</strong> only. Other accounts remain unaffected.</span>
+          </div>
         </div>
 
         <div>
@@ -1947,8 +1957,8 @@
           </div>
         </div>
 
-        <button type="submit" id="btn-save-admin-password" class="w-full py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2">
-          <i class="fa-solid fa-cloud-arrow-up"></i> Save Password to Cloud (Supabase)
+        <button type="submit" id="btn-save-admin-password" class="w-full py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Save Password for <span id="cp-btn-target-label" class="font-mono">admin</span> to Cloud
         </button>
       </form>
     </div>
@@ -1981,6 +1991,6 @@
 
   <!-- Scripts -->
   <script src="js/backend-config.js?v=20261015_01"></script>
-  <script src="js/admin.js?v=20261015_03"></script>
+  <script src="js/admin.js?v=20261015_04"></script>
 </body>
 </html>
