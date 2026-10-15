@@ -119,7 +119,12 @@
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">Password / PIN</label>
-          <input type="password" id="admin-pass" required placeholder="Enter password" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500" />
+          <div class="relative">
+            <input type="password" id="admin-pass" required placeholder="Enter password" class="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500 font-mono tracking-wider" />
+            <button type="button" onclick="togglePinInputVisibility('admin-pass', this)" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer text-sm p-1 flex items-center justify-center" title="Show / Hide Password">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
         </div>
         <div class="flex items-center justify-between pt-0.5 text-[11px]">
           <div class="flex items-center gap-1.5">
@@ -198,12 +203,22 @@
 
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1">New Password / PIN</label>
-            <input type="password" id="fp-new-pass" required minlength="6" placeholder="Enter new password (min 6 chars)" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500" />
+            <div class="relative">
+              <input type="password" id="fp-new-pass" required minlength="6" placeholder="Enter new password (min 6 chars)" class="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500 font-mono tracking-wider" />
+              <button type="button" onclick="togglePinInputVisibility('fp-new-pass', this)" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer text-sm p-1 flex items-center justify-center" title="Show / Hide Password">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
           </div>
 
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1">Confirm New Password</label>
-            <input type="password" id="fp-confirm-pass" required minlength="6" placeholder="Confirm new password" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500" />
+            <div class="relative">
+              <input type="password" id="fp-confirm-pass" required minlength="6" placeholder="Confirm new password" class="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500 font-mono tracking-wider" />
+              <button type="button" onclick="togglePinInputVisibility('fp-confirm-pass', this)" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer text-sm p-1 flex items-center justify-center" title="Show / Hide Password">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
           </div>
 
           <div id="fp-step2-error-msg" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs"></div>
@@ -1991,6 +2006,6 @@
 
   <!-- Scripts -->
   <script src="js/backend-config.js?v=20261015_01"></script>
-  <script src="js/admin.js?v=20261015_04"></script>
+  <script src="js/admin.js?v=20261015_05"></script>
 </body>
 </html>
