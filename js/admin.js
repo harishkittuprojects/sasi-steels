@@ -7287,20 +7287,17 @@ async function triggerManualCloudSync() {
   }
 
   try {
-    const quotes = await dbGetQuotations();
-    allQuotationsRecords = quotes || [];
-    renderQuotationsTable(allQuotationsRecords);
-    updateQuotationsMetrics(allQuotationsRecords);
+    // 1. Load and sync quotations
+    await loadQuotations();
 
-    // Also sync orders
-    if (typeof dbGetOrders === 'function') {
-      const ords = await dbGetOrders();
-      if (typeof allOrdersRecords !== 'undefined') allOrdersRecords = ords || [];
-      if (typeof updateOrdersStats === 'function') updateOrdersStats();
+    // 2. Load and sync orders
+    if (typeof loadOrders === 'function') {
+      await loadOrders();
     }
 
     loadInitialCounts();
-    showDashboardToast(`☁️ Cloud synchronization complete! ${allQuotationsRecords.length} quotations active across all devices.`, 'success');
+    const count = allQuotationsRecords ? allQuotationsRecords.length : 0;
+    showDashboardToast(`☁️ Cloud synchronization complete! ${count} quotations active across all devices.`, 'success');
   } catch (err) {
     console.error("Manual cloud sync failed:", err);
     showDashboardToast(`Cloud sync notice: ${err.message || 'Please check internet connection'}`, 'error');
@@ -7372,8 +7369,7 @@ async function handleImportQuotationsFile(event) {
         await cloudSaveCollection('cloud_quotations_sync', merged);
       }
 
-      renderQuotationsTable(allQuotationsRecords);
-      updateQuotationsMetrics(allQuotationsRecords);
+      await loadQuotations();
       loadInitialCounts();
 
       showDashboardToast(`🎉 Successfully imported and synced ${merged.length} quotations to cloud!`, 'success');
