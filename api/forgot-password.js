@@ -218,33 +218,63 @@ module.exports = async function handler(req, res) {
 
     const targetAccount = (req.body.targetAccount || 'admin').toString().toLowerCase().trim();
 
-    // Helper for direct Supabase REST upsert
-    async function directUpsertUser(uName, pass, uRole) {
-      return fetch(`${SUPABASE_URL}/rest/v1/admin_users?on_conflict=username`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({
-          username: uName,
-          password_hash: pass,
-          role: uRole
-        })
-      });
+    // Helper for direct Supabase REST update & upsert
+    async function directSaveUser(uName, pass, uRole) {
+      // 1. Try PATCH first (fastest for existing row)
+      try {
+        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_users?username=ilike.${encodeURIComponent(uName)}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            password_hash: pass,
+            role: uRole
+          })
+        });
+        if (patchRes.ok) {
+          const patched = await patchRes.json();
+          if (Array.isArray(patched) && patched.length > 0) return true;
+        }
+      } catch (e) {
+        console.warn("Direct PATCH notice:", e.message);
+      }
+
+      // 2. Try POST upsert
+      try {
+        const postRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_users?on_conflict=username`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=representation'
+          },
+          body: JSON.stringify({
+            username: uName,
+            password_hash: pass,
+            role: uRole
+          })
+        });
+        return postRes.ok;
+      } catch (e) {
+        console.warn("Direct upsert notice:", e.message);
+      }
+      return false;
     }
 
     // Update password in Supabase strictly for the selected account
     try {
       if (targetAccount === 'sasiadmin') {
         // ONLY update sasiadmin account with role 'Admin' - do NOT touch admin!
-        await directUpsertUser('sasiadmin', cleanPass, 'Admin');
+        await directSaveUser('sasiadmin', cleanPass, 'Admin');
       } else {
         // Update master 'admin' & target email - do NOT touch sasiadmin!
-        await directUpsertUser(targetEmail, cleanPass, 'Super Admin');
-        await directUpsertUser('admin', cleanPass, 'Super Admin');
+        await directSaveUser(targetEmail, cleanPass, 'Super Admin');
+        await directSaveUser('admin', cleanPass, 'Super Admin');
       }
     } catch (dbErr) {
       console.warn("Supabase password update notice:", dbErr.message);
