@@ -368,13 +368,12 @@ function checkAdminAuth() {
 
   const isRestricted = isRestrictedAdminUser();
 
-  // Check if session has already unlocked the protected sections (Super Admin only)
-  const isUnlocked = !isRestricted && sessionStorage.getItem('sasi_sections_unlocked') === 'true';
-  PROTECTED_SECTIONS.forEach(sec => {
-    sectionLockState[sec] = !isUnlocked;
-  });
-
+  // Super Admin (admin) has full unlocked access to all sections on login
   if (!isRestricted) {
+    sessionStorage.setItem('sasi_sections_unlocked', 'true');
+    PROTECTED_SECTIONS.forEach(sec => {
+      sectionLockState[sec] = false;
+    });
     updateAllLockBadges();
   }
 
@@ -391,18 +390,14 @@ function checkAdminAuth() {
       showDashboardToast('⛔ Access Denied: You do not have permission to access this section.', 'error');
     } else {
       const normalized = normalizeTabName(requestedTab);
-      switchTab(normalized || 'employees');
+      switchTab(normalized || (isRestricted ? 'employees' : 'quotations'));
       if (['leads', 'lead', 'inquiries', 'inquiry', 'rfq'].includes(requestedTab) && !isRestricted) {
         if (typeof switchQuotationSubTab === 'function') switchQuotationSubTab('inquiries');
       }
     }
   } else {
-    // Navigate to default tab
-    if (isRestricted) {
-      switchTab('employees');
-    } else {
-      switchTab(isUnlocked ? 'quotations' : 'employees');
-    }
+    // Default tab: admin lands directly on quotations, sasiadmin lands on employees
+    switchTab(isRestricted ? 'employees' : 'quotations');
   }
 
   loadInitialCounts();
@@ -511,16 +506,22 @@ async function handleAdminLogin(e) {
           showDashboardToast(`Welcome, ${loggedInUser}! Access set to Workshop & Catalog operations.`, 'info');
         }
       } else {
+        // Super Admin (admin) - FULL DIRECT UNRESTRICTED ACCESS
+        sessionStorage.setItem('sasi_sections_unlocked', 'true');
+        PROTECTED_SECTIONS.forEach(sec => {
+          sectionLockState[sec] = false;
+        });
         updateAllLockBadges();
+
         const requested = getRequestedTabFromUrl();
         if (requested && !isRestrictedSection(requested)) {
           switchTab(normalizeTabName(requested));
         } else {
-          switchTab('employees');
+          switchTab('quotations');
         }
         loadInitialCounts();
         if (typeof showDashboardToast === 'function') {
-          showDashboardToast(`Welcome back, ${loggedInUser} (${loggedInRole})!`, 'success');
+          showDashboardToast(`Welcome back, ${loggedInUser}! All portal sections unlocked.`, 'success');
         }
       }
     } else {
@@ -1404,14 +1405,15 @@ function switchTab(tabName) {
     tabName = 'employees';
   }
 
-  // If target section is protected and still locked (for main admin), intercept and show PIN modal
-  if (PROTECTED_SECTIONS.includes(tabName) && sectionLockState[tabName] === true) {
+  // If target section is protected: Super Admin has full direct access
+  if (PROTECTED_SECTIONS.includes(tabName)) {
     if (isRestricted) {
       showDashboardToast('⛔ Access Denied: Restricted section.', 'error');
       return;
     }
-    openPinLockModal(tabName);
-    return;
+    // Super Admin automatically accesses all protected sections without secondary PIN
+    sectionLockState[tabName] = false;
+    updateSectionLockIcon(tabName, false);
   }
 
   previousActiveTab = currentActiveTab;
