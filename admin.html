@@ -164,6 +164,18 @@
       <div id="fp-step-1">
         <form onsubmit="handleSendResetOtp(event)" class="space-y-4">
           <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">Select Account to Reset Password:</label>
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-800">
+              <button type="button" id="fp-tab-admin-step1" onclick="selectForgotAccountTarget('admin')" class="py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-slate-900 text-slate-400 hover:text-white cursor-pointer">
+                <i class="fa-solid fa-crown text-amber-300 text-[11px]"></i> admin (Super)
+              </button>
+              <button type="button" id="fp-tab-sasi-step1" onclick="selectForgotAccountTarget('sasiadmin')" class="py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-orange-600 text-white shadow-md cursor-pointer">
+                <i class="fa-solid fa-user-shield text-amber-400 text-[11px]"></i> sasiadmin (Workshop)
+              </button>
+            </div>
+          </div>
+
+          <div>
             <label class="block text-xs font-bold text-slate-300 mb-1">Registered Admin Email</label>
             <div class="relative">
               <i class="fa-solid fa-envelope absolute left-4 top-3.5 text-slate-500 text-xs"></i>
@@ -175,7 +187,7 @@
           <div id="fp-error-msg" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs"></div>
           <div id="fp-success-msg" class="hidden p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs"></div>
 
-          <button type="submit" id="btn-send-otp" class="w-full py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2">
+          <button type="submit" id="btn-send-otp" class="w-full py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2 cursor-pointer">
             <span>Send OTP to Email</span>
             <i class="fa-solid fa-paper-plane"></i>
           </button>
@@ -186,18 +198,27 @@
       <div id="fp-step-2" class="hidden">
         <form onsubmit="handleVerifyAndResetPassword(event)" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1">Select Account to Reset</label>
-            <select id="fp-account-target" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold">
-              <option value="admin">admin (Super Admin - Full Access)</option>
-              <option value="sasiadmin">sasiadmin (Second Admin - Workshop & Employees)</option>
-            </select>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">Account Being Reset:</label>
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-800">
+              <button type="button" id="fp-tab-admin-step2" onclick="selectForgotAccountTarget('admin')" class="py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-slate-900 text-slate-400 hover:text-white cursor-pointer">
+                <i class="fa-solid fa-crown text-amber-300 text-[11px]"></i> admin
+              </button>
+              <button type="button" id="fp-tab-sasi-step2" onclick="selectForgotAccountTarget('sasiadmin')" class="py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-orange-600 text-white shadow-md cursor-pointer">
+                <i class="fa-solid fa-user-shield text-amber-400 text-[11px]"></i> sasiadmin
+              </button>
+            </div>
+            <input type="hidden" id="fp-account-target" value="sasiadmin" />
+            <p class="text-[11px] text-orange-300 mt-1.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-info"></i> Resetting password for: <strong id="fp-notice-target-name" class="font-mono underline">sasiadmin</strong> only.
+            </p>
           </div>
+
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1">Enter 6-Digit OTP</label>
             <input type="text" id="fp-otp" required maxlength="6" inputmode="numeric" placeholder="Enter OTP code" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-center tracking-[6px] text-lg font-mono font-bold text-orange-400 focus:outline-none focus:border-orange-500" />
             <div class="flex items-center justify-between mt-1 text-[11px]">
               <span class="text-slate-400">Sent to: <span id="fp-sent-target" class="text-white font-medium"></span></span>
-              <button type="button" onclick="handleSendResetOtp(event)" class="text-orange-400 hover:text-orange-300 font-semibold underline">Resend OTP</button>
+              <button type="button" onclick="handleSendResetOtp(event)" class="text-orange-400 hover:text-orange-300 font-semibold underline cursor-pointer">Resend OTP</button>
             </div>
           </div>
 
@@ -225,11 +246,11 @@
           <div id="fp-step2-success-msg" class="hidden p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs"></div>
 
           <div class="flex items-center gap-3 pt-2">
-            <button type="button" onclick="backToStep1()" class="w-1/3 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all">
+            <button type="button" onclick="backToStep1()" class="w-1/3 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer">
               Back
             </button>
-            <button type="submit" id="btn-verify-reset" class="w-2/3 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2">
-              <span>Reset Password</span>
+            <button type="submit" id="btn-verify-reset" class="w-2/3 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer">
+              <span>Reset Password for <span id="fp-btn-target-label" class="font-mono">sasiadmin</span></span>
               <i class="fa-solid fa-check"></i>
             </button>
           </div>
@@ -2006,6 +2027,6 @@
 
   <!-- Scripts -->
   <script src="js/backend-config.js?v=20261015_01"></script>
-  <script src="js/admin.js?v=20261015_05"></script>
+  <script src="js/admin.js?v=20261015_06"></script>
 </body>
 </html>

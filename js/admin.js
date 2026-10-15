@@ -542,11 +542,47 @@ async function handleAdminLogin(e) {
   }
 }
 
+function selectForgotAccountTarget(acc) {
+  const account = (acc === 'sasiadmin') ? 'sasiadmin' : 'admin';
+  const inputEl = document.getElementById('fp-account-target');
+  const tabAdmin1 = document.getElementById('fp-tab-admin-step1');
+  const tabSasi1 = document.getElementById('fp-tab-sasi-step1');
+  const tabAdmin2 = document.getElementById('fp-tab-admin-step2');
+  const tabSasi2 = document.getElementById('fp-tab-sasi-step2');
+  const btnLabel = document.getElementById('fp-btn-target-label');
+  const noticeName = document.getElementById('fp-notice-target-name');
+
+  if (inputEl) inputEl.value = account;
+  if (btnLabel) btnLabel.textContent = account;
+  if (noticeName) noticeName.textContent = account;
+
+  const activeClass = 'py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-orange-600 text-white shadow-md cursor-pointer';
+  const inactiveClass = 'py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 bg-slate-900 text-slate-400 hover:text-white cursor-pointer';
+
+  if (account === 'admin') {
+    if (tabAdmin1) tabAdmin1.className = activeClass;
+    if (tabSasi1) tabSasi1.className = inactiveClass;
+    if (tabAdmin2) tabAdmin2.className = activeClass;
+    if (tabSasi2) tabSasi2.className = inactiveClass;
+  } else {
+    if (tabSasi1) tabSasi1.className = activeClass;
+    if (tabAdmin1) tabAdmin1.className = inactiveClass;
+    if (tabSasi2) tabSasi2.className = activeClass;
+    if (tabAdmin2) tabAdmin2.className = inactiveClass;
+  }
+}
+
 // ================= FORGOT PASSWORD & SMTP EMAIL RESET LOGIC =================
 function openForgotPasswordModal() {
   const modal = document.getElementById('forgot-password-modal');
   if (!modal) return;
   modal.classList.remove('hidden');
+
+  // Pre-select whatever username was active on the login card
+  const loginUser = (document.getElementById('admin-user')?.value || '').toLowerCase().trim();
+  const target = (loginUser === 'sasiadmin') ? 'sasiadmin' : 'admin';
+  selectForgotAccountTarget(target);
+
   backToStep1();
 }
 

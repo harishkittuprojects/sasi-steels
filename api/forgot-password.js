@@ -222,7 +222,7 @@ module.exports = async function handler(req, res) {
     async function directSaveUser(uName, pass, uRole) {
       // 1. Try PATCH first (fastest for existing row)
       try {
-        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_users?username=ilike.${encodeURIComponent(uName)}`, {
+        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_users?username=eq.${encodeURIComponent(uName)}`, {
           method: 'PATCH',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
