@@ -177,39 +177,22 @@ async function cloudUpdateAdminUser(username, password, role) {
   return true;
 }
 
-async function fillAdminCredentials(user, explicitPass) {
+function selectQuickUser(user) {
   const u = document.getElementById('admin-user');
   const p = document.getElementById('admin-pass');
   if (u) u.value = user;
-
-  if (explicitPass) {
-    if (p) p.value = explicitPass;
-    return;
+  if (p) {
+    p.value = '';
+    p.type = 'password';
+    p.focus();
   }
+  const eyeBtn = document.getElementById('admin-pass-toggle-btn') || document.querySelector('#auth-modal button[onclick*="admin-pass"]');
+  if (eyeBtn) eyeBtn.innerHTML = '<i class="fa-regular fa-eye"></i>';
+}
 
-  const userClean = (user || '').toLowerCase().trim();
-
-  // If already loaded in activeCloudPasswords in memory, populate instantly
-  if (typeof activeCloudPasswords !== 'undefined' && activeCloudPasswords[userClean] && activeCloudPasswords[userClean] !== '••••••') {
-    if (p) p.value = activeCloudPasswords[userClean];
-  }
-
-  // ALWAYS verify/fetch the live password from Supabase cloud database
-  try {
-    const cloudUser = await cloudGetAdminUser(userClean);
-    if (cloudUser && cloudUser.password_hash) {
-      if (p) p.value = cloudUser.password_hash;
-      if (typeof activeCloudPasswords !== 'undefined') activeCloudPasswords[userClean] = cloudUser.password_hash;
-      localStorage.setItem('sasi_admin_pass_' + userClean, cloudUser.password_hash);
-      return;
-    }
-  } catch (err) {
-    console.warn("Could not fetch cloud password in fillAdminCredentials:", err);
-  }
-
-  // Offline / fallback only
-  const fallback = localStorage.getItem('sasi_admin_pass_' + userClean) || (userClean === 'sasiadmin' ? 'sasi833399' : '9030777');
-  if (p && !p.value) p.value = fallback;
+// Backwards-compatible alias: never auto-fill or expose password
+async function fillAdminCredentials(user) {
+  selectQuickUser(user);
 }
 
 function applyUserAccessPermissions() {
@@ -362,7 +345,15 @@ function checkAdminAuth() {
   const authModal = document.getElementById('auth-modal');
   if (!isAuth) {
     if (authModal) authModal.classList.remove('hidden');
-    // Pre-fetch cloud passwords for quick login button assistance
+    // Ensure login password field is strictly empty and masked
+    const p = document.getElementById('admin-pass');
+    if (p) {
+      p.value = '';
+      p.type = 'password';
+    }
+    const eyeBtn = document.getElementById('admin-pass-toggle-btn') || document.querySelector('#auth-modal button[onclick*="admin-pass"]');
+    if (eyeBtn) eyeBtn.innerHTML = '<i class="fa-regular fa-eye"></i>';
+
     if (typeof refreshCurrentPasswordsDisplay === 'function') {
       refreshCurrentPasswordsDisplay().catch(() => {});
     }
@@ -491,6 +482,11 @@ async function handleAdminLogin(e) {
       sessionStorage.setItem('sasi_admin_auth', 'true');
       sessionStorage.setItem('sasi_admin_user', loggedInUser);
       sessionStorage.setItem('sasi_admin_role', loggedInRole);
+      const passEl = document.getElementById('admin-pass');
+      if (passEl) {
+        passEl.value = '';
+        passEl.type = 'password';
+      }
       document.getElementById('auth-modal').classList.add('hidden');
       initHeaderTodayDate();
 
@@ -747,11 +743,16 @@ async function handleVerifyAndResetPassword(e) {
       localStorage.setItem('sasi_admin_pass_' + targetAccount, newPass);
       localStorage.removeItem('sasi_custom_admin_password');
 
-      // Auto-fill login form
+      // Set account on login form and ensure password field is clean and masked for user login
       const passInput = document.getElementById('admin-pass');
       const userInput = document.getElementById('admin-user');
-      if (passInput) passInput.value = newPass;
       if (userInput) userInput.value = targetAccount;
+      if (passInput) {
+        passInput.value = '';
+        passInput.type = 'password';
+      }
+      const eyeBtn = document.getElementById('admin-pass-toggle-btn') || document.querySelector('#auth-modal button[onclick*="admin-pass"]');
+      if (eyeBtn) eyeBtn.innerHTML = '<i class="fa-regular fa-eye"></i>';
 
       if (succBox) {
         succBox.textContent = `✅ Password for ${targetAccount} reset successfully! Redirecting to login...`;
@@ -7258,3 +7259,18 @@ function saveSettings() {
 // Initialize Admin on DOM Ready & Hash Change Navigation
 document.addEventListener('DOMContentLoaded', checkAdminAuth);
 window.addEventListener('hashchange', handleUrlNavigation);
+
+// Ensure browser autofill does not forcefully pre-populate password field on load
+window.addEventListener('load', () => {
+  const isAuth = sessionStorage.getItem('sasi_admin_auth');
+  if (!isAuth) {
+    const p = document.getElementById('admin-pass');
+    if (p) {
+      p.value = '';
+      p.type = 'password';
+    }
+    const eyeBtn = document.getElementById('admin-pass-toggle-btn') || document.querySelector('#auth-modal button[onclick*="admin-pass"]');
+    if (eyeBtn) eyeBtn.innerHTML = '<i class="fa-regular fa-eye"></i>';
+  }
+});
+
