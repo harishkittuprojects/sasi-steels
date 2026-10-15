@@ -460,16 +460,27 @@
                 </select>
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
                 <button id="quote-preset-all" onclick="setQuoteDatePreset('all')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white">All</button>
                 <button id="quote-preset-today" onclick="setQuoteDatePreset('today')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300">Today</button>
                 <button id="quote-preset-month" onclick="setQuoteDatePreset('this_month')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300">This Month</button>
               </div>
-              <button onclick="resetQuotationsFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1">
+
+              <!-- Sequence Order Controls -->
+              <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800" title="Sort sequence order">
+                <button type="button" id="quote-order-asc" onclick="setQuotationSortOrder('asc')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow-sm cursor-pointer" title="Ascending Sequence: 1, 2, 3..."><i class="fa-solid fa-arrow-up-1-9 mr-1"></i>1 ➔ N</button>
+                <button type="button" id="quote-order-desc" onclick="setQuotationSortOrder('desc')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer" title="Descending Sequence: N, N-1... 1 (Newest First)"><i class="fa-solid fa-arrow-down-9-1 mr-1"></i>N ➔ 1</button>
+              </div>
+
+              <button type="button" onclick="renumberQuotationsSerialWise(true)" class="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 hover:text-white text-orange-400 border border-orange-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm" title="Re-sequence all quotations in 1 to N serial order without any gaps">
+                <i class="fa-solid fa-list-ol"></i> Sequence Order (1 to N)
+              </button>
+
+              <button onclick="resetQuotationsFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1 cursor-pointer">
                 <i class="fa-solid fa-rotate-right"></i> Reset
               </button>
-              <button onclick="exportAllQuotationsExcel()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all">
+              <button onclick="exportAllQuotationsExcel()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer">
                 <i class="fa-solid fa-file-excel"></i> Export All (.xlsx)
               </button>
             </div>
@@ -481,7 +492,12 @@
               <table class="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
-                    <th class="py-3.5 px-4">Quotation No</th>
+                    <th class="py-3.5 px-4 cursor-pointer hover:text-white select-none transition-colors" onclick="toggleQuotationSortOrder()" title="Click to toggle sequence order (1 ➔ N or N ➔ 1)">
+                      <span class="inline-flex items-center gap-1">
+                        Quotation No
+                        <i id="quote-sort-icon" class="fa-solid fa-arrow-up-1-9 text-orange-400 text-[10px]"></i>
+                      </span>
+                    </th>
                     <th class="py-3.5 px-4">Date</th>
                     <th class="py-3.5 px-4">Customer & Company</th>
                     <th class="py-3.5 px-4">Items / Scope</th>
@@ -1965,6 +1981,6 @@
 
   <!-- Scripts -->
   <script src="js/backend-config.js?v=20261015_01"></script>
-  <script src="js/admin.js?v=20261015_01"></script>
+  <script src="js/admin.js?v=20261015_03"></script>
 </body>
 </html>

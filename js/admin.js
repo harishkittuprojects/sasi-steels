@@ -1681,6 +1681,10 @@ async function loadQuotations() {
     const quotes = await dbGetQuotations();
     allQuotationsRecords = quotes || [];
 
+    // Auto-fix / harmonize sequence order if gaps or jumps exist (e.g. 82, 80, 78 jumping to 18)
+    checkAndAutoFixQuotationSerialSeries();
+    updateQuotationSortUI();
+
     // Auto-sync any approved or completed quotations to orders
     if (typeof syncQuotationToOrder === 'function') {
       for (const q of allQuotationsRecords) {
@@ -1721,6 +1725,157 @@ async function loadQuotations() {
   } catch (err) {
     console.error("Error in loadQuotations:", err);
     if (tbodyQuotes) tbodyQuotes.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No official quotations found.</td></tr>`;
+  }
+}
+
+// Global quotation sorting state
+let currentQuotationSortOrder = (function() {
+  try {
+    return localStorage.getItem('sasi_quote_sort_order') || 'asc';
+  } catch (e) {
+    return 'asc';
+  }
+})();
+
+function setQuotationSortOrder(order) {
+  currentQuotationSortOrder = order;
+  try {
+    localStorage.setItem('sasi_quote_sort_order', order);
+  } catch (e) {}
+  updateQuotationSortUI();
+  filterQuotationsData();
+  if (typeof showDashboardToast === 'function') {
+    showDashboardToast(`Sorted in sequence: ${order === 'asc' ? '1 ➔ N (Ascending Sequence)' : 'N ➔ 1 (Newest First)'}`, 'info');
+  }
+}
+
+function toggleQuotationSortOrder() {
+  const nextOrder = (currentQuotationSortOrder === 'asc') ? 'desc' : 'asc';
+  setQuotationSortOrder(nextOrder);
+}
+
+function updateQuotationSortUI() {
+  const icon = document.getElementById('quote-sort-icon');
+  if (icon) {
+    icon.className = (currentQuotationSortOrder === 'desc')
+      ? 'fa-solid fa-arrow-down-9-1 text-orange-400 text-[10px] ml-1'
+      : 'fa-solid fa-arrow-up-1-9 text-orange-400 text-[10px] ml-1';
+  }
+  const btnAsc = document.getElementById('quote-order-asc');
+  const btnDesc = document.getElementById('quote-order-desc');
+  if (btnAsc && btnDesc) {
+    if (currentQuotationSortOrder === 'asc') {
+      btnAsc.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow-sm';
+      btnDesc.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300';
+    } else {
+      btnDesc.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow-sm';
+      btnAsc.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300';
+    }
+  }
+}
+
+// Auto-check and auto-fix gaps or non-sequential numbers in serial series
+function checkAndAutoFixQuotationSerialSeries() {
+  if (!allQuotationsRecords || allQuotationsRecords.length <= 1) return;
+
+  const nums = allQuotationsRecords
+    .map(q => parseInt(String(q.quote_number || '').trim(), 10))
+    .filter(n => !isNaN(n));
+
+  // If some are non-numeric or missing
+  if (nums.length !== allQuotationsRecords.length) {
+    renumberQuotationsSerialWise(false);
+    return;
+  }
+
+  // Check if sorted numbers form a strict consecutive series 1..N
+  const sortedNums = [...nums].sort((a, b) => a - b);
+  if (sortedNums[0] !== 1 || sortedNums[sortedNums.length - 1] !== allQuotationsRecords.length) {
+    renumberQuotationsSerialWise(false);
+    return;
+  }
+
+  for (let i = 0; i < sortedNums.length; i++) {
+    if (sortedNums[i] !== i + 1) {
+      renumberQuotationsSerialWise(false);
+      return;
+    }
+  }
+}
+
+// Re-sequence all quotations in 100% sequential order (1, 2, 3... N)
+async function renumberQuotationsSerialWise(showToastNotice = true) {
+  if (!allQuotationsRecords || allQuotationsRecords.length === 0) {
+    const quotes = await dbGetQuotations();
+    allQuotationsRecords = quotes || [];
+  }
+  if (!allQuotationsRecords || allQuotationsRecords.length === 0) {
+    if (showToastNotice && typeof showDashboardToast === 'function') {
+      showDashboardToast('No quotations found to sequence.', 'info');
+    }
+    return;
+  }
+
+  // 1. Sort all quotations chronologically (oldest date/creation first)
+  const sorted = [...allQuotationsRecords].sort((a, b) => {
+    const dateA = new Date(a.quote_date || a.created_at || 0).getTime();
+    const dateB = new Date(b.quote_date || b.created_at || 0).getTime();
+    if (dateA !== dateB) return dateA - dateB;
+    const idA = parseInt(a.id, 10) || 0;
+    const idB = parseInt(b.id, 10) || 0;
+    return idA - idB;
+  });
+
+  // 2. Assign strictly sequential numbers: 1, 2, 3... N
+  const quoteNumberMap = {};
+  sorted.forEach((q, idx) => {
+    const oldNum = q.quote_number;
+    const seqNum = String(idx + 1);
+    q.quote_number = seqNum;
+    if (oldNum) quoteNumberMap[String(oldNum)] = seqNum;
+  });
+
+  allQuotationsRecords = sorted;
+
+  // 3. Persist to localStorage
+  if (typeof saveLocalCollection === 'function') {
+    saveLocalCollection('sasi_quotations', allQuotationsRecords);
+  }
+
+  // 4. Update in Supabase if quotations table exists
+  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+  if (client) {
+    try {
+      for (const q of allQuotationsRecords) {
+        if (q.id) {
+          client.from('quotations').update({ quote_number: q.quote_number }).eq('id', q.id).catch(() => {});
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 5. Update linked orders in sasi_orders so references stay synced
+  try {
+    let ordersList = (typeof getLocalCollection === 'function') ? getLocalCollection('sasi_orders') || [] : [];
+    let ordersChanged = false;
+    ordersList.forEach(ord => {
+      if (ord.quote_number && quoteNumberMap[String(ord.quote_number)]) {
+        ord.quote_number = quoteNumberMap[String(ord.quote_number)];
+        ordersChanged = true;
+      }
+    });
+    if (ordersChanged && typeof saveLocalCollection === 'function') {
+      saveLocalCollection('sasi_orders', ordersList);
+      if (typeof allOrdersRecords !== 'undefined') allOrdersRecords = ordersList;
+    }
+  } catch (e) {}
+
+  // 6. Refresh UI
+  updateQuotationSortUI();
+  filterQuotationsData();
+
+  if (showToastNotice && typeof showDashboardToast === 'function') {
+    showDashboardToast(`✅ All ${allQuotationsRecords.length} quotations arranged in exact sequence order (1 to ${allQuotationsRecords.length})!`, 'success');
   }
 }
 
@@ -1769,6 +1924,21 @@ function filterQuotationsData() {
     return;
   }
 
+  // Sort filtered records according to currentQuotationSortOrder ('desc' = highest # first; 'asc' = lowest # first)
+  filtered.sort((a, b) => {
+    const numA = parseInt(String(a.quote_number || '').trim(), 10);
+    const numB = parseInt(String(b.quote_number || '').trim(), 10);
+    const hasA = !isNaN(numA);
+    const hasB = !isNaN(numB);
+
+    if (hasA && hasB) {
+      return (currentQuotationSortOrder === 'asc') ? (numA - numB) : (numB - numA);
+    }
+    const dateA = new Date(a.quote_date || a.created_at || 0).getTime();
+    const dateB = new Date(b.quote_date || b.created_at || 0).getTime();
+    return (currentQuotationSortOrder === 'asc') ? (dateA - dateB) : (dateB - dateA);
+  });
+
   tbody.innerHTML = filtered.map(q => {
     const rawPhone = (q.customer_phone || '').replace(/[^0-9]/g, '');
     const phoneLink = rawPhone.startsWith('91') ? rawPhone : (rawPhone ? '91' + rawPhone : '');
@@ -1782,7 +1952,9 @@ function filterQuotationsData() {
     return `
       <tr class="hover:bg-slate-800/50 transition-colors">
         <td class="py-3 px-4">
-          <span class="font-mono font-bold text-orange-400 bg-orange-500/10 px-2 py-1 rounded-lg border border-orange-500/20 inline-block text-[11px]">${q.quote_number}</span>
+          <span class="font-mono font-bold text-orange-400 bg-orange-500/10 px-2.5 py-1 rounded-lg border border-orange-500/20 inline-block text-[11px] shadow-sm tracking-wide">
+            #${q.quote_number}
+          </span>
         </td>
         <td class="py-3 px-4 text-slate-300 font-mono text-[11px] whitespace-nowrap">
           <div class="flex items-center gap-1.5"><i class="fa-regular fa-calendar text-slate-400"></i> ${displayDate}</div>
