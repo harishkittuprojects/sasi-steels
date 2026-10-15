@@ -516,9 +516,19 @@
               <button onclick="resetQuotationsFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1 cursor-pointer">
                 <i class="fa-solid fa-rotate-right"></i> Reset
               </button>
+              <button type="button" id="btn-cloud-sync-quotations" onclick="triggerManualCloudSync()" class="px-3.5 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600 hover:text-white text-sky-400 border border-sky-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm" title="Synchronize quotations between all devices via cloud">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Sync Cloud
+              </button>
               <button onclick="exportAllQuotationsExcel()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer">
                 <i class="fa-solid fa-file-excel"></i> Export All (.xlsx)
               </button>
+              <button type="button" onclick="exportQuotationsBackupJson()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer" title="Download portable JSON backup file">
+                <i class="fa-solid fa-download"></i> Backup JSON
+              </button>
+              <button type="button" onclick="triggerImportQuotationsJson()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer" title="Import quotations from JSON backup file">
+                <i class="fa-solid fa-upload"></i> Restore JSON
+              </button>
+              <input type="file" id="quote-backup-file-input" accept=".json" class="hidden" onchange="handleImportQuotationsFile(event)" />
             </div>
           </div>
 
@@ -2026,7 +2036,7 @@
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-md w-full px-4"></div>
 
   <!-- Scripts -->
-  <script src="js/backend-config.js?v=20261015_02"></script>
-  <script src="js/admin.js?v=20261015_08"></script>
+  <script src="js/backend-config.js?v=20261015_03"></script>
+  <script src="js/admin.js?v=20261015_09"></script>
 </body>
 </html>

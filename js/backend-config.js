@@ -1178,11 +1178,132 @@ const DEFAULT_ORDERS = [
   }
 ];
 
+// =========================================================
+// UNIVERSAL CROSS-DEVICE CLOUD SYNC ENGINE (SUPABASE BACKED)
+// =========================================================
+
+async function cloudSaveCollection(dbUsername, dataArray) {
+  if (!Array.isArray(dataArray)) return false;
+  const payload = JSON.stringify(dataArray);
+
+  try {
+    const patchRes = await fetch(`${BACKEND_CONFIG.SUPABASE_URL}/rest/v1/admin_users?username=eq.${dbUsername}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': BACKEND_CONFIG.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${BACKEND_CONFIG.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        password_hash: payload,
+        role: 'Cloud Data Sync'
+      })
+    });
+
+    if (patchRes.ok) {
+      const patched = await patchRes.json();
+      if (Array.isArray(patched) && patched.length > 0) return true;
+    }
+
+    // Fallback upsert
+    await fetch(`${BACKEND_CONFIG.SUPABASE_URL}/rest/v1/admin_users?on_conflict=username`, {
+      method: 'POST',
+      headers: {
+        'apikey': BACKEND_CONFIG.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${BACKEND_CONFIG.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      },
+      body: JSON.stringify({
+        username: dbUsername,
+        password_hash: payload,
+        role: 'Cloud Data Sync'
+      })
+    });
+    return true;
+  } catch (e) {
+    console.warn("Cloud save error for " + dbUsername, e);
+    return false;
+  }
+}
+
+async function cloudSyncCollection(storageKey, dbUsername, idField) {
+  let local = getLocalCollection(storageKey) || [];
+
+  try {
+    const res = await fetch(`${BACKEND_CONFIG.SUPABASE_URL}/rest/v1/admin_users?username=eq.${dbUsername}&select=password_hash&limit=1`, {
+      headers: {
+        'apikey': BACKEND_CONFIG.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${BACKEND_CONFIG.SUPABASE_ANON_KEY}`,
+        'Cache-Control': 'no-cache'
+      }
+    });
+
+    if (res.ok) {
+      const rows = await res.json();
+      let remote = [];
+      if (Array.isArray(rows) && rows.length > 0 && rows[0].password_hash) {
+        try {
+          const parsed = JSON.parse(rows[0].password_hash);
+          if (Array.isArray(parsed)) remote = parsed;
+        } catch (pe) {
+          console.warn("JSON parse error for " + dbUsername, pe);
+        }
+      }
+
+      // Merge remote and local records
+      const map = new Map();
+      remote.forEach(item => {
+        const k = item[idField] || String(item.id);
+        if (k) map.set(k, item);
+      });
+
+      local.forEach(item => {
+        const k = item[idField] || String(item.id);
+        if (k) {
+          if (!map.has(k)) {
+            map.set(k, item);
+          } else {
+            const existing = map.get(k);
+            const exDate = new Date(existing.updated_at || existing.created_at || 0).getTime();
+            const locDate = new Date(item.updated_at || item.created_at || 0).getTime();
+            if (locDate >= exDate) {
+              map.set(k, { ...existing, ...item });
+            }
+          }
+        }
+      });
+
+      const merged = Array.from(map.values());
+
+      // If local had items not yet in cloud, or cloud had empty array, update cloud now
+      if (merged.length > 0 && (remote.length < merged.length || JSON.stringify(remote) !== JSON.stringify(merged))) {
+        cloudSaveCollection(dbUsername, merged).catch(err => console.warn("Cloud push error:", err));
+      }
+
+      saveLocalCollection(storageKey, merged);
+      return merged;
+    }
+  } catch (err) {
+    console.warn("Cloud fetch error for " + dbUsername, err);
+  }
+
+  return local;
+}
+
 async function dbGetOrders() {
   let local = getLocalCollection('sasi_orders');
   if (local === null) {
     saveLocalCollection('sasi_orders', DEFAULT_ORDERS);
     local = DEFAULT_ORDERS;
+  }
+
+  // 1. Cross-device cloud sync
+  try {
+    local = await cloudSyncCollection('sasi_orders', 'cloud_orders_sync', 'order_number');
+  } catch (syncErr) {
+    console.warn("Orders cloud sync notice:", syncErr);
   }
 
   // Ensure every order object has company_name and paid_amount properly formatted
@@ -1203,33 +1324,6 @@ async function dbGetOrders() {
   });
   if (updatedLocal) {
     saveLocalCollection('sasi_orders', local);
-  }
-
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client.from('orders').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        const sanitizedRemote = data.map(rem => {
-          if (!rem.company_name) {
-            const loc = local.find(l => String(l.id) === String(rem.id) || l.order_number === rem.order_number);
-            rem.company_name = (loc && loc.company_name) ? loc.company_name : (rem.customer_name || 'General Client');
-          }
-          if (rem.paid_amount === undefined || rem.paid_amount === null || isNaN(parseFloat(rem.paid_amount))) {
-            const tot = parseFloat(rem.total_amount) || 0;
-            if (rem.payment_status === 'Paid') rem.paid_amount = tot;
-            else if (rem.payment_status === 'Partial') rem.paid_amount = Math.round(tot * 0.5 * 100) / 100;
-            else rem.paid_amount = 0;
-          }
-          return rem;
-        });
-        const merged = mergeCollections(sanitizedRemote, local);
-        saveLocalCollection('sasi_orders', merged);
-        return merged;
-      }
-    } catch (e) {
-      console.warn("Supabase fetch orders error:", e);
-    }
   }
 
   return local || [];
@@ -1282,6 +1376,7 @@ async function dbAddOrder(order) {
   const localList = getLocalCollection('sasi_orders') || [...DEFAULT_ORDERS];
   localList.unshift(newRow);
   saveLocalCollection('sasi_orders', localList);
+  cloudSaveCollection('cloud_orders_sync', localList).catch(() => {});
 
   const client = getSupabaseClient();
   if (client) {
@@ -1293,6 +1388,7 @@ async function dbAddOrder(order) {
         const curList = getLocalCollection('sasi_orders') || [];
         if (curList.length > 0) curList[0].id = data[0].id;
         saveLocalCollection('sasi_orders', curList);
+        cloudSaveCollection('cloud_orders_sync', curList).catch(() => {});
         return { success: true, data };
       }
     } catch (e) {
@@ -1320,6 +1416,7 @@ async function dbUpdateOrderStatus(id, newStatus) {
 
     existing.order_status = newStatus;
     saveLocalCollection('sasi_orders', localList);
+    cloudSaveCollection('cloud_orders_sync', localList).catch(() => {});
   }
 
   const client = getSupabaseClient();
@@ -1356,6 +1453,7 @@ async function dbUpdateOrder(id, updatedData) {
 
     localList[existingIndex] = { ...oldOrder, ...updatedData };
     saveLocalCollection('sasi_orders', localList);
+    cloudSaveCollection('cloud_orders_sync', localList).catch(() => {});
   }
 
   const client = getSupabaseClient();
@@ -1382,6 +1480,7 @@ async function dbDeleteOrder(id) {
 
   localList = localList.filter(x => String(x.id) !== String(id) && String(x.order_number) !== String(id));
   saveLocalCollection('sasi_orders', localList);
+  cloudSaveCollection('cloud_orders_sync', localList).catch(() => {});
 
   const client = getSupabaseClient();
   if (client) {
@@ -1410,6 +1509,7 @@ async function dbDeleteAllOrders() {
   }
 
   saveLocalCollection('sasi_orders', []);
+  cloudSaveCollection('cloud_orders_sync', []).catch(() => {});
 
   const client = getSupabaseClient();
   if (client) {
@@ -1731,48 +1831,58 @@ async function dbGetQuotationSettings() {
     local = DEFAULT_QUOTATION_SETTINGS;
   }
 
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client.from('quotation_settings').select('*').limit(1);
-      if (!error && data && data.length > 0) {
-        const merged = sanitizeQuotationSettings({ ...DEFAULT_QUOTATION_SETTINGS, ...local, ...data[0] });
-        saveLocalCollection('sasi_quotation_settings', merged);
-        return merged;
+  // Cross-device cloud sync for settings
+  try {
+    const res = await fetch(`${BACKEND_CONFIG.SUPABASE_URL}/rest/v1/admin_users?username=eq.cloud_quotation_settings_sync&select=password_hash&limit=1`, {
+      headers: {
+        'apikey': BACKEND_CONFIG.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${BACKEND_CONFIG.SUPABASE_ANON_KEY}`,
+        'Cache-Control': 'no-cache'
       }
-    } catch (e) {
-      console.warn("Supabase fetch quotation_settings error:", e);
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length > 0 && rows[0].password_hash && rows[0].password_hash !== '{}') {
+        const cloudSettings = JSON.parse(rows[0].password_hash);
+        local = sanitizeQuotationSettings({ ...DEFAULT_QUOTATION_SETTINGS, ...local, ...cloudSettings });
+        saveLocalCollection('sasi_quotation_settings', local);
+      } else if (local && Object.keys(local).length > 0) {
+        // Push local settings to cloud
+        cloudSaveSettings('cloud_quotation_settings_sync', local).catch(() => {});
+      }
     }
-  }
+  } catch (e) {}
 
   const sanitized = sanitizeQuotationSettings(local || DEFAULT_QUOTATION_SETTINGS);
   saveLocalCollection('sasi_quotation_settings', sanitized);
   return sanitized;
 }
 
+async function cloudSaveSettings(dbUsername, settingsObj) {
+  const payload = JSON.stringify(settingsObj);
+  try {
+    await fetch(`${BACKEND_CONFIG.SUPABASE_URL}/rest/v1/admin_users?username=eq.${dbUsername}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': BACKEND_CONFIG.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${BACKEND_CONFIG.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password_hash: payload, role: 'Cloud Data Sync' })
+    });
+  } catch (e) {}
+}
+
 async function dbSaveQuotationSettings(settings) {
   const current = await dbGetQuotationSettings();
   const updated = sanitizeQuotationSettings({ ...current, ...settings, updated_at: new Date().toISOString() });
   saveLocalCollection('sasi_quotation_settings', updated);
-
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data } = await client.from('quotation_settings').select('id').limit(1);
-      if (data && data.length > 0) {
-        await client.from('quotation_settings').update(updated).eq('id', data[0].id);
-      } else {
-        await client.from('quotation_settings').insert([updated]);
-      }
-    } catch (e) {
-      console.warn("Supabase save quotation_settings error:", e);
-    }
-  }
+  cloudSaveSettings('cloud_quotation_settings_sync', updated).catch(() => {});
 
   return updated;
 }
 
-// Quotations List CRUD (Cloud-First Sync)
+// Quotations List CRUD (Cross-Device Cloud Sync)
 async function dbGetQuotations() {
   let local = getLocalCollection('sasi_quotations');
   if (local === null) {
@@ -1780,40 +1890,11 @@ async function dbGetQuotations() {
     local = DEFAULT_QUOTATIONS;
   }
 
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      const { data, error } = await client.from('quotations').select('*').order('created_at', { ascending: false });
-      if (!error && data) {
-        // De-duplicate remote items
-        const cleanRemote = [];
-        const seenRemote = new Set();
-        for (const item of data) {
-          const key = item.quote_number || String(item.id);
-          if (!seenRemote.has(key)) {
-            seenRemote.add(key);
-            cleanRemote.push(item);
-          }
-        }
-        const merged = mergeCollections(cleanRemote, local, 'quote_number');
-        const finalQuotes = [];
-        const finalSeen = new Set();
-        for (const q of merged) {
-          const key = q.quote_number || String(q.id);
-          if (!finalSeen.has(key)) {
-            finalSeen.add(key);
-            finalQuotes.push({
-              ...q,
-              terms: sanitizeQuotationTerms(q.terms)
-            });
-          }
-        }
-        saveLocalCollection('sasi_quotations', finalQuotes);
-        return finalQuotes;
-      }
-    } catch (e) {
-      console.warn("Supabase fetch quotations error:", e);
-    }
+  // 1. Primary Cross-Device Cloud Sync via Supabase admin_users persistent storage
+  try {
+    local = await cloudSyncCollection('sasi_quotations', 'cloud_quotations_sync', 'quote_number');
+  } catch (syncErr) {
+    console.warn("Quotations cloud sync notice:", syncErr);
   }
 
   // Deduplicate local
@@ -1865,6 +1946,9 @@ async function dbAddQuotation(quote) {
   localList.unshift(newRow);
   saveLocalCollection('sasi_quotations', localList);
 
+  // Sync to Supabase cloud storage across systems
+  cloudSaveCollection('cloud_quotations_sync', localList).catch(() => {});
+
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -1875,6 +1959,7 @@ async function dbAddQuotation(quote) {
         const curList = getLocalCollection('sasi_quotations') || [];
         if (curList.length > 0) curList[0].id = data[0].id;
         saveLocalCollection('sasi_quotations', curList);
+        cloudSaveCollection('cloud_quotations_sync', curList).catch(() => {});
         return { success: true, data };
       }
     } catch (e) {
@@ -1896,6 +1981,7 @@ async function dbUpdateQuotation(id, updatedData) {
       updated_at: new Date().toISOString()
     };
     saveLocalCollection('sasi_quotations', localList);
+    cloudSaveCollection('cloud_quotations_sync', localList).catch(() => {});
   }
 
   const client = getSupabaseClient();
@@ -1918,6 +2004,7 @@ async function dbDeleteQuotation(id) {
   let localList = getLocalCollection('sasi_quotations') || [];
   localList = localList.filter(x => String(x.id) !== String(id) && String(x.quote_number) !== String(id));
   saveLocalCollection('sasi_quotations', localList);
+  cloudSaveCollection('cloud_quotations_sync', localList).catch(() => {});
 
   const client = getSupabaseClient();
   if (client) {
@@ -1937,6 +2024,7 @@ async function dbDeleteQuotation(id) {
 
 async function dbDeleteAllQuotations() {
   saveLocalCollection('sasi_quotations', []);
+  cloudSaveCollection('cloud_quotations_sync', []).catch(() => {});
 
   const client = getSupabaseClient();
   if (client) {

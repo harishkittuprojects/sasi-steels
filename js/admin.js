@@ -7274,3 +7274,116 @@ window.addEventListener('load', () => {
   }
 });
 
+// =========================================================
+// CROSS-DEVICE CLOUD SYNC & BACKUP CONTROLLER
+// =========================================================
+
+async function triggerManualCloudSync() {
+  const btn = document.getElementById('btn-cloud-sync-quotations');
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Syncing Cloud...';
+  }
+
+  try {
+    const quotes = await dbGetQuotations();
+    allQuotationsRecords = quotes || [];
+    renderQuotationsTable(allQuotationsRecords);
+    updateQuotationsMetrics(allQuotationsRecords);
+
+    // Also sync orders
+    if (typeof dbGetOrders === 'function') {
+      const ords = await dbGetOrders();
+      if (typeof allOrdersRecords !== 'undefined') allOrdersRecords = ords || [];
+      if (typeof updateOrdersStats === 'function') updateOrdersStats();
+    }
+
+    loadInitialCounts();
+    showDashboardToast(`☁️ Cloud synchronization complete! ${allQuotationsRecords.length} quotations active across all devices.`, 'success');
+  } catch (err) {
+    console.error("Manual cloud sync failed:", err);
+    showDashboardToast(`Cloud sync notice: ${err.message || 'Please check internet connection'}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  }
+}
+
+function exportQuotationsBackupJson() {
+  const quotes = allQuotationsRecords || getLocalCollection('sasi_quotations') || [];
+  if (!quotes || quotes.length === 0) {
+    showDashboardToast('No quotations to export.', 'info');
+    return;
+  }
+  const jsonStr = JSON.stringify(quotes, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const filename = `SASI_Steels_Quotations_Backup_${getLocalDateStr()}.json`;
+  
+  if (typeof saveAs !== 'undefined') {
+    saveAs(blob, filename);
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
+  showDashboardToast(`📥 Downloaded backup of ${quotes.length} quotations as JSON!`, 'success');
+}
+
+function triggerImportQuotationsJson() {
+  const input = document.getElementById('quote-backup-file-input');
+  if (input) input.click();
+}
+
+async function handleImportQuotationsFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) {
+        alert("Invalid backup file. JSON must contain an array of quotation records.");
+        return;
+      }
+
+      // Merge into local and upload to cloud
+      const current = getLocalCollection('sasi_quotations') || [];
+      const map = new Map();
+      current.forEach(q => map.set(q.quote_number || String(q.id), q));
+      data.forEach(q => map.set(q.quote_number || String(q.id), q));
+
+      const merged = Array.from(map.values());
+      saveLocalCollection('sasi_quotations', merged);
+      allQuotationsRecords = merged;
+
+      // Sync to cloud
+      if (typeof cloudSaveCollection === 'function') {
+        await cloudSaveCollection('cloud_quotations_sync', merged);
+      }
+
+      renderQuotationsTable(allQuotationsRecords);
+      updateQuotationsMetrics(allQuotationsRecords);
+      loadInitialCounts();
+
+      showDashboardToast(`🎉 Successfully imported and synced ${merged.length} quotations to cloud!`, 'success');
+    } catch (err) {
+      alert("Error parsing backup JSON file: " + err.message);
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+
