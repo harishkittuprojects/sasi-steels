@@ -505,8 +505,8 @@
 
               <!-- Sequence Order Controls -->
               <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800" title="Sort sequence order">
-                <button type="button" id="quote-order-asc" onclick="setQuotationSortOrder('asc')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow-sm cursor-pointer" title="Ascending Sequence: 1, 2, 3..."><i class="fa-solid fa-arrow-up-1-9 mr-1"></i>1 ➔ N</button>
-                <button type="button" id="quote-order-desc" onclick="setQuotationSortOrder('desc')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer" title="Descending Sequence: N, N-1... 1 (Newest First)"><i class="fa-solid fa-arrow-down-9-1 mr-1"></i>N ➔ 1</button>
+                <button type="button" id="quote-order-asc" onclick="setQuotationSortOrder('asc')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow-sm cursor-pointer" title="Ascending Sequence: Small to Big (1, 2, 3...)"><i class="fa-solid fa-arrow-up-1-9 mr-1"></i>Small ➔ Big (1 ➔ N)</button>
+                <button type="button" id="quote-order-desc" onclick="setQuotationSortOrder('desc')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer" title="Descending Sequence: Big to Small (N, N-1...)"><i class="fa-solid fa-arrow-down-9-1 mr-1"></i>Big ➔ Small (N ➔ 1)</button>
               </div>
 
               <button type="button" onclick="renumberQuotationsSerialWise(true)" class="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 hover:text-white text-orange-400 border border-orange-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm" title="Re-sequence all quotations in 1 to N serial order without any gaps">
@@ -540,7 +540,7 @@
                   <tr class="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
                     <th class="py-3.5 px-4 cursor-pointer hover:text-white select-none transition-colors" onclick="toggleQuotationSortOrder()" title="Click to toggle sequence order (1 ➔ N or N ➔ 1)">
                       <span class="inline-flex items-center gap-1">
-                        Quotation No
+                        Bill / Quotation No
                         <i id="quote-sort-icon" class="fa-solid fa-arrow-up-1-9 text-orange-400 text-[10px]"></i>
                       </span>
                     </th>
@@ -2036,7 +2036,7 @@
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-md w-full px-4"></div>
 
   <!-- Scripts -->
-  <script src="js/backend-config.js?v=20261015_05"></script>
-  <script src="js/admin.js?v=20261015_11"></script>
+  <script src="js/backend-config.js?v=20261023_01"></script>
+  <script src="js/admin.js?v=20261023_01"></script>
 </body>
 </html>

@@ -1750,8 +1750,7 @@ async function loadQuotations() {
     const quotes = await dbGetQuotations();
     allQuotationsRecords = quotes || [];
 
-    // Auto-fix / harmonize sequence order if gaps or jumps exist (e.g. 82, 80, 78 jumping to 18)
-    checkAndAutoFixQuotationSerialSeries();
+    // Update sort UI without silently overwriting custom bill/quotation numbers
     updateQuotationSortUI();
 
     // Auto-sync any approved or completed quotations to orders
@@ -1800,7 +1799,12 @@ async function loadQuotations() {
 // Global quotation sorting state
 let currentQuotationSortOrder = (function() {
   try {
-    return localStorage.getItem('sasi_quote_sort_order') || 'asc';
+    const saved = localStorage.getItem('sasi_quote_sort_order_v3');
+    if (saved === 'asc' || saved === 'desc') return saved;
+    // Default strictly to 'asc' (Small to Big: 1, 2, 3...)
+    localStorage.setItem('sasi_quote_sort_order_v3', 'asc');
+    localStorage.setItem('sasi_quote_sort_order', 'asc');
+    return 'asc';
   } catch (e) {
     return 'asc';
   }
@@ -1809,12 +1813,13 @@ let currentQuotationSortOrder = (function() {
 function setQuotationSortOrder(order) {
   currentQuotationSortOrder = order;
   try {
+    localStorage.setItem('sasi_quote_sort_order_v3', order);
     localStorage.setItem('sasi_quote_sort_order', order);
   } catch (e) {}
   updateQuotationSortUI();
   filterQuotationsData();
   if (typeof showDashboardToast === 'function') {
-    showDashboardToast(`Sorted in sequence: ${order === 'asc' ? '1 ➔ N (Ascending Sequence)' : 'N ➔ 1 (Newest First)'}`, 'info');
+    showDashboardToast(`Sorted in sequence: ${order === 'asc' ? 'Small to Big (1 ➔ N Ascending)' : 'Big to Small (N ➔ 1 Descending)'}`, 'info');
   }
 }
 
@@ -1845,31 +1850,9 @@ function updateQuotationSortUI() {
 
 // Auto-check and auto-fix gaps or non-sequential numbers in serial series
 function checkAndAutoFixQuotationSerialSeries() {
-  if (!allQuotationsRecords || allQuotationsRecords.length <= 1) return;
-
-  const nums = allQuotationsRecords
-    .map(q => parseInt(String(q.quote_number || '').trim(), 10))
-    .filter(n => !isNaN(n));
-
-  // If some are non-numeric or missing
-  if (nums.length !== allQuotationsRecords.length) {
-    renumberQuotationsSerialWise(false);
-    return;
-  }
-
-  // Check if sorted numbers form a strict consecutive series 1..N
-  const sortedNums = [...nums].sort((a, b) => a - b);
-  if (sortedNums[0] !== 1 || sortedNums[sortedNums.length - 1] !== allQuotationsRecords.length) {
-    renumberQuotationsSerialWise(false);
-    return;
-  }
-
-  for (let i = 0; i < sortedNums.length; i++) {
-    if (sortedNums[i] !== i + 1) {
-      renumberQuotationsSerialWise(false);
-      return;
-    }
-  }
+  // Preserves user-entered Bill / Quotation numbers exactly as entered.
+  // Renumbering is only executed if the user explicitly clicks the "Sequence Order (1 to N)" button.
+  return;
 }
 
 // Re-sequence all quotations in 100% sequential order (1, 2, 3... N)
@@ -1993,19 +1976,33 @@ function filterQuotationsData() {
     return;
   }
 
-  // Sort filtered records according to currentQuotationSortOrder ('desc' = highest # first; 'asc' = lowest # first)
+  // Sort filtered records: 'asc' = small to big (1, 2, 3...); 'desc' = big to small (N... 3, 2, 1)
   filtered.sort((a, b) => {
-    const numA = parseInt(String(a.quote_number || '').trim(), 10);
-    const numB = parseInt(String(b.quote_number || '').trim(), 10);
+    const rawA = String(a.quote_number || '').trim();
+    const rawB = String(b.quote_number || '').trim();
+    const cleanA = rawA.replace(/[^0-9]/g, '');
+    const cleanB = rawB.replace(/[^0-9]/g, '');
+    const numA = cleanA !== '' ? parseInt(cleanA, 10) : NaN;
+    const numB = cleanB !== '' ? parseInt(cleanB, 10) : NaN;
     const hasA = !isNaN(numA);
     const hasB = !isNaN(numB);
 
     if (hasA && hasB) {
-      return (currentQuotationSortOrder === 'asc') ? (numA - numB) : (numB - numA);
+      if (numA !== numB) {
+        return (currentQuotationSortOrder === 'asc') ? (numA - numB) : (numB - numA);
+      }
+    } else if (hasA && !hasB) {
+      return (currentQuotationSortOrder === 'asc') ? -1 : 1;
+    } else if (!hasA && hasB) {
+      return (currentQuotationSortOrder === 'asc') ? 1 : -1;
     }
+
     const dateA = new Date(a.quote_date || a.created_at || 0).getTime();
     const dateB = new Date(b.quote_date || b.created_at || 0).getTime();
-    return (currentQuotationSortOrder === 'asc') ? (dateA - dateB) : (dateB - dateA);
+    if (dateA !== dateB) {
+      return (currentQuotationSortOrder === 'asc') ? (dateA - dateB) : (dateB - dateA);
+    }
+    return (currentQuotationSortOrder === 'asc') ? rawA.localeCompare(rawB) : rawB.localeCompare(rawA);
   });
 
   tbody.innerHTML = filtered.map(q => {
@@ -2022,7 +2019,7 @@ function filterQuotationsData() {
       <tr class="hover:bg-slate-800/50 transition-colors">
         <td class="py-3 px-4">
           <span class="font-mono font-bold text-orange-400 bg-orange-500/10 px-2.5 py-1 rounded-lg border border-orange-500/20 inline-block text-[11px] shadow-sm tracking-wide">
-            #${q.quote_number}
+            ${String(q.quote_number || '').trim().startsWith('#') ? String(q.quote_number || '').trim() : (q.quote_number ? '#' + String(q.quote_number).trim() : '#-')}
           </span>
         </td>
         <td class="py-3 px-4 text-slate-300 font-mono text-[11px] whitespace-nowrap">
@@ -2443,8 +2440,9 @@ async function openQuotationModal(editId = null, isDuplicate = false) {
   if (editId) {
     const existing = allQuotationsRecords.find(x => String(x.id) === String(editId) || String(x.quote_number) === String(editId));
     if (existing) {
-      modalTitle.textContent = isDuplicate ? 'Duplicate Quotation' : `Edit Quotation (${existing.quote_number})`;
-      document.getElementById('quote-input-number').value = isDuplicate ? generateNextQuoteNumber(allQuotationsRecords) : existing.quote_number;
+      activeQuotationEditingId = isDuplicate ? null : (existing.id || editId);
+      modalTitle.textContent = isDuplicate ? 'Duplicate Quotation' : `Edit Quotation (${existing.quote_number || ''})`;
+      document.getElementById('quote-input-number').value = isDuplicate ? generateNextQuoteNumber(allQuotationsRecords) : (existing.quote_number !== undefined && existing.quote_number !== null ? existing.quote_number : '');
       document.getElementById('quote-input-date').value = isDuplicate ? getLocalDateStr() : (existing.quote_date || getLocalDateStr());
       document.getElementById('quote-input-validity').value = existing.validity_days || 15;
       document.getElementById('quote-input-customer').value = existing.customer_name || '';
