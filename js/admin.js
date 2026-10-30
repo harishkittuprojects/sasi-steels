@@ -1325,7 +1325,7 @@ async function handleChangePasswordsSubmit(e) {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Saving to Cloud (Supabase)...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Saving to Cloud...';
   }
 
   try {
@@ -1336,7 +1336,7 @@ async function handleChangePasswordsSubmit(e) {
 
     if (msgEl) {
       msgEl.className = 'mb-4 p-3 rounded-xl text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 block';
-      msgEl.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i> Password for <strong>${targetAccount}</strong> successfully updated in Supabase cloud!`;
+      msgEl.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i> Password for <strong>${targetAccount}</strong> successfully updated in Cloud!`;
     }
 
     showDashboardToast(`🎉 Password for ${targetAccount} updated in cloud! Works on all systems.`, 'success');
@@ -1352,7 +1352,7 @@ async function handleChangePasswordsSubmit(e) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Save Password to Cloud (Supabase)';
+      btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Save Password to Cloud';
     }
   }
 }
@@ -1650,15 +1650,8 @@ function sanitizeQuotationTerms(terms) {
   if (!Array.isArray(terms) || terms.length === 0) {
     return [...OFFICIAL_COMPANY_TERMS];
   }
-  const isOldOutdated = terms.some(t => typeof t === 'string' && (
-    t.includes('Prices are valid for 15 days from the date of quotation') ||
-    t.includes('drawing approval') ||
-    t.includes('Guntur jurisdiction only')
-  ));
-  if (isOldOutdated || terms.length < 7) {
-    return [...OFFICIAL_COMPANY_TERMS];
-  }
-  return terms.filter(t => t && String(t).trim().length > 0);
+  const cleanTerms = terms.map(t => String(t || '').trim()).filter(t => t.length > 0);
+  return cleanTerms.length > 0 ? cleanTerms : [...OFFICIAL_COMPANY_TERMS];
 }
 
 function sanitizeQuotationSettings(settings) {
@@ -1855,79 +1848,11 @@ function checkAndAutoFixQuotationSerialSeries() {
   return;
 }
 
-// Re-sequence all quotations in 100% sequential order (1, 2, 3... N)
+// Sequence all quotations in ascending order (1, 2, 3... N) without modifying customer quote numbers
 async function renumberQuotationsSerialWise(showToastNotice = true) {
-  if (!allQuotationsRecords || allQuotationsRecords.length === 0) {
-    const quotes = await dbGetQuotations();
-    allQuotationsRecords = quotes || [];
-  }
-  if (!allQuotationsRecords || allQuotationsRecords.length === 0) {
-    if (showToastNotice && typeof showDashboardToast === 'function') {
-      showDashboardToast('No quotations found to sequence.', 'info');
-    }
-    return;
-  }
-
-  // 1. Sort all quotations chronologically (oldest date/creation first)
-  const sorted = [...allQuotationsRecords].sort((a, b) => {
-    const dateA = new Date(a.quote_date || a.created_at || 0).getTime();
-    const dateB = new Date(b.quote_date || b.created_at || 0).getTime();
-    if (dateA !== dateB) return dateA - dateB;
-    const idA = parseInt(a.id, 10) || 0;
-    const idB = parseInt(b.id, 10) || 0;
-    return idA - idB;
-  });
-
-  // 2. Assign strictly sequential numbers: 1, 2, 3... N
-  const quoteNumberMap = {};
-  sorted.forEach((q, idx) => {
-    const oldNum = q.quote_number;
-    const seqNum = String(idx + 1);
-    q.quote_number = seqNum;
-    if (oldNum) quoteNumberMap[String(oldNum)] = seqNum;
-  });
-
-  allQuotationsRecords = sorted;
-
-  // 3. Persist to localStorage
-  if (typeof saveLocalCollection === 'function') {
-    saveLocalCollection('sasi_quotations', allQuotationsRecords);
-  }
-
-  // 4. Update in Supabase if quotations table exists
-  const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
-  if (client) {
-    try {
-      for (const q of allQuotationsRecords) {
-        if (q.id) {
-          client.from('quotations').update({ quote_number: q.quote_number }).eq('id', q.id).catch(() => {});
-        }
-      }
-    } catch (e) {}
-  }
-
-  // 5. Update linked orders in sasi_orders so references stay synced
-  try {
-    let ordersList = (typeof getLocalCollection === 'function') ? getLocalCollection('sasi_orders') || [] : [];
-    let ordersChanged = false;
-    ordersList.forEach(ord => {
-      if (ord.quote_number && quoteNumberMap[String(ord.quote_number)]) {
-        ord.quote_number = quoteNumberMap[String(ord.quote_number)];
-        ordersChanged = true;
-      }
-    });
-    if (ordersChanged && typeof saveLocalCollection === 'function') {
-      saveLocalCollection('sasi_orders', ordersList);
-      if (typeof allOrdersRecords !== 'undefined') allOrdersRecords = ordersList;
-    }
-  } catch (e) {}
-
-  // 6. Refresh UI
-  updateQuotationSortUI();
-  filterQuotationsData();
-
+  setQuotationSortOrder('asc');
   if (showToastNotice && typeof showDashboardToast === 'function') {
-    showDashboardToast(`✅ All ${allQuotationsRecords.length} quotations arranged in exact sequence order (1 to ${allQuotationsRecords.length})!`, 'success');
+    showDashboardToast('Quotations displayed in serial order (Small to Big).', 'success');
   }
 }
 
@@ -2055,7 +1980,7 @@ function filterQuotationsData() {
           ${grandTotalFormatted}
         </td>
         <td class="py-3 px-4">
-          <select onchange="handleQuotationStatusChange('${q.id || q.quote_number}', this.value)" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-bold outline-none focus:border-orange-500 cursor-pointer">
+          <select onchange="handleQuotationStatusChange('${q.quote_number || q.id}', this.value)" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-bold outline-none focus:border-orange-500 cursor-pointer">
             <option value="Draft" ${q.status === 'Draft' ? 'selected' : ''}>Draft</option>
             <option value="Sent" ${q.status === 'Sent' ? 'selected' : ''}>Sent</option>
             <option value="Approved" ${q.status === 'Approved' ? 'selected' : ''}>Approved (Confirmed)</option>
@@ -2069,26 +1994,26 @@ function filterQuotationsData() {
               <i class="fa-solid fa-cart-shopping text-emerald-400"></i> <span class="hidden sm:inline">Booked</span>
             </button>
           ` : `
-            <button onclick="confirmQuotationOrder('${q.id || q.quote_number}')" class="p-1.5 px-2.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-bold inline-flex items-center gap-1 border border-emerald-500/30 transition-all" title="Confirm Order & Book to Orders & Bookings">
+            <button onclick="confirmQuotationOrder('${q.quote_number || q.id}')" class="p-1.5 px-2.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-bold inline-flex items-center gap-1 border border-emerald-500/30 transition-all" title="Confirm Order & Book to Orders & Bookings">
               <i class="fa-solid fa-cart-arrow-down"></i> <span class="hidden sm:inline">Confirm</span>
             </button>
           `}
-          <button onclick="openQuotationPreview('${q.id || q.quote_number}')" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs" title="Live Preview">
+          <button onclick="openQuotationPreview('${q.quote_number || q.id}')" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs" title="Live Preview">
             <i class="fa-solid fa-eye text-orange-400"></i>
           </button>
-          <button onclick="openQuotationModal('${q.id || q.quote_number}', false)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs" title="Edit Quotation">
+          <button onclick="openQuotationModal('${q.quote_number || q.id}', false)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs" title="Edit Quotation">
             <i class="fa-solid fa-pen-to-square text-blue-400"></i>
           </button>
-          <button onclick="openQuotationModal('${q.id || q.quote_number}', true)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs" title="Duplicate Quotation">
+          <button onclick="openQuotationModal('${q.quote_number || q.id}', true)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs" title="Duplicate Quotation">
             <i class="fa-solid fa-clone text-purple-400"></i>
           </button>
-          <button onclick="exportQuotationToExcel('${q.id || q.quote_number}')" class="p-1.5 px-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs" title="Download Excel (.xlsx)">
+          <button onclick="exportQuotationToExcel('${q.quote_number || q.id}')" class="p-1.5 px-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs" title="Download Excel (.xlsx)">
             <i class="fa-solid fa-file-excel"></i>
           </button>
-          <button onclick="exportQuotationToPDF('${q.id || q.quote_number}')" class="p-1.5 px-2 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs" title="Download PDF">
+          <button onclick="exportQuotationToPDF('${q.quote_number || q.id}')" class="p-1.5 px-2 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs" title="Download PDF">
             <i class="fa-solid fa-file-pdf"></i>
           </button>
-          <button onclick="handleDeleteQuotation('${q.id || q.quote_number}')" class="p-1.5 px-2 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs" title="Delete">
+          <button onclick="handleDeleteQuotation('${q.quote_number || q.id}')" class="p-1.5 px-2 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs" title="Delete">
             <i class="fa-solid fa-trash"></i>
           </button>
         </td>
@@ -2116,7 +2041,8 @@ function resetQuotationsFilter() {
 }
 
 async function confirmQuotationOrder(id) {
-  let quote = (allQuotationsRecords || []).find(q => String(q.id) === String(id) || String(q.quote_number) === String(id));
+  let quote = (allQuotationsRecords || []).find(q => String(q.quote_number) === String(id)) ||
+              (allQuotationsRecords || []).find(q => String(q.id) === String(id));
   if (!quote && previewingQuotationData && (String(previewingQuotationData.id) === String(id) || String(previewingQuotationData.quote_number) === String(id))) {
     quote = previewingQuotationData;
   }
@@ -2152,7 +2078,8 @@ async function confirmQuotationOrder(id) {
 }
 
 async function handleQuotationStatusChange(id, newStatus) {
-  const quote = allQuotationsRecords.find(q => String(q.id) === String(id) || String(q.quote_number) === String(id));
+  const quote = allQuotationsRecords.find(q => String(q.quote_number) === String(id)) ||
+                allQuotationsRecords.find(q => String(q.id) === String(id));
   await dbUpdateQuotation(id, { status: newStatus });
   
   if (quote) {
@@ -2438,9 +2365,11 @@ async function openQuotationModal(editId = null, isDuplicate = false) {
   if (!modal) return;
 
   if (editId) {
-    const existing = allQuotationsRecords.find(x => String(x.id) === String(editId) || String(x.quote_number) === String(editId));
+    const cleanId = String(editId).replace(/^#/, '').trim();
+    const existing = allQuotationsRecords.find(x => String(x.quote_number || '').replace(/^#/, '').trim() === cleanId) ||
+                     allQuotationsRecords.find(x => String(x.id) === String(editId));
     if (existing) {
-      activeQuotationEditingId = isDuplicate ? null : (existing.id || editId);
+      activeQuotationEditingId = isDuplicate ? null : (existing.quote_number || existing.id);
       modalTitle.textContent = isDuplicate ? 'Duplicate Quotation' : `Edit Quotation (${existing.quote_number || ''})`;
       document.getElementById('quote-input-number').value = isDuplicate ? generateNextQuoteNumber(allQuotationsRecords) : (existing.quote_number !== undefined && existing.quote_number !== null ? existing.quote_number : '');
       document.getElementById('quote-input-date').value = isDuplicate ? getLocalDateStr() : (existing.quote_date || getLocalDateStr());
@@ -2572,8 +2501,8 @@ function renderQuotationItemRows() {
           ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </td>
         <td class="py-2.5 px-3 text-center">
-          <button type="button" onclick="removeQuotationItemRow(${idx})" class="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-colors inline-flex items-center justify-center text-xs" title="Delete Row">
-            <i class="fa-solid fa-trash"></i>
+          <button type="button" onclick="removeQuotationItemRow(${idx}, event)" class="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-colors inline-flex items-center justify-center text-xs cursor-pointer" title="Delete Row">
+            <i class="fa-solid fa-trash pointer-events-none"></i>
           </button>
         </td>
       </tr>
@@ -2640,12 +2569,18 @@ function addNewQuotationItemRow(prefill = null) {
   recalculateQuotationTotals();
 }
 
-function removeQuotationItemRow(index) {
+function removeQuotationItemRow(index, event) {
+  if (event) {
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    if (typeof event.stopPropagation === 'function') event.stopPropagation();
+  }
+  const idx = parseInt(index, 10);
+  if (isNaN(idx) || idx < 0 || idx >= activeQuotationItems.length) return;
   if (activeQuotationItems.length <= 1) {
     alert("Quotation must have at least 1 line item.");
     return;
   }
-  activeQuotationItems.splice(index, 1);
+  activeQuotationItems.splice(idx, 1);
   renderQuotationItemRows();
   recalculateQuotationTotals();
 }
@@ -2934,24 +2869,41 @@ async function saveQuotationFormData() {
   const data = await getQuotationFormData();
   if (!data) return;
 
-  if (activeQuotationEditingId) {
-    await dbUpdateQuotation(activeQuotationEditingId, data);
-  } else {
-    await dbAddQuotation(data);
+  const saveBtn = document.querySelector('button[onclick="saveQuotationFormData()"]');
+  const origHtml = saveBtn ? saveBtn.innerHTML : '';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Saving Quotation...';
   }
 
-  // Automatic sync to Orders & Bookings when marked as Approved / Confirmed
-  if (data.status === 'Approved' || data.status === 'Completed') {
-    if (typeof syncQuotationToOrder === 'function') {
-      await syncQuotationToOrder(data);
+  try {
+    if (activeQuotationEditingId) {
+      await dbUpdateQuotation(activeQuotationEditingId, data);
+    } else {
+      await dbAddQuotation(data);
+    }
+
+    // Automatic sync to Orders & Bookings when marked as Approved / Confirmed
+    if (data.status === 'Approved' || data.status === 'Completed') {
+      if (typeof syncQuotationToOrder === 'function') {
+        await syncQuotationToOrder(data);
+      }
+    }
+
+    closeQuotationModal();
+    await loadQuotations();
+    await loadOrders();
+    loadInitialCounts();
+    showDashboardToast(`Quotation #${data.quote_number} saved successfully!`, 'success');
+  } catch (err) {
+    console.error("Save quotation error:", err);
+    showDashboardToast("Error saving quotation: " + (err.message || err), 'error');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = origHtml;
     }
   }
-
-  closeQuotationModal();
-  await loadQuotations();
-  await loadOrders();
-  loadInitialCounts();
-  showDashboardToast(`Quotation #${data.quote_number} saved successfully!`, 'success');
 }
 
 // ================= 5. CORPORATE LIVE A4 PREVIEW ENGINE (MATCHING REFERENCE IMAGE) =================
@@ -3162,7 +3114,8 @@ async function previewCurrentQuotation() {
 }
 
 async function openQuotationPreview(quoteId) {
-  const quote = allQuotationsRecords.find(q => String(q.id) === String(quoteId) || String(q.quote_number) === String(quoteId));
+  const quote = allQuotationsRecords.find(q => String(q.quote_number) === String(quoteId)) ||
+                allQuotationsRecords.find(q => String(q.id) === String(quoteId));
   if (!quote) return;
   const settings = activeQuotationSettings || (await dbGetQuotationSettings());
   previewingQuotationData = quote;
@@ -3241,7 +3194,8 @@ function printQuotationDocument() {
 // ================= 6. EXCEL (.XLSX) GENERATION ENGINE (EXACT REFERENCE REPLICA) =================
 
 async function exportQuotationToExcel(quoteId) {
-  const quote = allQuotationsRecords.find(q => String(q.id) === String(quoteId) || String(q.quote_number) === String(quoteId));
+  const quote = allQuotationsRecords.find(q => String(q.quote_number) === String(quoteId)) ||
+                allQuotationsRecords.find(q => String(q.id) === String(quoteId));
   if (!quote) return;
   const settings = activeQuotationSettings || (await dbGetQuotationSettings());
   await generateExcelQuotationWorkbook(quote, settings);
@@ -3689,11 +3643,13 @@ async function exportAllQuotationsExcel() {
 // ================= 7. PDF GENERATION ENGINE (html2pdf) =================
 
 async function exportQuotationToPDF(quoteId) {
-  let quote = allQuotationsRecords.find(q => String(q.id) === String(quoteId) || String(q.quote_number) === String(quoteId));
+  let quote = allQuotationsRecords.find(q => String(q.quote_number) === String(quoteId)) ||
+              allQuotationsRecords.find(q => String(q.id) === String(quoteId));
   if (!quote) {
     const quotes = await dbGetQuotations();
     allQuotationsRecords = quotes || [];
-    quote = allQuotationsRecords.find(q => String(q.id) === String(quoteId) || String(q.quote_number) === String(quoteId));
+    quote = allQuotationsRecords.find(q => String(q.quote_number) === String(quoteId)) ||
+            allQuotationsRecords.find(q => String(q.id) === String(quoteId));
   }
   if (!quote) {
     alert("Quotation not found.");
@@ -4947,7 +4903,20 @@ function onOrderItemSelect(itemId) {
   }
 }
 
-function calculateOrderTotal() {
+function onOrderPaymentStatusChange(status) {
+  const totalInput = document.querySelector('#crud-form-fields input[name="total_amount"]');
+  const paidInput = document.querySelector('#crud-form-fields input[name="paid_amount"]');
+  if (!totalInput || !paidInput) return;
+  const total = parseFloat(totalInput.value) || 0;
+  if (status === 'Paid') {
+    paidInput.value = total;
+  } else if (status === 'Pending') {
+    paidInput.value = 0;
+  }
+  calculateOrderTotal('payment_status');
+}
+
+function calculateOrderTotal(triggerSource = 'qty_or_price') {
   const qtyInput = document.querySelector('#crud-form-fields input[name="quantity"]');
   const priceInput = document.querySelector('#crud-form-fields input[name="unit_price"]');
   const totalInput = document.querySelector('#crud-form-fields input[name="total_amount"]');
@@ -4960,15 +4929,21 @@ function calculateOrderTotal() {
   if (qtyInput && priceInput && totalInput) {
     const q = parseFloat(qtyInput.value) || 0;
     const p = parseFloat(priceInput.value) || 0;
-    const total = Math.round(q * p);
-    totalInput.value = total;
+    
+    // Auto-update total amount only when quantity or unit price changes
+    let total = parseFloat(totalInput.value) || 0;
+    if (triggerSource === 'qty_or_price') {
+      const rawTotal = q * p;
+      total = Math.round(rawTotal * 100) / 100;
+      totalInput.value = total;
+    }
 
     // Paid & Balance check
     let paid = paidInput ? (parseFloat(paidInput.value) || 0) : 0;
-    const balanceDue = Math.max(0, total - paid);
+    const balanceDue = Math.max(0, Math.round((total - paid) * 100) / 100);
 
     if (balanceBadge) {
-      if (balanceDue === 0 && total > 0) {
+      if (balanceDue <= 0 && total > 0) {
         balanceBadge.className = 'mt-1.5 text-xs font-bold text-emerald-400 flex items-center gap-1';
         balanceBadge.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Fully Paid (₹${total.toLocaleString('en-IN')})`;
       } else {
@@ -4977,8 +4952,8 @@ function calculateOrderTotal() {
       }
     }
 
-    // Auto update payment_status select if not manually adjusted
-    if (paymentSelect) {
+    // Auto update payment_status select if not manually adjusted via dropdown
+    if (paymentSelect && triggerSource !== 'payment_status') {
       if (paid >= total && total > 0) {
         paymentSelect.value = 'Paid';
       } else if (paid > 0 && paid < total) {
@@ -5124,7 +5099,7 @@ async function openOrderModal(id = null) {
     <div class="grid grid-cols-3 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1 text-xs">Quantity <span class="text-orange-500">*</span></label>
-        <input type="number" step="0.1" min="0.1" name="quantity" required oninput="calculateOrderTotal()" value="${initialQty}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-orange-400" />
+        <input type="number" step="any" min="0" name="quantity" required oninput="calculateOrderTotal('qty_or_price')" value="${initialQty}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold text-orange-400" />
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1 text-xs">Unit</label>
@@ -5143,7 +5118,7 @@ async function openOrderModal(id = null) {
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1 text-xs">Unit Price (₹)</label>
-        <input type="number" step="0.5" name="unit_price" required oninput="calculateOrderTotal()" value="${initialPrice}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold" />
+        <input type="number" step="any" min="0" name="unit_price" required oninput="calculateOrderTotal('qty_or_price')" value="${initialPrice}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold" />
       </div>
     </div>
 
@@ -5152,15 +5127,15 @@ async function openOrderModal(id = null) {
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label class="block text-slate-300 font-bold mb-1 text-xs">Total Amount (₹)</label>
-          <input type="number" name="total_amount" required oninput="calculateOrderTotal()" value="${initialTotal}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/50 text-emerald-400 font-black text-sm focus:outline-none" />
+          <input type="number" step="any" min="0" name="total_amount" required oninput="calculateOrderTotal('total')" value="${initialTotal}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/50 text-emerald-400 font-black text-sm focus:outline-none" />
         </div>
         <div>
           <label class="block text-emerald-400 font-bold mb-1 text-xs">Paid Amount (₹)</label>
-          <input type="number" step="1" name="paid_amount" oninput="calculateOrderTotal()" value="${initialPaid}" placeholder="0" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/60 text-emerald-300 font-black text-sm focus:outline-none focus:border-emerald-400" />
+          <input type="number" step="any" min="0" name="paid_amount" oninput="calculateOrderTotal('paid')" value="${initialPaid}" placeholder="0" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/60 text-emerald-300 font-black text-sm focus:outline-none focus:border-emerald-400" />
         </div>
         <div>
           <label class="block text-slate-300 font-bold mb-1 text-xs">Payment Status</label>
-          <select name="payment_status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer">
+          <select name="payment_status" onchange="onOrderPaymentStatusChange(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer">
             <option value="Paid" ${existing && existing.payment_status === 'Paid' ? 'selected' : ''}>Paid</option>
             <option value="Partial" ${existing && existing.payment_status === 'Partial' ? 'selected' : ''}>Partial</option>
             <option value="Pending" ${!existing || existing.payment_status === 'Pending' ? 'selected' : ''}>Pending</option>
@@ -5212,11 +5187,26 @@ async function openOrderModal(id = null) {
 
   document.getElementById('crud-modal').classList.remove('hidden');
 
+  // Ensure form and number inputs never trigger browser step validation mismatch
+  const crudForm = document.getElementById('crud-form');
+  if (crudForm) {
+    crudForm.noValidate = true;
+  }
+  const crudBtn = document.getElementById('crud-submit-btn');
+  if (crudBtn) {
+    crudBtn.setAttribute('formnovalidate', 'true');
+  }
+  document.querySelectorAll('#crud-form-fields input[type="number"]').forEach(inp => {
+    inp.step = 'any';
+    inp.min = '0';
+    inp.setCustomValidity('');
+  });
+
   // Trigger initial item selection and payment balance calculation
-  if (selectedInventoryId) {
+  if (!existing && selectedInventoryId) {
     onOrderItemSelect(selectedInventoryId);
   } else {
-    calculateOrderTotal();
+    calculateOrderTotal('init');
   }
 }
 
@@ -5549,13 +5539,13 @@ function openEmployeeModal(id = null) {
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Daily Wage Rate (₹)</label>
-        <input type="number" name="daily_wage" required value="${existing ? existing.daily_wage : '850'}" placeholder="e.g. 850" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold" />
+        <input type="number" step="any" min="0" name="daily_wage" required value="${existing ? existing.daily_wage : '850'}" placeholder="e.g. 850" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold" />
       </div>
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Standard Shift (Hours)</label>
-        <input type="number" step="0.5" min="1" max="24" name="standard_hours" value="${existing && existing.standard_hours ? existing.standard_hours : '8'}" placeholder="e.g. 8" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold" />
+        <input type="number" step="any" min="1" max="24" name="standard_hours" value="${existing && existing.standard_hours ? existing.standard_hours : '8'}" placeholder="e.g. 8" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 font-semibold" />
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Phone / WhatsApp</label>
@@ -5872,7 +5862,7 @@ async function openAttendanceModal(id = null) {
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1 text-xs">Overtime (Hours)</label>
-        <input type="number" step="0.5" min="0" name="overtime_hours" value="${existingOvertime}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+        <input type="number" step="any" min="0" name="overtime_hours" value="${existingOvertime}" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
     </div>
   `;
@@ -6193,7 +6183,7 @@ function openInventoryModal(id = null) {
       <div>
         <label class="block text-slate-300 font-bold mb-1">Current Stock Quantity & Unit <span class="text-orange-500">*</span></label>
         <div class="flex gap-2">
-          <input type="number" step="0.1" name="quantity" required value="${existing ? existing.quantity : ''}" placeholder="Available Qty" class="w-1/2 px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-orange-400 font-bold focus:outline-none focus:border-orange-500" />
+          <input type="number" step="any" min="0" name="quantity" required value="${existing ? existing.quantity : ''}" placeholder="Available Qty" class="w-1/2 px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-orange-400 font-bold focus:outline-none focus:border-orange-500" />
           <select name="unit" onchange="toggleInventoryCustomUnit(this.value)" class="w-1/2 px-2 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-semibold text-xs">
             <option value="Tons" ${unit === 'Tons' ? 'selected' : ''}>Tons</option>
             <option value="Sheets" ${unit === 'Sheets' ? 'selected' : ''}>Sheets</option>
@@ -6215,7 +6205,7 @@ function openInventoryModal(id = null) {
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div>
         <label class="block text-slate-300 font-bold mb-1">Unit Rate (₹)</label>
-        <input type="number" step="0.5" name="unit_price" value="${existing ? existing.unit_price : ''}" placeholder="Rate / unit" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold" />
+        <input type="number" step="any" min="0" name="unit_price" value="${existing ? existing.unit_price : ''}" placeholder="Rate / unit" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500 font-bold" />
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Yard / Warehouse Location</label>
@@ -6223,7 +6213,7 @@ function openInventoryModal(id = null) {
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Min Reorder Alert Level</label>
-        <input type="number" step="1" name="min_reorder_level" value="${existing && existing.min_reorder_level ? existing.min_reorder_level : 5}" placeholder="Alert at Qty" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+        <input type="number" step="any" min="0" name="min_reorder_level" value="${existing && existing.min_reorder_level ? existing.min_reorder_level : 5}" placeholder="Alert at Qty" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
     </div>
   `;
@@ -6482,7 +6472,7 @@ function openFinanceModal() {
       </div>
       <div>
         <label class="block text-slate-300 font-bold mb-1">Amount (₹)</label>
-        <input type="number" name="amount" required placeholder="e.g. 50000" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
+        <input type="number" step="any" min="0" name="amount" required placeholder="e.g. 50000" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-orange-500" />
       </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -6924,7 +6914,7 @@ async function handleCrudSubmit(e) {
   const formData = new FormData(form);
   const btn = document.getElementById('crud-submit-btn');
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving to Supabase & Cloudinary...`;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving Details...`;
 
   try {
     if (activeModalType === 'inquiry') {

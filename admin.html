@@ -305,7 +305,7 @@
           <i class="fa-solid fa-user-lock text-orange-400 text-xs"></i>
           <span class="hidden sm:inline">Change Passwords</span>
         </button>
-        <button id="btn-header-settings" onclick="openSettingsModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800" title="Cloudinary & Supabase Settings">
+        <button id="btn-header-settings" onclick="openSettingsModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800" title="System Settings">
           <i class="fa-solid fa-gear text-sm"></i>
         </button>
         <button onclick="adminLogout()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 text-xs font-bold transition-all border border-slate-700">
@@ -509,7 +509,7 @@
                 <button type="button" id="quote-order-desc" onclick="setQuotationSortOrder('desc')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer" title="Descending Sequence: Big to Small (N, N-1...)"><i class="fa-solid fa-arrow-down-9-1 mr-1"></i>Big ➔ Small (N ➔ 1)</button>
               </div>
 
-              <button type="button" onclick="renumberQuotationsSerialWise(true)" class="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 hover:text-white text-orange-400 border border-orange-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm" title="Re-sequence all quotations in 1 to N serial order without any gaps">
+              <button type="button" onclick="renumberQuotationsSerialWise(true)" class="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 hover:text-white text-orange-400 border border-orange-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm" title="View all quotations in 1 to N serial sequence">
                 <i class="fa-solid fa-list-ol"></i> Sequence Order (1 to N)
               </button>
 
@@ -689,75 +689,79 @@
           </div>
         </div>
 
-        <!-- 2. SEVEN REAL-TIME COMPANY CALCULATION METRICS CARDS -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
+        <!-- 2. REAL-TIME COMPANY CALCULATION METRICS CARDS -->
+        <!-- Row 1: Primary Financial Ledger (3 Wide High-Capacity Cards) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-3.5">
+          <!-- Total Value (Order Sum) -->
+          <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Value</span>
+              <span class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center text-xs"><i class="fa-solid fa-sack-dollar"></i></span>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-white mt-1 font-heading tracking-tight truncate" id="orders-total-revenue">₹0</div>
+            <div class="text-[11px] text-slate-500 mt-1 font-medium">All booked orders sum</div>
+          </div>
+
+          <!-- Paid Amount -->
+          <div class="min-w-0 bg-gradient-to-b from-slate-900 to-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 flex flex-col justify-between hover:border-emerald-500/50 transition-all shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Paid Amount</span>
+              <span class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs"><i class="fa-solid fa-circle-check"></i></span>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1 font-heading tracking-tight truncate" id="orders-paid-amount">₹0</div>
+            <div class="text-[11px] text-emerald-500/70 mt-1 font-semibold">Collected payments</div>
+          </div>
+
+          <!-- Pending Amount / Due Balance -->
+          <div class="min-w-0 bg-gradient-to-b from-slate-900 to-amber-950/20 border border-amber-500/40 rounded-2xl p-4 flex flex-col justify-between hover:border-amber-500/60 transition-all shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Pending Due</span>
+              <span class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xs"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-amber-400 mt-1 font-heading tracking-tight truncate" id="orders-pending-amount">₹0</div>
+            <div class="text-[11px] text-amber-500/70 mt-1 font-semibold">Outstanding balance due</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Operational Quantities & Fulfillment (4 Cards) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <!-- Total Orders -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
+          <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Orders</span>
               <i class="fa-solid fa-receipt text-slate-500 text-xs"></i>
             </div>
-            <div class="text-xl sm:text-2xl font-black text-white mt-1 font-heading" id="orders-total-count">0</div>
+            <div class="text-xl sm:text-2xl font-black text-white mt-1 font-heading truncate" id="orders-total-count">0</div>
             <div class="text-[10px] text-slate-500 mt-0.5">Booked orders</div>
           </div>
 
           <!-- Total Quantity -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
+          <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Qty</span>
               <i class="fa-solid fa-boxes-stacked text-cyan-500 text-xs"></i>
             </div>
-            <div class="text-xl sm:text-2xl font-black text-cyan-400 mt-1 font-heading" id="orders-total-quantity">0</div>
+            <div class="text-xl sm:text-2xl font-black text-cyan-400 mt-1 font-heading truncate" id="orders-total-quantity">0</div>
             <div class="text-[10px] text-slate-500 mt-0.5">Units / Tons</div>
           </div>
 
-          <!-- Total Amount -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Value</span>
-              <i class="fa-solid fa-sack-dollar text-slate-400 text-xs"></i>
-            </div>
-            <div class="text-xl sm:text-2xl font-black text-white mt-1 font-heading" id="orders-total-revenue">₹0</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Order sum</div>
-          </div>
-
-          <!-- Paid Amount -->
-          <div class="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-3.5 flex flex-col justify-between hover:border-emerald-500/50 transition-all shadow-sm bg-gradient-to-b from-slate-900 to-emerald-950/20">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Paid Amount</span>
-              <i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i>
-            </div>
-            <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1 font-heading" id="orders-paid-amount">₹0</div>
-            <div class="text-[10px] text-emerald-500/70 mt-0.5 font-semibold">Collected</div>
-          </div>
-
-          <!-- Pending Amount / Due Balance -->
-          <div class="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-3.5 flex flex-col justify-between hover:border-amber-500/60 transition-all shadow-sm bg-gradient-to-b from-slate-900 to-amber-950/20">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Pending Due</span>
-              <i class="fa-solid fa-triangle-exclamation text-amber-400 text-xs"></i>
-            </div>
-            <div class="text-xl sm:text-2xl font-black text-amber-400 mt-1 font-heading" id="orders-pending-amount">₹0</div>
-            <div class="text-[10px] text-amber-500/70 mt-0.5 font-semibold">Balance due</div>
-          </div>
-
           <!-- Pending / Active Orders -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
+          <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Pending Orders</span>
               <i class="fa-solid fa-clock text-orange-400 text-xs"></i>
             </div>
-            <div class="text-xl sm:text-2xl font-black text-orange-400 mt-1 font-heading" id="orders-active-count">0</div>
+            <div class="text-xl sm:text-2xl font-black text-orange-400 mt-1 font-heading truncate" id="orders-active-count">0</div>
             <div class="text-[10px] text-slate-500 mt-0.5">In production</div>
           </div>
 
           <!-- Completed / Delivered -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm col-span-2 sm:col-span-1">
+          <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition-all shadow-sm">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Completed</span>
               <i class="fa-solid fa-truck-fast text-emerald-400 text-xs"></i>
             </div>
-            <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1 font-heading" id="orders-delivered-count">0</div>
+            <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1 font-heading truncate" id="orders-delivered-count">0</div>
             <div class="text-[10px] text-slate-500 mt-0.5">Delivered</div>
           </div>
         </div>
@@ -1450,7 +1454,7 @@
                 <span class="text-slate-400 font-semibold">Packing / Forwarding Charges:</span>
                 <div class="flex items-center gap-1 w-36">
                   <span class="text-slate-500 font-bold">₹</span>
-                  <input type="number" id="quote-input-packing" value="0" min="0" step="100" class="w-full px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-right focus:border-orange-500 outline-none" oninput="recalculateQuotationTotals()" />
+                  <input type="number" id="quote-input-packing" value="0" min="0" step="any" class="w-full px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-right focus:border-orange-500 outline-none" oninput="recalculateQuotationTotals()" />
                 </div>
               </div>
 
@@ -1474,7 +1478,7 @@
                 <input type="text" id="quote-input-other-desc" placeholder="Other charges (e.g. Freight / Crane / Erection)" class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs flex-1 focus:border-orange-500 outline-none" />
                 <div class="flex items-center gap-1 w-36 shrink-0">
                   <span class="text-slate-500 font-bold">₹</span>
-                  <input type="number" id="quote-input-other-amount" value="0" min="0" step="100" class="w-full px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-right focus:border-orange-500 outline-none" oninput="recalculateQuotationTotals()" />
+                  <input type="number" id="quote-input-other-amount" value="0" min="0" step="any" class="w-full px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-right focus:border-orange-500 outline-none" oninput="recalculateQuotationTotals()" />
                 </div>
               </div>
 
@@ -1769,11 +1773,11 @@
       <h3 class="text-xl font-bold text-white font-heading mb-1" id="crud-modal-title">Add Item</h3>
       <p class="text-xs text-slate-400 mb-5" id="crud-modal-subtitle">Fill in the details below.</p>
       
-      <form id="crud-form" onsubmit="handleCrudSubmit(event)" class="space-y-4 text-xs">
+      <form id="crud-form" onsubmit="handleCrudSubmit(event)" novalidate class="space-y-4 text-xs">
         <div id="crud-form-fields" class="space-y-4">
           <!-- Dynamic Form Fields -->
         </div>
-        <button type="submit" id="crud-submit-btn" class="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow">
+        <button type="submit" id="crud-submit-btn" formnovalidate class="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow">
           Save Details
         </button>
       </form>
@@ -2036,7 +2040,7 @@
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-md w-full px-4"></div>
 
   <!-- Scripts -->
-  <script src="js/backend-config.js?v=20261023_01"></script>
-  <script src="js/admin.js?v=20261023_01"></script>
+  <script src="js/backend-config.js?v=20261030_quote_fix_09"></script>
+  <script src="js/admin.js?v=20261030_quote_fix_09"></script>
 </body>
 </html>

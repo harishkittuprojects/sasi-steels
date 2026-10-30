@@ -1252,38 +1252,48 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
         }
       }
 
-      // Merge remote and local records
-      const map = new Map();
-      remote.forEach(item => {
-        const k = item[idField] || String(item.id);
-        if (k) map.set(k, item);
-      });
+      // Remote cloud data is the central source of truth across all devices
+      if (remote.length > 0) {
+        const map = new Map();
+        remote.forEach(r => {
+          const k = String(r[idField] || r.id);
+          if (k) map.set(k, r);
+        });
 
-      local.forEach(item => {
-        const k = item[idField] || String(item.id);
-        if (k) {
+        // If local has genuine offline items or more recent edits (newer updated_at), preserve them
+        let hasNewerLocal = false;
+        local.forEach(l => {
+          const k = String(l[idField] || l.id);
+          if (!k) return;
           if (!map.has(k)) {
-            map.set(k, item);
+            map.set(k, l);
+            hasNewerLocal = true;
           } else {
-            const existing = map.get(k);
-            const exDate = new Date(existing.updated_at || existing.created_at || 0).getTime();
-            const locDate = new Date(item.updated_at || item.created_at || 0).getTime();
-            if (locDate >= exDate) {
-              map.set(k, { ...existing, ...item });
+            const ex = map.get(k);
+            const exTime = new Date(ex.updated_at || ex.created_at || 0).getTime();
+            const locTime = new Date(l.updated_at || l.created_at || 0).getTime();
+            if (locTime > exTime) {
+              map.set(k, l);
+              hasNewerLocal = true;
             }
           }
+        });
+
+        const finalMerged = Array.from(map.values());
+        saveLocalCollection(storageKey, finalMerged);
+        if (hasNewerLocal) {
+          cloudSaveCollection(dbUsername, finalMerged).catch(err => console.warn("Cloud push error:", err));
         }
-      });
-
-      const merged = Array.from(map.values());
-
-      // If local had items not yet in cloud, or cloud had empty array, update cloud now
-      if (merged.length > 0 && (remote.length < merged.length || JSON.stringify(remote) !== JSON.stringify(merged))) {
-        cloudSaveCollection(dbUsername, merged).catch(err => console.warn("Cloud push error:", err));
+        return finalMerged;
       }
 
-      saveLocalCollection(storageKey, merged);
-      return merged;
+      // If remote was empty, seed remote with local records
+      if (local.length > 0) {
+        cloudSaveCollection(dbUsername, local).catch(err => console.warn("Cloud seed error:", err));
+        return local;
+      }
+
+      return [];
     }
   } catch (err) {
     console.warn("Cloud fetch error for " + dbUsername, err);
@@ -1783,20 +1793,13 @@ function generateNextQuoteNumber(existingQuotations = []) {
   return String(nextNum);
 }
 
-// Helper to ensure official 7 terms are always preserved
+// Helper to ensure terms are preserved without forcibly overwriting user customizations
 function sanitizeQuotationTerms(terms) {
   if (!Array.isArray(terms) || terms.length === 0) {
     return [...DEFAULT_QUOTATION_SETTINGS.default_terms];
   }
-  const isOldOutdated = terms.some(t => typeof t === 'string' && (
-    t.includes('Prices are valid for 15 days from the date of quotation') ||
-    t.includes('drawing approval') ||
-    t.includes('Guntur jurisdiction only')
-  ));
-  if (isOldOutdated || terms.length < 7) {
-    return [...DEFAULT_QUOTATION_SETTINGS.default_terms];
-  }
-  return terms.filter(t => t && String(t).trim().length > 0);
+  const cleanTerms = terms.map(t => String(t || '').trim()).filter(t => t.length > 0);
+  return cleanTerms.length > 0 ? cleanTerms : [...DEFAULT_QUOTATION_SETTINGS.default_terms];
 }
 
 function sanitizeQuotationSettings(settings) {
@@ -1884,10 +1887,17 @@ async function dbSaveQuotationSettings(settings) {
 
 // Quotations List CRUD (Cross-Device Cloud Sync)
 async function dbGetQuotations() {
+  try {
+    const syncVerKey = 'sasi_quotations_sync_ver_20261030_full';
+    if (localStorage.getItem(syncVerKey) !== 'v1') {
+      localStorage.removeItem('sasi_quotations');
+      localStorage.setItem(syncVerKey, 'v1');
+    }
+  } catch (e) {}
+
   let local = getLocalCollection('sasi_quotations');
   if (local === null) {
-    saveLocalCollection('sasi_quotations', DEFAULT_QUOTATIONS);
-    local = DEFAULT_QUOTATIONS;
+    local = [];
   }
 
   // 1. Primary Cross-Device Cloud Sync via Supabase admin_users persistent storage
@@ -1947,7 +1957,11 @@ async function dbAddQuotation(quote) {
   saveLocalCollection('sasi_quotations', localList);
 
   // Sync to Supabase cloud storage across systems
-  cloudSaveCollection('cloud_quotations_sync', localList).catch(() => {});
+  try {
+    await cloudSaveCollection('cloud_quotations_sync', localList);
+  } catch (err) {
+    console.warn("Cloud save collection error:", err);
+  }
 
   const client = getSupabaseClient();
   if (client) {
@@ -1972,16 +1986,37 @@ async function dbAddQuotation(quote) {
 
 async function dbUpdateQuotation(id, updatedData) {
   let localList = getLocalCollection('sasi_quotations') || [];
-  const existingIndex = localList.findIndex(x => String(x.id) === String(id) || String(x.quote_number) === String(id));
+  
+  // Find index by updatedData quote_number, or old id / quote_number
+  let existingIndex = localList.findIndex(x => 
+    (updatedData.quote_number && String(x.quote_number) === String(updatedData.quote_number)) ||
+    (id && (String(x.quote_number) === String(id) || String(x.id) === String(id)))
+  );
+
+  const nowIso = new Date().toISOString();
 
   if (existingIndex !== -1) {
     localList[existingIndex] = {
       ...localList[existingIndex],
       ...updatedData,
-      updated_at: new Date().toISOString()
+      id: localList[existingIndex].id || id || Date.now(),
+      updated_at: nowIso
     };
-    saveLocalCollection('sasi_quotations', localList);
-    cloudSaveCollection('cloud_quotations_sync', localList).catch(() => {});
+  } else {
+    localList.unshift({
+      id: id || Date.now(),
+      created_at: nowIso,
+      ...updatedData,
+      updated_at: nowIso
+    });
+  }
+
+  saveLocalCollection('sasi_quotations', localList);
+  
+  try {
+    await cloudSaveCollection('cloud_quotations_sync', localList);
+  } catch (err) {
+    console.warn("Cloud save collection error:", err);
   }
 
   const client = getSupabaseClient();
@@ -2004,7 +2039,11 @@ async function dbDeleteQuotation(id) {
   let localList = getLocalCollection('sasi_quotations') || [];
   localList = localList.filter(x => String(x.id) !== String(id) && String(x.quote_number) !== String(id));
   saveLocalCollection('sasi_quotations', localList);
-  cloudSaveCollection('cloud_quotations_sync', localList).catch(() => {});
+  try {
+    await cloudSaveCollection('cloud_quotations_sync', localList);
+  } catch (err) {
+    console.warn("Cloud save collection error:", err);
+  }
 
   const client = getSupabaseClient();
   if (client) {
