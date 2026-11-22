@@ -5221,7 +5221,21 @@ async function deleteOrderItem(id) {
 }
 
 async function handleDeleteAllOrders() {
-  if (confirm("⚠️ Are you sure you want to delete ALL customer orders? Active stocks will be restored to Inventory. This cannot be undone.")) {
+  if (typeof isRestrictedAdminUser === 'function' && isRestrictedAdminUser()) {
+    if (typeof showDashboardToast === 'function') {
+      showDashboardToast('⛔ Access Denied: You do not have permission to delete orders.', 'error');
+    }
+    return;
+  }
+  if (!allOrdersRecords || allOrdersRecords.length === 0) {
+    if (typeof showDashboardToast === 'function') {
+      showDashboardToast('ℹ️ No customer orders found to delete.', 'info');
+    } else {
+      alert('No customer orders found to delete.');
+    }
+    return;
+  }
+  if (confirm(`⚠️ Are you sure you want to delete ALL (${allOrdersRecords.length}) customer orders? Active stocks will be restored to Inventory. This cannot be undone.`)) {
     await dbDeleteAllOrders();
     allOrdersRecords = [];
     populateCompanyFilterOptions();
@@ -5229,6 +5243,9 @@ async function handleDeleteAllOrders() {
     await loadInventory();
     await loadProducts();
     loadInitialCounts();
+    if (typeof showDashboardToast === 'function') {
+      showDashboardToast('🗑️ All customer orders deleted successfully. Stock restored.', 'success');
+    }
   }
 }
 

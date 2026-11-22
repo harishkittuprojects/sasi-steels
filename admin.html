@@ -651,6 +651,9 @@
             <button onclick="exportOrdersCSV()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer">
               <i class="fa-solid fa-table"></i> All CSV
             </button>
+            <button onclick="handleDeleteAllOrders()" class="px-3.5 py-2 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Delete All Customer Orders">
+              <i class="fa-solid fa-trash-can"></i> Delete All
+            </button>
             <button onclick="openOrderModal()" class="btn-orange-pill text-xs px-4 py-2 cursor-pointer shadow-lg shadow-orange-500/20">
               <i class="fa-solid fa-cart-plus mr-1"></i> Create Order
             </button>
@@ -818,6 +821,9 @@
             <button onclick="resetOrdersFilter()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-orange-400 font-medium inline-flex items-center gap-1 cursor-pointer">
               <i class="fa-solid fa-rotate-right"></i> Reset
             </button>
+            <button onclick="handleDeleteAllOrders()" class="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-xs text-red-400 hover:text-white border border-red-500/30 font-bold inline-flex items-center gap-1.5 cursor-pointer transition-all shadow-sm" title="Delete All Customer Orders">
+              <i class="fa-solid fa-trash-can"></i> Delete All
+            </button>
           </div>
         </div>
 
@@ -835,7 +841,14 @@
                   <th class="py-3.5 px-4">Paid & Due Balance</th>
                   <th class="py-3.5 px-4">Payment</th>
                   <th class="py-3.5 px-4">Order Status</th>
-                  <th class="py-3.5 px-4 text-right">Actions</th>
+                  <th class="py-3.5 px-4 text-right">
+                    <div class="inline-flex items-center gap-2 justify-end">
+                      <span>Actions</span>
+                      <button onclick="handleDeleteAllOrders()" class="px-2 py-0.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer transition-all shadow-sm normal-case tracking-normal" title="Delete All Orders">
+                        <i class="fa-solid fa-trash-can"></i> Delete All
+                      </button>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody id="table-orders" class="divide-y divide-slate-800 text-slate-200">
