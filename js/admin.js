@@ -1980,26 +1980,9 @@ function filterQuotationsData() {
           </select>
         </td>
         <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
-          ${(() => {
-            const qNum = String(q.quote_number || q.id || '').trim();
-            const isBooked = (allOrdersRecords || []).some(o => 
-              (o.quotation_number && String(o.quotation_number).trim() === qNum) ||
-              (o.order_number && (o.order_number === `ORD-${qNum}` || o.order_number === `ORD-${qNum.replace(/[^A-Za-z0-9]/g, '-')}`))
-            );
-            if (isBooked) {
-              return `
-                <button onclick="viewLinkedOrder('${q.quote_number}')" class="p-1.5 px-2.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs font-bold inline-flex items-center gap-1 border border-emerald-500/30 transition-all cursor-pointer" title="Order Confirmed & Booked! Click to view in Orders & Bookings">
-                  <i class="fa-solid fa-cart-shopping text-emerald-400"></i> <span class="hidden sm:inline">Booked</span>
-                </button>
-              `;
-            } else {
-              return `
-                <button onclick="confirmQuotationOrder('${q.quote_number || q.id}')" class="p-1.5 px-2.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold inline-flex items-center gap-1 shadow-md transition-all active:scale-95 cursor-pointer" title="Confirm Order & Book directly to Orders & Bookings">
-                  <i class="fa-solid fa-cart-arrow-down"></i> <span class="hidden sm:inline">Confirm</span>
-                </button>
-              `;
-            }
-          })()}
+          <button onclick="confirmQuotationOrder('${q.quote_number || q.id}')" class="p-1.5 px-2.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold inline-flex items-center gap-1 shadow-md transition-all active:scale-95 cursor-pointer" title="Confirm Order & Book directly to Orders & Bookings">
+            <i class="fa-solid fa-cart-arrow-down"></i> <span class="hidden sm:inline">Confirm</span>
+          </button>
           <button onclick="openQuotationPreview('${q.quote_number || q.id}')" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs" title="Live Preview">
             <i class="fa-solid fa-eye text-orange-400"></i>
           </button>
