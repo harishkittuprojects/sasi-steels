@@ -972,6 +972,10 @@
         <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-magnifying-glass text-orange-400"></i> Search:</span>
+              <input type="text" id="attendance-filter-search" placeholder="Search worker / role..." class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none w-48" oninput="filterAttendanceData()" />
+            </div>
+            <div class="flex items-center gap-2">
               <span class="text-xs text-slate-400 font-semibold"><i class="fa-regular fa-calendar text-orange-400"></i> From:</span>
               <input type="date" id="attendance-filter-from" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:border-orange-500 outline-none cursor-pointer" oninput="onDateInputFilterChange('attendance')" onchange="onDateInputFilterChange('attendance')" onclick="if(this.showPicker) this.showPicker()" />
             </div>

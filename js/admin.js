@@ -5635,11 +5635,23 @@ function filterAttendanceData() {
   const tbody = document.getElementById('table-attendance');
   if (!tbody) return;
 
+  const searchVal = (document.getElementById('attendance-filter-search')?.value || '').toLowerCase().trim();
   const fromVal = document.getElementById('attendance-filter-from')?.value || '';
   const toVal = document.getElementById('attendance-filter-to')?.value || '';
   const statusVal = document.getElementById('attendance-filter-status')?.value || 'ALL';
 
   const filtered = allAttendanceRecords.filter(r => {
+    // 1. Search filter: worker/employee name, role, status, or date
+    if (searchVal) {
+      const name = (r.employee_name || '').toLowerCase();
+      const role = (r.role || '').toLowerCase();
+      const st = (r.status || '').toLowerCase();
+      const dt = (r.attendance_date || r.date || '').toLowerCase();
+      if (!name.includes(searchVal) && !role.includes(searchVal) && !st.includes(searchVal) && !dt.includes(searchVal)) {
+        return false;
+      }
+    }
+
     if (statusVal !== 'ALL' && r.status !== statusVal) return false;
 
     // Accurate date comparison using normalized YYYY-MM-DD
@@ -5710,6 +5722,9 @@ function setAttendanceDatePreset(preset) {
 }
 
 function resetAttendanceFilter() {
+  const searchInput = document.getElementById('attendance-filter-search');
+  if (searchInput) searchInput.value = '';
+
   const statusSelect = document.getElementById('attendance-filter-status');
   if (statusSelect) statusSelect.value = 'ALL';
 
@@ -5721,11 +5736,21 @@ async function exportAttendanceCSV() {
     allAttendanceRecords = await dbGetAttendance() || [];
   }
 
+  const searchVal = (document.getElementById('attendance-filter-search')?.value || '').toLowerCase().trim();
   const fromVal = document.getElementById('attendance-filter-from')?.value || '';
   const toVal = document.getElementById('attendance-filter-to')?.value || '';
   const statusVal = document.getElementById('attendance-filter-status')?.value || 'ALL';
 
   let exportList = allAttendanceRecords.filter(r => {
+    if (searchVal) {
+      const name = (r.employee_name || '').toLowerCase();
+      const role = (r.role || '').toLowerCase();
+      const st = (r.status || '').toLowerCase();
+      const dt = (r.attendance_date || r.date || '').toLowerCase();
+      if (!name.includes(searchVal) && !role.includes(searchVal) && !st.includes(searchVal) && !dt.includes(searchVal)) {
+        return false;
+      }
+    }
     if (statusVal !== 'ALL' && r.status !== statusVal) return false;
     const rDate = getRecordDateStr(r.attendance_date || r.date || r.created_at);
     if (fromVal && rDate < fromVal) return false;
