@@ -4200,10 +4200,62 @@ function openNewInquiryModal() {
 // ================= 2. CUSTOMER ORDERS & COMPANY-WISE LEDGER ENGINE =================
 let currentSelectedOrderCompany = 'ALL';
 
+// Global order sorting state: defaults strictly to 'asc' (Small to Big: ORD-1, ORD-2, ORD-3... ORD-205)
+let currentOrderSortOrder = (function() {
+  try {
+    const saved = localStorage.getItem('sasi_order_sort_order');
+    if (saved === 'asc' || saved === 'desc') return saved;
+    return 'asc';
+  } catch (e) {
+    return 'asc';
+  }
+})();
+
+function setOrderSortOrder(order) {
+  currentOrderSortOrder = order;
+  try {
+    localStorage.setItem('sasi_order_sort_order', order);
+  } catch (e) {}
+  updateOrderSortUI();
+  filterOrdersData();
+  if (typeof showDashboardToast === 'function') {
+    showDashboardToast(`Orders sorted in sequence: ${order === 'asc' ? 'Small to Big (1 ➔ N Ascending)' : 'Big to Small (N ➔ 1 Descending)'}`, 'info');
+  }
+}
+
+function toggleOrderSortOrder() {
+  const nextOrder = (currentOrderSortOrder === 'asc') ? 'desc' : 'asc';
+  setOrderSortOrder(nextOrder);
+}
+
+function updateOrderSortUI() {
+  const ascBtn = document.getElementById('order-order-asc');
+  const descBtn = document.getElementById('order-order-desc');
+  const icon = document.getElementById('order-sort-header-icon');
+
+  if (ascBtn && descBtn) {
+    if (currentOrderSortOrder === 'asc') {
+      ascBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow-sm cursor-pointer';
+      descBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer';
+    } else {
+      ascBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer';
+      descBtn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-orange-600 text-white shadow-sm cursor-pointer';
+    }
+  }
+
+  if (icon) {
+    icon.className = (currentOrderSortOrder === 'asc')
+      ? 'fa-solid fa-arrow-up-1-9 text-orange-400'
+      : 'fa-solid fa-arrow-down-9-1 text-orange-400';
+  }
+}
+
 async function loadOrders() {
   if (isRestrictedAdminUser()) return;
   const tbody = document.getElementById('table-orders');
   if (!tbody) return;
+
+  updateOrderSortUI();
 
   // FAST CACHE RENDER (0ms): display instantly from local cache without blank screen
   const cachedOrders = (allOrdersRecords && allOrdersRecords.length) 
@@ -4212,6 +4264,7 @@ async function loadOrders() {
   if (cachedOrders.length > 0) {
     allOrdersRecords = cachedOrders;
     populateCompanyFilterOptions();
+    updateOrderSortUI();
     filterOrdersData();
   } else {
     tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & company ledgers...</td></tr>`;
@@ -4553,6 +4606,35 @@ function filterOrdersData() {
     return true;
   });
 
+  // Sort orders in sequence: 'asc' = small to big (ORD-1, ORD-2, ORD-3... ORD-205); 'desc' = big to small (ORD-205... ORD-1)
+  filtered.sort((a, b) => {
+    const rawA = String(a.order_number || a.quotation_number || a.id || '').trim();
+    const rawB = String(b.order_number || b.quotation_number || b.id || '').trim();
+    const cleanA = rawA.replace(/[^0-9]/g, '');
+    const cleanB = rawB.replace(/[^0-9]/g, '');
+    const numA = cleanA !== '' ? parseInt(cleanA, 10) : NaN;
+    const numB = cleanB !== '' ? parseInt(cleanB, 10) : NaN;
+    const hasA = !isNaN(numA);
+    const hasB = !isNaN(numB);
+
+    if (hasA && hasB) {
+      if (numA !== numB) {
+        return (currentOrderSortOrder === 'asc') ? (numA - numB) : (numB - numA);
+      }
+    } else if (hasA && !hasB) {
+      return (currentOrderSortOrder === 'asc') ? -1 : 1;
+    } else if (!hasA && hasB) {
+      return (currentOrderSortOrder === 'asc') ? 1 : -1;
+    }
+
+    const dateA = new Date(a.order_date || a.created_at || 0).getTime();
+    const dateB = new Date(b.order_date || b.created_at || 0).getTime();
+    if (dateA !== dateB) {
+      return (currentOrderSortOrder === 'asc') ? (dateA - dateB) : (dateB - dateA);
+    }
+    return (currentOrderSortOrder === 'asc') ? rawA.localeCompare(rawB) : rawB.localeCompare(rawA);
+  });
+
   updateOrdersMetrics(filtered);
   renderOrdersList(filtered);
 }
@@ -4567,6 +4649,9 @@ async function handleOrderStatusChange(id, newStatus) {
 
 function resetOrdersFilter() {
   currentSelectedOrderCompany = 'ALL';
+  currentOrderSortOrder = 'asc';
+  updateOrderSortUI();
+
   const compSelect = document.getElementById('order-filter-company');
   const searchInput = document.getElementById('order-filter-search');
   const statusSelect = document.getElementById('order-filter-status');
