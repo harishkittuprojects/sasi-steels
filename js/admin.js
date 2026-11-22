@@ -2027,7 +2027,8 @@ function resetQuotationsFilter() {
 
 async function confirmQuotationOrder(id) {
   let quote = (allQuotationsRecords || []).find(q => String(q.quote_number) === String(id)) ||
-              (allQuotationsRecords || []).find(q => String(q.id) === String(id));
+              (allQuotationsRecords || []).find(q => String(q.id) === String(id)) ||
+              (allQuotationsRecords || []).find(q => String(q.quote_number).replace(/^#/, '') === String(id).replace(/^#/, ''));
   if (!quote && previewingQuotationData && (String(previewingQuotationData.id) === String(id) || String(previewingQuotationData.quote_number) === String(id))) {
     quote = previewingQuotationData;
   }
@@ -2051,9 +2052,10 @@ async function confirmQuotationOrder(id) {
     await loadOrders();
     loadInitialCounts();
 
-    showDashboardToast(`🎉 Quotation #${quote.quote_number} confirmed! Order booked in Orders & Bookings.`, 'success', 'View in Orders', () => {
-      viewLinkedOrder(quote.quote_number);
-    });
+    showDashboardToast(`🎉 Quotation #${quote.quote_number} confirmed! Navigating to Orders & Bookings...`, 'success');
+    
+    // Immediately display this confirmed order in Orders & Bookings
+    await viewLinkedOrder(quote.quote_number);
     return true;
   } catch (err) {
     console.error("Error confirming quotation order:", err);
@@ -2090,20 +2092,33 @@ async function handleQuotationStatusChange(id, newStatus) {
 async function viewLinkedOrder(quoteNumber) {
   closeQuotationPreviewModal();
 
-  const qNum = String(quoteNumber).trim();
+  const rawNum = String(quoteNumber || '').trim();
+  const cleanQNum = rawNum.replace(/^#/, '').trim();
+  const orderNum = `ORD-${cleanQNum.replace(/[^A-Za-z0-9]/g, '-')}`;
+
   const hasOrder = (allOrdersRecords || []).some(o => 
-    (o.quotation_number && String(o.quotation_number).trim() === qNum) ||
-    (o.order_number && (o.order_number === `ORD-${qNum}` || o.order_number === `ORD-${qNum.replace(/[^A-Za-z0-9]/g, '-')}`))
+    (o.quotation_number && (String(o.quotation_number).trim() === cleanQNum || String(o.quotation_number).trim() === rawNum)) ||
+    (o.order_number && (o.order_number === orderNum || o.order_number === `ORD-${cleanQNum}` || o.order_number === `ORD-${rawNum}`))
   );
 
   // If order was not found in bookings, auto-book it now
   if (!hasOrder) {
-    const quote = (allQuotationsRecords || []).find(q => String(q.quote_number).trim() === qNum);
+    const quote = (allQuotationsRecords || []).find(q => 
+      String(q.quote_number).trim() === cleanQNum || 
+      String(q.quote_number).trim() === rawNum ||
+      String(q.id).trim() === rawNum
+    );
     if (quote && typeof syncQuotationToOrder === 'function') {
       await syncQuotationToOrder(quote);
       await loadOrders();
       loadInitialCounts();
     }
+  }
+
+  // Ensure orders section is unlocked
+  if (PROTECTED_SECTIONS.includes('orders')) {
+    sectionLockState['orders'] = false;
+    updateSectionLockIcon('orders', false);
   }
 
   switchTab('orders');
@@ -2125,8 +2140,13 @@ async function viewLinkedOrder(quoteNumber) {
 
     const searchInput = document.getElementById('order-filter-search');
     if (searchInput) {
-      searchInput.value = `ORD-${quoteNumber}`;
+      searchInput.value = orderNum;
       filterOrdersData();
+    }
+
+    const sectionOrders = document.getElementById('section-orders');
+    if (sectionOrders) {
+      sectionOrders.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, 250);
 }
