@@ -1242,7 +1242,7 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
 
     if (res.ok) {
       const rows = await res.json();
-      let remote = [];
+      let remote = null;
       if (Array.isArray(rows) && rows.length > 0 && rows[0].password_hash) {
         try {
           const parsed = JSON.parse(rows[0].password_hash);
@@ -1252,44 +1252,15 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
         }
       }
 
-      // Remote cloud data is the central source of truth across all devices
-      if (remote.length > 0) {
-        const map = new Map();
-        remote.forEach(r => {
-          const k = String(r[idField] || r.id);
-          if (k) map.set(k, r);
-        });
-
-        // If local has genuine offline items or more recent edits (newer updated_at), preserve them
-        let hasNewerLocal = false;
-        local.forEach(l => {
-          const k = String(l[idField] || l.id);
-          if (!k) return;
-          if (!map.has(k)) {
-            map.set(k, l);
-            hasNewerLocal = true;
-          } else {
-            const ex = map.get(k);
-            const exTime = new Date(ex.updated_at || ex.created_at || 0).getTime();
-            const locTime = new Date(l.updated_at || l.created_at || 0).getTime();
-            if (locTime > exTime) {
-              map.set(k, l);
-              hasNewerLocal = true;
-            }
-          }
-        });
-
-        const finalMerged = Array.from(map.values());
-        saveLocalCollection(storageKey, finalMerged);
-        if (hasNewerLocal) {
-          cloudSaveCollection(dbUsername, finalMerged).catch(err => console.warn("Cloud push error:", err));
-        }
-        return finalMerged;
+      // If remote cloud record exists, IT IS THE CENTRAL SOURCE OF TRUTH across all devices!
+      if (remote !== null) {
+        saveLocalCollection(storageKey, remote);
+        return remote;
       }
 
-      // If remote was empty, seed remote with local records
+      // If remote was completely uninitialized in database, seed with local records
       if (local.length > 0) {
-        cloudSaveCollection(dbUsername, local).catch(err => console.warn("Cloud seed error:", err));
+        await cloudSaveCollection(dbUsername, local);
         return local;
       }
 
