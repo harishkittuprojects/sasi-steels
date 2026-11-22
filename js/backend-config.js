@@ -1298,6 +1298,14 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
           });
         }
 
+        // SAFEGUARD: If remote cloud record is empty array, but local has active items, preserve local and re-sync to cloud
+        if (Array.isArray(remote) && remote.length === 0 && Array.isArray(local) && local.length > 0) {
+          remote = [...local];
+          cloudSaveCollection(dbUsername, remote).catch(() => {});
+          saveLocalCollection(storageKey, remote);
+          return remote;
+        }
+
         if (idField && Array.isArray(local) && local.length > 0) {
           const localMap = new Map();
           local.forEach(l => {
