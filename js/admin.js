@@ -299,43 +299,63 @@ function handleUrlNavigation() {
 }
 
 // Auth check on load
+function updateBadgesFromMemory() {
+  const isRestricted = isRestrictedAdminUser();
+  if (!isRestricted) {
+    const quotes = (allQuotationsRecords && allQuotationsRecords.length) ? allQuotationsRecords : (getLocalCollection('sasi_quotations') || []);
+    const bQuotes = document.getElementById('badge-quotes-count');
+    if (bQuotes) bQuotes.textContent = quotes.length;
+
+    const inq = (allInquiriesRecords && allInquiriesRecords.length) ? allInquiriesRecords : (getLocalCollection('sasi_inquiries') || []);
+    const bInq = document.getElementById('badge-inquiries-count');
+    if (bInq) bInq.textContent = quotes.length;
+    const bSub = document.getElementById('badge-inquiries-subtab-count');
+    if (bSub) bSub.textContent = inq.length;
+
+    const orders = (allOrdersRecords && allOrdersRecords.length) ? allOrdersRecords : (getLocalCollection('sasi_orders') || []);
+    const activeOrd = orders.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
+    const bOrders = document.getElementById('badge-orders-count');
+    if (bOrders) bOrders.textContent = activeOrd;
+  }
+  const emp = (allEmployeesRecords && allEmployeesRecords.length) ? allEmployeesRecords : (getLocalCollection('sasi_employees') || []);
+  const bEmp = document.getElementById('badge-employees-count');
+  if (bEmp && emp.length) bEmp.textContent = emp.length;
+
+  const prods = (allProductsRecords && allProductsRecords.length) ? allProductsRecords : (getLocalCollection('sasi_products') || []);
+  const bProds = document.getElementById('badge-products-count');
+  if (bProds && prods.length) bProds.textContent = prods.length;
+}
+
 async function loadInitialCounts() {
+  // 1. Immediately paint badge counts from memory/cache (0ms)
+  updateBadgesFromMemory();
+
   const isRestricted = isRestrictedAdminUser();
   try {
     if (!isRestricted) {
-      const quotes = await dbGetQuotations();
-      if (quotes) {
-        allQuotationsRecords = quotes;
-        const b = document.getElementById('badge-quotes-count');
-        if (b) b.textContent = quotes.length;
-      }
-      const inq = await dbGetInquiries();
-      if (inq) {
-        allInquiriesRecords = inq;
-        const unread = inq.filter(i => i.status === 'New').length;
-        const b = document.getElementById('badge-inquiries-count');
-        if (b) b.textContent = allQuotationsRecords.length;
-        const bSub = document.getElementById('badge-inquiries-subtab-count');
-        if (bSub) bSub.textContent = inq.length;
-      }
-      const orders = await dbGetOrders();
-      if (orders) {
-        allOrdersRecords = orders;
-        const activeOrd = orders.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
-        const b = document.getElementById('badge-orders-count');
-        if (b) b.textContent = activeOrd;
-      }
-    }
-    const emp = await dbGetEmployees();
-    if (emp) {
-      const b = document.getElementById('badge-employees-count');
-      if (b) b.textContent = emp.length;
-    }
-    const prods = await dbGetProducts();
-    if (prods) {
-      allProductsRecords = prods;
-      const b = document.getElementById('badge-products-count');
-      if (b) b.textContent = prods.length;
+      // 2. Fetch in parallel in background without blocking
+      const [quotesRes, inqRes, ordersRes, empRes, prodsRes] = await Promise.allSettled([
+        dbGetQuotations(),
+        dbGetInquiries(),
+        dbGetOrders(),
+        dbGetEmployees(),
+        dbGetProducts()
+      ]);
+
+      if (quotesRes.status === 'fulfilled' && quotesRes.value) allQuotationsRecords = quotesRes.value;
+      if (inqRes.status === 'fulfilled' && inqRes.value) allInquiriesRecords = inqRes.value;
+      if (ordersRes.status === 'fulfilled' && ordersRes.value) allOrdersRecords = ordersRes.value;
+      if (empRes.status === 'fulfilled' && empRes.value) allEmployeesRecords = empRes.value;
+      if (prodsRes.status === 'fulfilled' && prodsRes.value) allProductsRecords = prodsRes.value;
+      updateBadgesFromMemory();
+    } else {
+      const [empRes, prodsRes] = await Promise.allSettled([
+        dbGetEmployees(),
+        dbGetProducts()
+      ]);
+      if (empRes.status === 'fulfilled' && empRes.value) allEmployeesRecords = empRes.value;
+      if (prodsRes.status === 'fulfilled' && prodsRes.value) allProductsRecords = prodsRes.value;
+      updateBadgesFromMemory();
     }
   } catch (e) {}
 }
@@ -1729,54 +1749,69 @@ function switchQuotationSubTab(subTab) {
   }
 }
 
+function updateQuotationKPIs() {
+  const totalQuotesCount = (allQuotationsRecords || []).length;
+  const totalPipelineValue = (allQuotationsRecords || []).reduce((sum, q) => sum + (parseFloat(q.grand_total) || 0), 0);
+  const approvedQuotesCount = (allQuotationsRecords || []).filter(q => q.status === 'Approved' || q.status === 'Completed').length;
+  const pendingInquiriesCount = (allInquiriesRecords || []).filter(i => i.status === 'New' || i.status === 'Contacted').length;
+
+  const elTotal = document.getElementById('quote-stat-total');
+  const elVal = document.getElementById('quote-stat-value');
+  const elApp = document.getElementById('quote-stat-approved');
+  const elInq = document.getElementById('quote-stat-inquiries');
+  const badgeQuotes = document.getElementById('badge-quotes-count');
+  const badgeInqSub = document.getElementById('badge-inquiries-subtab-count');
+  const badgeSidebarInq = document.getElementById('badge-inquiries-count');
+
+  if (elTotal) elTotal.textContent = totalQuotesCount;
+  if (elVal) elVal.textContent = '₹' + totalPipelineValue.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  if (elApp) elApp.textContent = approvedQuotesCount;
+  if (elInq) elInq.textContent = pendingInquiriesCount;
+  if (badgeQuotes) badgeQuotes.textContent = totalQuotesCount;
+  if (badgeInqSub) badgeInqSub.textContent = (allInquiriesRecords || []).length;
+  if (badgeSidebarInq) badgeSidebarInq.textContent = totalQuotesCount;
+}
+
 async function loadQuotations() {
   if (isRestrictedAdminUser()) return;
   const tbodyQuotes = document.getElementById('table-official-quotations');
   const tbodyInq = document.getElementById('table-inquiries');
-  if (tbodyQuotes) tbodyQuotes.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading quotations...</td></tr>`;
+
+  // INSTANT RENDER (0ms): If quotations exist in memory or local storage, render immediately!
+  const cachedQuotes = (allQuotationsRecords && allQuotationsRecords.length) ? allQuotationsRecords : (getLocalCollection('sasi_quotations') || []);
+  const cachedInq = (allInquiriesRecords && allInquiriesRecords.length) ? allInquiriesRecords : (getLocalCollection('sasi_inquiries') || []);
+  if (cachedQuotes.length > 0) {
+    allQuotationsRecords = cachedQuotes;
+    allInquiriesRecords = cachedInq;
+    updateQuotationSortUI();
+    updateQuotationKPIs();
+    filterQuotationsData();
+    filterInquiriesData();
+  } else if (tbodyQuotes) {
+    tbodyQuotes.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading quotations...</td></tr>`;
+  }
 
   try {
-    // Load Settings
-    activeQuotationSettings = await dbGetQuotationSettings();
+    // Parallel background fetch from cloud
+    const [settings, quotes, inquiries] = await Promise.all([
+      dbGetQuotationSettings(),
+      dbGetQuotations(),
+      dbGetInquiries()
+    ]);
 
-    // Load Official Quotations
-    const quotes = await dbGetQuotations();
-    allQuotationsRecords = quotes || [];
+    if (settings) activeQuotationSettings = settings;
+    if (quotes) allQuotationsRecords = quotes;
+    if (inquiries) allInquiriesRecords = inquiries;
 
-    // Update sort UI without silently overwriting custom bill/quotation numbers
     updateQuotationSortUI();
-
-    // Load Inquiries
-    const inquiries = await dbGetInquiries();
-    allInquiriesRecords = inquiries || [];
-
-    // Calculate Summary KPIs
-    const totalQuotesCount = allQuotationsRecords.length;
-    const totalPipelineValue = allQuotationsRecords.reduce((sum, q) => sum + (parseFloat(q.grand_total) || 0), 0);
-    const approvedQuotesCount = allQuotationsRecords.filter(q => q.status === 'Approved' || q.status === 'Completed').length;
-    const pendingInquiriesCount = allInquiriesRecords.filter(i => i.status === 'New' || i.status === 'Contacted').length;
-
-    const elTotal = document.getElementById('quote-stat-total');
-    const elVal = document.getElementById('quote-stat-value');
-    const elApp = document.getElementById('quote-stat-approved');
-    const elInq = document.getElementById('quote-stat-inquiries');
-    const badgeQuotes = document.getElementById('badge-quotes-count');
-    const badgeInqSub = document.getElementById('badge-inquiries-subtab-count');
-    const badgeSidebarInq = document.getElementById('badge-inquiries-count');
-
-    if (elTotal) elTotal.textContent = totalQuotesCount;
-    if (elVal) elVal.textContent = '₹' + totalPipelineValue.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-    if (elApp) elApp.textContent = approvedQuotesCount;
-    if (elInq) elInq.textContent = pendingInquiriesCount;
-    if (badgeQuotes) badgeQuotes.textContent = totalQuotesCount;
-    if (badgeInqSub) badgeInqSub.textContent = allInquiriesRecords.length;
-    if (badgeSidebarInq) badgeSidebarInq.textContent = totalQuotesCount;
-
+    updateQuotationKPIs();
     filterQuotationsData();
     filterInquiriesData();
   } catch (err) {
     console.error("Error in loadQuotations:", err);
-    if (tbodyQuotes) tbodyQuotes.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No official quotations found.</td></tr>`;
+    if (!allQuotationsRecords || allQuotationsRecords.length === 0) {
+      if (tbodyQuotes) tbodyQuotes.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">No official quotations found.</td></tr>`;
+    }
   }
 }
 
@@ -2032,7 +2067,7 @@ async function confirmQuotationOrder(id) {
   if (!quote && previewingQuotationData && (String(previewingQuotationData.id) === String(id) || String(previewingQuotationData.quote_number) === String(id))) {
     quote = previewingQuotationData;
   }
-  if (!quote && allQuotationsRecords.length > 0) {
+  if (!quote && allQuotationsRecords && allQuotationsRecords.length > 0) {
     quote = allQuotationsRecords[0];
   }
   if (!quote) {
@@ -2040,28 +2075,119 @@ async function confirmQuotationOrder(id) {
     return false;
   }
 
-  try {
-    const updatedQuote = { ...quote, status: 'Approved' };
-    await dbUpdateQuotation(quote.id || quote.quote_number, { status: 'Approved' });
+  const qNum = String(quote.quote_number || quote.id || '').replace(/^#/, '').trim();
+  const orderNum = `ORD-${qNum.replace(/[^A-Za-z0-9]/g, '-')}`;
 
-    if (typeof syncQuotationToOrder === 'function') {
-      await syncQuotationToOrder(updatedQuote);
+  // 1. INSTANT OPTIMISTIC STATE UPDATE (0ms)
+  quote.status = 'Approved';
+  const updatedQuote = { ...quote, status: 'Approved' };
+
+  let itemDesc = 'Custom Steel Fabrication';
+  let totalQty = 1;
+  let category = 'Quotation Order';
+  if (Array.isArray(quote.items) && quote.items.length > 0) {
+    const descriptions = quote.items
+      .filter(it => it && it.description)
+      .map(it => `${it.description}${it.quantity ? ' (Qty: ' + it.quantity + (it.finish ? ' ' + it.finish : '') + ')' : ''}`);
+    if (descriptions.length > 0) {
+      itemDesc = descriptions.join('; ');
+      category = quote.items[0].description || 'Quotation Order';
     }
-
-    await loadQuotations();
-    await loadOrders();
-    loadInitialCounts();
-
-    showDashboardToast(`🎉 Quotation #${quote.quote_number} confirmed! Navigating to Orders & Bookings...`, 'success');
-    
-    // Immediately display this confirmed order in Orders & Bookings
-    await viewLinkedOrder(quote.quote_number);
-    return true;
-  } catch (err) {
-    console.error("Error confirming quotation order:", err);
-    alert("Could not confirm quotation order: " + (err.message || err));
-    return false;
+    totalQty = quote.items.reduce((sum, it) => sum + (parseFloat(it.quantity) || 1), 0);
   }
+  const grandTotal = parseFloat(quote.grand_total) || 0;
+  const unitPrice = totalQty > 0 ? Math.round((grandTotal / totalQty) * 100) / 100 : grandTotal;
+  const companyName = (quote.company_name && quote.company_name.trim()) ? quote.company_name.trim() : (quote.customer_name || 'General Client');
+  const customerName = quote.customer_name || 'Valued Client';
+  const notesText = `Official Order booked from Quotation #${qNum}${quote.notes ? ' | ' + quote.notes : ''}`;
+
+  if (!allOrdersRecords) allOrdersRecords = getLocalCollection('sasi_orders') || [];
+  const existingIdx = allOrdersRecords.findIndex(o => 
+    (o.quotation_number && String(o.quotation_number).trim() === qNum) ||
+    (o.order_number && (o.order_number === orderNum || o.order_number === `ORD-${qNum}`))
+  );
+
+  const bookedOrder = {
+    order_number: orderNum,
+    quotation_number: qNum,
+    company_name: companyName,
+    customer_name: customerName,
+    customer_phone: quote.customer_phone || 'N/A',
+    customer_email: quote.customer_email || null,
+    delivery_address: quote.customer_address || null,
+    inventory_item_id: null,
+    item_name: itemDesc,
+    category: category,
+    quantity: totalQty,
+    unit: 'Units',
+    unit_price: unitPrice,
+    total_amount: grandTotal,
+    paid_amount: quote.status === 'Completed' ? grandTotal : 0,
+    payment_status: quote.status === 'Completed' ? 'Paid' : 'Pending',
+    order_status: 'Confirmed',
+    order_date: quote.quote_date || new Date().toISOString().split('T')[0],
+    notes: notesText
+  };
+
+  if (existingIdx >= 0) {
+    allOrdersRecords[existingIdx] = { ...allOrdersRecords[existingIdx], ...bookedOrder };
+  } else {
+    allOrdersRecords.unshift(bookedOrder);
+  }
+
+  saveLocalCollection('sasi_orders', allOrdersRecords);
+  saveLocalCollection('sasi_quotations', allQuotationsRecords);
+  updateBadgesFromMemory();
+
+  // 2. INSTANT JUMP & DISPLAY IN ORDERS & BOOKINGS (Immediate 0ms response)
+  closeQuotationPreviewModal();
+  if (PROTECTED_SECTIONS.includes('orders')) {
+    sectionLockState['orders'] = false;
+    updateSectionLockIcon('orders', false);
+  }
+  switchTab('orders');
+
+  currentSelectedOrderCompany = 'ALL';
+  const companySelect = document.getElementById('order-filter-company');
+  if (companySelect) companySelect.value = 'ALL';
+  populateCompanyFilterOptions();
+
+  const statusSelect = document.getElementById('order-filter-status');
+  const paymentSelect = document.getElementById('order-filter-payment');
+  const fromInput = document.getElementById('order-filter-from');
+  const toInput = document.getElementById('order-filter-to');
+  if (statusSelect) statusSelect.value = 'ALL';
+  if (paymentSelect) paymentSelect.value = 'ALL';
+  if (fromInput) fromInput.value = '';
+  if (toInput) toInput.value = '';
+  if (typeof setDateFilterPreset === 'function') setDateFilterPreset('order', 'all');
+
+  const searchInput = document.getElementById('order-filter-search');
+  if (searchInput) {
+    searchInput.value = orderNum;
+  }
+  filterOrdersData();
+
+  const sectionOrders = document.getElementById('section-orders');
+  if (sectionOrders) {
+    sectionOrders.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  showDashboardToast(`⚡ Order ${orderNum} confirmed and displayed!`, 'success');
+
+  // 3. BACKGROUND ASYNC PERSISTENCE (Non-blocking)
+  (async () => {
+    try {
+      await dbUpdateQuotation(quote.id || quote.quote_number, { status: 'Approved' });
+      if (typeof syncQuotationToOrder === 'function') {
+        await syncQuotationToOrder(updatedQuote);
+      }
+    } catch (bgErr) {
+      console.warn("Background order booking notice:", bgErr);
+    }
+  })();
+
+  return true;
 }
 
 async function handleQuotationStatusChange(id, newStatus) {
@@ -2096,59 +2222,38 @@ async function viewLinkedOrder(quoteNumber) {
   const cleanQNum = rawNum.replace(/^#/, '').trim();
   const orderNum = `ORD-${cleanQNum.replace(/[^A-Za-z0-9]/g, '-')}`;
 
-  const hasOrder = (allOrdersRecords || []).some(o => 
-    (o.quotation_number && (String(o.quotation_number).trim() === cleanQNum || String(o.quotation_number).trim() === rawNum)) ||
-    (o.order_number && (o.order_number === orderNum || o.order_number === `ORD-${cleanQNum}` || o.order_number === `ORD-${rawNum}`))
-  );
-
-  // If order was not found in bookings, auto-book it now
-  if (!hasOrder) {
-    const quote = (allQuotationsRecords || []).find(q => 
-      String(q.quote_number).trim() === cleanQNum || 
-      String(q.quote_number).trim() === rawNum ||
-      String(q.id).trim() === rawNum
-    );
-    if (quote && typeof syncQuotationToOrder === 'function') {
-      await syncQuotationToOrder(quote);
-      await loadOrders();
-      loadInitialCounts();
-    }
-  }
-
-  // Ensure orders section is unlocked
   if (PROTECTED_SECTIONS.includes('orders')) {
     sectionLockState['orders'] = false;
     updateSectionLockIcon('orders', false);
   }
 
   switchTab('orders');
-  setTimeout(() => {
-    currentSelectedOrderCompany = 'ALL';
-    const companySelect = document.getElementById('order-filter-company');
-    if (companySelect) companySelect.value = 'ALL';
-    if (typeof populateCompanyFilterOptions === 'function') populateCompanyFilterOptions();
 
-    const statusSelect = document.getElementById('order-filter-status');
-    const paymentSelect = document.getElementById('order-filter-payment');
-    const fromInput = document.getElementById('order-filter-from');
-    const toInput = document.getElementById('order-filter-to');
-    if (statusSelect) statusSelect.value = 'ALL';
-    if (paymentSelect) paymentSelect.value = 'ALL';
-    if (fromInput) fromInput.value = '';
-    if (toInput) toInput.value = '';
-    if (typeof setDateFilterPreset === 'function') setDateFilterPreset('order', 'all');
+  currentSelectedOrderCompany = 'ALL';
+  const companySelect = document.getElementById('order-filter-company');
+  if (companySelect) companySelect.value = 'ALL';
+  populateCompanyFilterOptions();
 
-    const searchInput = document.getElementById('order-filter-search');
-    if (searchInput) {
-      searchInput.value = orderNum;
-      filterOrdersData();
-    }
+  const statusSelect = document.getElementById('order-filter-status');
+  const paymentSelect = document.getElementById('order-filter-payment');
+  const fromInput = document.getElementById('order-filter-from');
+  const toInput = document.getElementById('order-filter-to');
+  if (statusSelect) statusSelect.value = 'ALL';
+  if (paymentSelect) paymentSelect.value = 'ALL';
+  if (fromInput) fromInput.value = '';
+  if (toInput) toInput.value = '';
+  if (typeof setDateFilterPreset === 'function') setDateFilterPreset('order', 'all');
 
-    const sectionOrders = document.getElementById('section-orders');
-    if (sectionOrders) {
-      sectionOrders.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, 250);
+  const searchInput = document.getElementById('order-filter-search');
+  if (searchInput) {
+    searchInput.value = orderNum;
+  }
+  filterOrdersData();
+
+  const sectionOrders = document.getElementById('section-orders');
+  if (sectionOrders) {
+    sectionOrders.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 async function handleDeleteQuotation(id) {
@@ -4080,7 +4185,16 @@ async function loadOrders() {
   if (isRestrictedAdminUser()) return;
   const tbody = document.getElementById('table-orders');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & company ledgers...</td></tr>`;
+
+  // FAST CACHE RENDER (0ms): display instantly from local cache without blank screen
+  const cachedOrders = (allOrdersRecords && allOrdersRecords.length) ? allOrdersRecords : (getLocalCollection('sasi_orders') || []);
+  if (cachedOrders.length > 0) {
+    allOrdersRecords = cachedOrders;
+    populateCompanyFilterOptions();
+    filterOrdersData();
+  } else {
+    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & company ledgers...</td></tr>`;
+  }
 
   try {
     const orders = await dbGetOrders();
@@ -4089,7 +4203,9 @@ async function loadOrders() {
     filterOrdersData();
   } catch (err) {
     console.error("Error in loadOrders:", err);
-    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Failed to load orders.</td></tr>`;
+    if (!allOrdersRecords || allOrdersRecords.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Failed to load orders.</td></tr>`;
+    }
   }
 }
 
@@ -5281,7 +5397,14 @@ async function handleDeleteAllOrders() {
 async function loadEmployees() {
   const tbody = document.getElementById('table-employees');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading staff directory...</td></tr>`;
+
+  const cached = (allEmployeesRecords && allEmployeesRecords.length) ? allEmployeesRecords : (getLocalCollection('sasi_employees') || []);
+  if (cached.length > 0) {
+    allEmployeesRecords = cached;
+    filterEmployeesData();
+  } else {
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading staff directory...</td></tr>`;
+  }
 
   try {
     const employees = await dbGetEmployees();
@@ -5289,7 +5412,9 @@ async function loadEmployees() {
     filterEmployeesData();
   } catch (err) {
     console.error("Error in loadEmployees:", err);
-    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Failed to load staff list.</td></tr>`;
+    if (!allEmployeesRecords || allEmployeesRecords.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Failed to load staff list.</td></tr>`;
+    }
   }
 }
 
