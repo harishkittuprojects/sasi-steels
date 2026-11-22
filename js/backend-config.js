@@ -1254,6 +1254,17 @@ function isOrderDeleted(id, orderNum) {
   }
 }
 
+function unrecordDeletedOrderId(id, orderNum) {
+  try {
+    const raw = localStorage.getItem('sasi_deleted_order_ids') || '[]';
+    let list = JSON.parse(raw);
+    const sId = id ? String(id).trim() : '';
+    const sNum = orderNum ? String(orderNum).trim() : '';
+    list = list.filter(x => x !== sId && x !== sNum);
+    localStorage.setItem('sasi_deleted_order_ids', JSON.stringify(list));
+  } catch (e) {}
+}
+
 async function cloudSyncCollection(storageKey, dbUsername, idField) {
   let local = getLocalCollection(storageKey) || [];
 
@@ -1280,8 +1291,11 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
 
       // If remote cloud record exists, merge any pending locally created items that haven't synced to remote yet
       if (remote !== null) {
-        if (storageKey === 'sasi_orders') {
-          remote = remote.filter(r => !isOrderDeleted(r.id, r.order_number));
+        if (storageKey === 'sasi_orders' && Array.isArray(remote) && remote.length > 0) {
+          // If remote actively has orders returned from cloud, un-tombstone them so they are not hidden
+          remote.forEach(r => {
+            unrecordDeletedOrderId(r.id, r.order_number);
+          });
         }
 
         if (idField && Array.isArray(local) && local.length > 0) {

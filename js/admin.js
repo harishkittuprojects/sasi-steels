@@ -2141,6 +2141,13 @@ async function confirmQuotationOrder(id) {
   window._lastConfirmedOrderNumber = orderNum;
   window._lastConfirmedOrderTime = Date.now();
 
+  // Ensure this confirmed order is NOT blocked by any previous deletion tombstone
+  if (typeof unrecordDeletedOrderId === 'function') {
+    unrecordDeletedOrderId(bookedOrder.id, bookedOrder.order_number);
+    unrecordDeletedOrderId(null, qNum);
+    unrecordDeletedOrderId(null, `ORD-${qNum}`);
+  }
+
   saveLocalCollection('sasi_orders', allOrdersRecords);
   saveLocalCollection('sasi_quotations', allQuotationsRecords);
   updateBadgesFromMemory();
