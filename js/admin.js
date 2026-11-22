@@ -2164,7 +2164,7 @@ async function confirmQuotationOrder(id) {
 
   const searchInput = document.getElementById('order-filter-search');
   if (searchInput) {
-    searchInput.value = orderNum;
+    searchInput.value = '';
   }
   filterOrdersData();
 
@@ -2246,7 +2246,7 @@ async function viewLinkedOrder(quoteNumber) {
 
   const searchInput = document.getElementById('order-filter-search');
   if (searchInput) {
-    searchInput.value = orderNum;
+    searchInput.value = '';
   }
   filterOrdersData();
 
@@ -4399,9 +4399,10 @@ function updateOrdersMetrics(currentFilteredList = allOrdersRecords) {
   const activeCount = currentFilteredList.filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
   const deliveredCount = currentFilteredList.filter(o => o.order_status === 'Delivered').length;
 
-  // Update DOM metric cards
+  // Update DOM metric cards (Sidebar badge always reflects ALL active orders, not filtered view)
+  const totalActiveCount = (allOrdersRecords || []).filter(o => o.order_status !== 'Delivered' && o.order_status !== 'Cancelled').length;
   const badgeEl = document.getElementById('badge-orders-count');
-  if (badgeEl) badgeEl.textContent = activeCount;
+  if (badgeEl) badgeEl.textContent = totalActiveCount;
 
   const totalEl = document.getElementById('orders-total-count');
   if (totalEl) totalEl.textContent = totalCount;
@@ -4476,16 +4477,29 @@ function filterOrdersData() {
 
     // 5. Search Text
     if (searchVal) {
-      const matchNum = (ord.order_number || '').toLowerCase().includes(searchVal);
+      const isExactOrderSearch = /^ord-\d+$/i.test(searchVal);
+      const cleanSearch = searchVal.replace(/[^a-z0-9]/g, '');
+      const cleanNum = (ord.order_number || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      let matchNum = false;
+      let matchClean = false;
+      let matchQuote = false;
+
+      if (isExactOrderSearch) {
+        matchNum = (ord.order_number || '').toLowerCase() === searchVal;
+        matchClean = cleanNum === cleanSearch;
+        matchQuote = ord.quotation_number ? String(ord.quotation_number).toLowerCase() === cleanSearch.replace(/^ord/, '') : false;
+      } else {
+        matchNum = (ord.order_number || '').toLowerCase().includes(searchVal);
+        matchClean = cleanSearch ? cleanNum.includes(cleanSearch) : false;
+        matchQuote = ord.quotation_number ? String(ord.quotation_number).toLowerCase().includes(searchVal) : false;
+      }
+
       const matchComp = (ord.company_name || '').toLowerCase().includes(searchVal);
       const matchCust = (ord.customer_name || '').toLowerCase().includes(searchVal);
       const matchPhone = (ord.customer_phone || '').toLowerCase().includes(searchVal);
       const matchItem = (ord.item_name || '').toLowerCase().includes(searchVal);
       const matchNotes = (ord.notes || '').toLowerCase().includes(searchVal);
-      const matchQuote = ord.quotation_number ? String(ord.quotation_number).toLowerCase().includes(searchVal) : false;
-      const cleanSearch = searchVal.replace(/[^a-z0-9]/g, '');
-      const cleanNum = (ord.order_number || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const matchClean = cleanSearch ? cleanNum.includes(cleanSearch) : false;
 
       if (!matchNum && !matchComp && !matchCust && !matchPhone && !matchItem && !matchNotes && !matchClean && !matchQuote) return false;
     }
