@@ -2108,6 +2108,8 @@ async function confirmQuotationOrder(id) {
   );
 
   const bookedOrder = {
+    id: existingIdx >= 0 && allOrdersRecords[existingIdx].id ? allOrdersRecords[existingIdx].id : Date.now(),
+    created_at: existingIdx >= 0 && allOrdersRecords[existingIdx].created_at ? allOrdersRecords[existingIdx].created_at : new Date().toISOString(),
     order_number: orderNum,
     quotation_number: qNum,
     company_name: companyName,
@@ -2129,15 +2131,25 @@ async function confirmQuotationOrder(id) {
     notes: notesText
   };
 
+  // If already in list, remove from previous index and place at top (index 0)
   if (existingIdx >= 0) {
-    allOrdersRecords[existingIdx] = { ...allOrdersRecords[existingIdx], ...bookedOrder };
-  } else {
-    allOrdersRecords.unshift(bookedOrder);
+    allOrdersRecords.splice(existingIdx, 1);
   }
+  allOrdersRecords.unshift(bookedOrder);
+
+  // Set tracking flags to protect this newly confirmed order
+  window._lastConfirmedOrderNumber = orderNum;
+  window._lastConfirmedOrderTime = Date.now();
 
   saveLocalCollection('sasi_orders', allOrdersRecords);
   saveLocalCollection('sasi_quotations', allQuotationsRecords);
   updateBadgesFromMemory();
+
+  // Instantly save to Supabase cloud to prevent any race condition
+  if (typeof cloudSaveCollection === 'function') {
+    cloudSaveCollection('cloud_orders_sync', allOrdersRecords).catch(() => {});
+    cloudSaveCollection('cloud_quotations_sync', allQuotationsRecords).catch(() => {});
+  }
 
   // 2. INSTANT JUMP & DISPLAY IN ORDERS & BOOKINGS (Immediate 0ms response)
   closeQuotationPreviewModal();
@@ -2150,7 +2162,6 @@ async function confirmQuotationOrder(id) {
   currentSelectedOrderCompany = 'ALL';
   const companySelect = document.getElementById('order-filter-company');
   if (companySelect) companySelect.value = 'ALL';
-  populateCompanyFilterOptions();
 
   const statusSelect = document.getElementById('order-filter-status');
   const paymentSelect = document.getElementById('order-filter-payment');
@@ -2166,6 +2177,7 @@ async function confirmQuotationOrder(id) {
   if (searchInput) {
     searchInput.value = '';
   }
+  populateCompanyFilterOptions();
   filterOrdersData();
 
   const sectionOrders = document.getElementById('section-orders');
@@ -2173,7 +2185,7 @@ async function confirmQuotationOrder(id) {
     sectionOrders.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  showDashboardToast(`⚡ Order ${orderNum} confirmed and displayed!`, 'success');
+  showDashboardToast(`⚡ Order ${orderNum} confirmed and added to Orders & Bookings!`, 'success');
 
   // 3. BACKGROUND ASYNC PERSISTENCE (Non-blocking)
   (async () => {
@@ -4198,18 +4210,40 @@ async function loadOrders() {
     tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & company ledgers...</td></tr>`;
   }
 
+  // If an order was just confirmed in the last 4 seconds, keep memory state stable to prevent network race conditions
+  if (window._lastConfirmedOrderTime && (Date.now() - window._lastConfirmedOrderTime < 4000)) {
+    return;
+  }
+
   try {
     const orders = await dbGetOrders();
     if (Array.isArray(orders)) {
       // Safe Merge: Never drop newly created in-memory orders, and never re-add permanently deleted orders
       const cleanOrders = orders.filter(o => typeof isOrderDeleted === 'function' ? !isOrderDeleted(o.id, o.order_number) : true);
+      const localMap = new Map((allOrdersRecords || []).map(o => [String(o.order_number || o.id || '').trim(), o]));
+      
+      let mergedOrders = cleanOrders.map(r => {
+        const rid = String(r.order_number || r.id || '').trim();
+        return localMap.has(rid) ? { ...r, ...localMap.get(rid) } : r;
+      });
+
       const remoteIds = new Set(cleanOrders.map(o => String(o.order_number || o.id || '').trim()));
       const pendingLocal = (allOrdersRecords || []).filter(o => {
         const oid = String(o.order_number || o.id || '').trim();
         const isDel = typeof isOrderDeleted === 'function' ? isOrderDeleted(o.id, o.order_number) : false;
         return oid && !remoteIds.has(oid) && !isDel;
       });
-      allOrdersRecords = [...pendingLocal, ...cleanOrders];
+      allOrdersRecords = [...pendingLocal, ...mergedOrders];
+
+      // Ensure the just-confirmed order stays at index 0 if present
+      if (window._lastConfirmedOrderNumber) {
+        const cIdx = allOrdersRecords.findIndex(o => o.order_number === window._lastConfirmedOrderNumber);
+        if (cIdx > 0) {
+          const item = allOrdersRecords.splice(cIdx, 1)[0];
+          allOrdersRecords.unshift(item);
+        }
+      }
+
       saveLocalCollection('sasi_orders', allOrdersRecords);
     }
     populateCompanyFilterOptions();
@@ -4310,10 +4344,16 @@ function renderOrdersList(list) {
     const paidAmount = parseFloat(ord.paid_amount !== undefined ? ord.paid_amount : (ord.payment_status === 'Paid' ? totalAmount : 0)) || 0;
     const pendingDue = Math.max(0, totalAmount - paidAmount);
 
+    const isJustConfirmed = window._lastConfirmedOrderNumber && 
+      (ord.order_number === window._lastConfirmedOrderNumber || (ord.quotation_number && String(ord.quotation_number) === String(window._lastConfirmedOrderNumber)));
+
     return `
-      <tr class="hover:bg-slate-800/50 transition-colors">
+      <tr class="hover:bg-slate-800/50 transition-colors ${isJustConfirmed ? 'bg-orange-500/10 border-l-4 border-l-orange-500' : ''}">
         <td class="py-3 px-4">
-          <div class="font-bold text-white font-mono text-xs text-orange-400">${ord.order_number || ('ORD-' + ord.id)}</div>
+          <div class="font-bold text-white font-mono text-xs text-orange-400 flex items-center gap-1.5 flex-wrap">
+            ${ord.order_number || ('ORD-' + ord.id)}
+            ${isJustConfirmed ? '<span class="px-1.5 py-0.5 rounded bg-orange-600 text-white text-[9px] font-black uppercase tracking-wider animate-pulse">CONFIRMED</span>' : ''}
+          </div>
           <div class="text-[11px] text-slate-300 font-mono font-semibold flex items-center gap-1 mt-0.5">
             <i class="fa-regular fa-calendar text-orange-400"></i> ${formatDisplayDate(ord.order_date || ord.created_at)}
           </div>

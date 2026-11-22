@@ -1285,6 +1285,21 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
         }
 
         if (idField && Array.isArray(local) && local.length > 0) {
+          const localMap = new Map();
+          local.forEach(l => {
+            const lid = String(l[idField] || l.id || '').trim();
+            if (lid && (storageKey !== 'sasi_orders' || !isOrderDeleted(l.id, l.order_number))) {
+              localMap.set(lid, l);
+            }
+          });
+
+          // 1. Update any existing remote items with latest local modifications (preserves confirmed orders & edits)
+          remote = remote.map(r => {
+            const rid = String(r[idField] || r.id || '').trim();
+            return localMap.has(rid) ? { ...r, ...localMap.get(rid) } : r;
+          });
+
+          // 2. Prepend any newly created local items not yet in remote
           const remoteIds = new Set(remote.map(r => String(r[idField] || r.id || '').trim()));
           const pendingItems = local.filter(l => {
             const lid = String(l[idField] || l.id || '').trim();
@@ -1293,8 +1308,8 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
           });
           if (pendingItems.length > 0) {
             remote = [...pendingItems, ...remote];
-            cloudSaveCollection(dbUsername, remote).catch(() => {});
           }
+          cloudSaveCollection(dbUsername, remote).catch(() => {});
         }
         saveLocalCollection(storageKey, remote);
         return remote;
