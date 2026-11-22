@@ -1305,8 +1305,14 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
 async function dbGetOrders() {
   let local = getLocalCollection('sasi_orders');
   if (local === null) {
-    saveLocalCollection('sasi_orders', DEFAULT_ORDERS);
-    local = DEFAULT_ORDERS;
+    if (!localStorage.getItem('sasi_orders_initialized')) {
+      saveLocalCollection('sasi_orders', DEFAULT_ORDERS);
+      localStorage.setItem('sasi_orders_initialized', 'true');
+      local = DEFAULT_ORDERS;
+    } else {
+      local = [];
+      saveLocalCollection('sasi_orders', []);
+    }
   }
 
   // 1. Cross-device cloud sync
@@ -1386,7 +1392,7 @@ async function dbAddOrder(order) {
   const localList = getLocalCollection('sasi_orders') || [...DEFAULT_ORDERS];
   localList.unshift(newRow);
   saveLocalCollection('sasi_orders', localList);
-  cloudSaveCollection('cloud_orders_sync', localList).catch(() => {});
+  await cloudSaveCollection('cloud_orders_sync', localList);
 
   const client = getSupabaseClient();
   if (client) {
@@ -1426,7 +1432,7 @@ async function dbUpdateOrderStatus(id, newStatus) {
 
     existing.order_status = newStatus;
     saveLocalCollection('sasi_orders', localList);
-    cloudSaveCollection('cloud_orders_sync', localList).catch(() => {});
+    await cloudSaveCollection('cloud_orders_sync', localList);
   }
 
   const client = getSupabaseClient();
@@ -1463,7 +1469,7 @@ async function dbUpdateOrder(id, updatedData) {
 
     localList[existingIndex] = { ...oldOrder, ...updatedData };
     saveLocalCollection('sasi_orders', localList);
-    cloudSaveCollection('cloud_orders_sync', localList).catch(() => {});
+    await cloudSaveCollection('cloud_orders_sync', localList);
   }
 
   const client = getSupabaseClient();
@@ -1490,7 +1496,7 @@ async function dbDeleteOrder(id) {
 
   localList = localList.filter(x => String(x.id) !== String(id) && String(x.order_number) !== String(id));
   saveLocalCollection('sasi_orders', localList);
-  cloudSaveCollection('cloud_orders_sync', localList).catch(() => {});
+  await cloudSaveCollection('cloud_orders_sync', localList);
 
   const client = getSupabaseClient();
   if (client) {
@@ -1519,7 +1525,8 @@ async function dbDeleteAllOrders() {
   }
 
   saveLocalCollection('sasi_orders', []);
-  cloudSaveCollection('cloud_orders_sync', []).catch(() => {});
+  localStorage.setItem('sasi_orders_initialized', 'true');
+  await cloudSaveCollection('cloud_orders_sync', []);
 
   const client = getSupabaseClient();
   if (client) {

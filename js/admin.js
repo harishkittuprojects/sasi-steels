@@ -1746,15 +1746,6 @@ async function loadQuotations() {
     // Update sort UI without silently overwriting custom bill/quotation numbers
     updateQuotationSortUI();
 
-    // Auto-sync any approved or completed quotations to orders
-    if (typeof syncQuotationToOrder === 'function') {
-      for (const q of allQuotationsRecords) {
-        if (q.status === 'Approved' || q.status === 'Completed') {
-          await syncQuotationToOrder(q);
-        }
-      }
-    }
-
     // Load Inquiries
     const inquiries = await dbGetInquiries();
     allInquiriesRecords = inquiries || [];
