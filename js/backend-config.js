@@ -2064,7 +2064,7 @@ async function dbDeleteAllQuotations() {
 async function syncQuotationToOrder(quote) {
   if (!quote || !quote.quote_number) return null;
 
-  const quoteNum = quote.quote_number;
+  const quoteNum = String(quote.quote_number).trim();
   const orderNum = `ORD-${quoteNum.replace(/[^A-Za-z0-9]/g, '-')}`;
 
   // Summarize item scope & quantities
@@ -2088,11 +2088,11 @@ async function syncQuotationToOrder(quote) {
   const customerName = quote.customer_name || 'Valued Client';
   const notesText = `Official Order booked from Quotation #${quoteNum}${quote.notes ? ' | ' + quote.notes : ''}`;
 
-  // Find if an order matching this quotation already exists
+  // Find if an order matching this quotation already exists (Exact match on quotation_number or exact order_number)
   const existingOrders = (await dbGetOrders()) || [];
   const existingOrder = existingOrders.find(o => 
-    (o.order_number && (o.order_number === orderNum || o.order_number === `ORD-${quoteNum}` || o.order_number.endsWith(quoteNum))) ||
-    (o.notes && o.notes.includes(quoteNum))
+    (o.quotation_number && String(o.quotation_number).trim() === quoteNum) ||
+    (o.order_number && (o.order_number === orderNum || o.order_number === `ORD-${quoteNum}`))
   );
 
   const isApproved = quote.status === 'Approved' || quote.status === 'Completed';
@@ -2107,6 +2107,7 @@ async function syncQuotationToOrder(quote) {
     }
 
     const updatedOrder = {
+      quotation_number: quoteNum,
       company_name: companyName,
       customer_name: customerName,
       customer_phone: quote.customer_phone || existingOrder.customer_phone,
@@ -2127,11 +2128,13 @@ async function syncQuotationToOrder(quote) {
   } else if (isApproved) {
     const newOrder = {
       order_number: orderNum,
+      quotation_number: quoteNum,
       company_name: companyName,
       customer_name: customerName,
       customer_phone: quote.customer_phone || 'N/A',
       customer_email: quote.customer_email || null,
       delivery_address: quote.customer_address || null,
+      inventory_item_id: null,
       item_name: itemDesc,
       category: category,
       quantity: totalQty,
