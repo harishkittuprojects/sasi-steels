@@ -4198,7 +4198,16 @@ async function loadOrders() {
 
   try {
     const orders = await dbGetOrders();
-    allOrdersRecords = orders || [];
+    if (Array.isArray(orders)) {
+      // Safe Merge: Never drop newly created in-memory orders that are still syncing to cloud
+      const remoteIds = new Set(orders.map(o => String(o.order_number || o.id || '').trim()));
+      const pendingLocal = (allOrdersRecords || []).filter(o => {
+        const oid = String(o.order_number || o.id || '').trim();
+        return oid && !remoteIds.has(oid);
+      });
+      allOrdersRecords = [...pendingLocal, ...orders];
+      saveLocalCollection('sasi_orders', allOrdersRecords);
+    }
     populateCompanyFilterOptions();
     filterOrdersData();
   } catch (err) {

@@ -1252,8 +1252,19 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
         }
       }
 
-      // If remote cloud record exists, IT IS THE CENTRAL SOURCE OF TRUTH across all devices!
+      // If remote cloud record exists, merge any pending locally created items that haven't synced to remote yet
       if (remote !== null) {
+        if (idField && Array.isArray(local) && local.length > 0) {
+          const remoteIds = new Set(remote.map(r => String(r[idField] || r.id || '').trim()));
+          const pendingItems = local.filter(l => {
+            const lid = String(l[idField] || l.id || '').trim();
+            return lid && !remoteIds.has(lid);
+          });
+          if (pendingItems.length > 0) {
+            remote = [...pendingItems, ...remote];
+            cloudSaveCollection(dbUsername, remote).catch(() => {});
+          }
+        }
         saveLocalCollection(storageKey, remote);
         return remote;
       }
@@ -1335,6 +1346,7 @@ async function dbAddOrder(order) {
     id: Date.now(),
     created_at: new Date().toISOString(),
     order_number: orderNum,
+    quotation_number: order.quotation_number || null,
     company_name: companyName,
     customer_name: order.customer_name || companyName,
     customer_phone: order.customer_phone || 'N/A',
