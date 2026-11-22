@@ -4187,7 +4187,9 @@ async function loadOrders() {
   if (!tbody) return;
 
   // FAST CACHE RENDER (0ms): display instantly from local cache without blank screen
-  const cachedOrders = (allOrdersRecords && allOrdersRecords.length) ? allOrdersRecords : (getLocalCollection('sasi_orders') || []);
+  const cachedOrders = (allOrdersRecords && allOrdersRecords.length) 
+    ? allOrdersRecords 
+    : (getLocalCollection('sasi_orders') || []).filter(o => typeof isOrderDeleted === 'function' ? !isOrderDeleted(o.id, o.order_number) : true);
   if (cachedOrders.length > 0) {
     allOrdersRecords = cachedOrders;
     populateCompanyFilterOptions();
@@ -4199,13 +4201,15 @@ async function loadOrders() {
   try {
     const orders = await dbGetOrders();
     if (Array.isArray(orders)) {
-      // Safe Merge: Never drop newly created in-memory orders that are still syncing to cloud
-      const remoteIds = new Set(orders.map(o => String(o.order_number || o.id || '').trim()));
+      // Safe Merge: Never drop newly created in-memory orders, and never re-add permanently deleted orders
+      const cleanOrders = orders.filter(o => typeof isOrderDeleted === 'function' ? !isOrderDeleted(o.id, o.order_number) : true);
+      const remoteIds = new Set(cleanOrders.map(o => String(o.order_number || o.id || '').trim()));
       const pendingLocal = (allOrdersRecords || []).filter(o => {
         const oid = String(o.order_number || o.id || '').trim();
-        return oid && !remoteIds.has(oid);
+        const isDel = typeof isOrderDeleted === 'function' ? isOrderDeleted(o.id, o.order_number) : false;
+        return oid && !remoteIds.has(oid) && !isDel;
       });
-      allOrdersRecords = [...pendingLocal, ...orders];
+      allOrdersRecords = [...pendingLocal, ...cleanOrders];
       saveLocalCollection('sasi_orders', allOrdersRecords);
     }
     populateCompanyFilterOptions();
@@ -5365,11 +5369,32 @@ async function openOrderModal(id = null) {
 
 async function deleteOrderItem(id) {
   if (confirm("Are you sure you want to delete this order? Active stock will be restored automatically to Inventory.")) {
+    const targetId = String(id || '').trim();
+    if (typeof recordDeletedOrderId === 'function') {
+      recordDeletedOrderId(targetId);
+    }
+
+    // 1. Immediately remove from in-memory records
+    allOrdersRecords = (allOrdersRecords || []).filter(o => 
+      String(o.id || '').trim() !== targetId && 
+      String(o.order_number || '').trim() !== targetId
+    );
+    saveLocalCollection('sasi_orders', allOrdersRecords);
+
+    // 2. Immediately update UI and badges (0ms)
+    populateCompanyFilterOptions();
+    filterOrdersData();
+    if (typeof updateBadgesFromMemory === 'function') updateBadgesFromMemory();
+
+    // 3. Persist deletion to Supabase cloud
     await dbDeleteOrder(id);
-    await loadOrders();
+
+    // 4. Update inventory and initial counts
     await loadInventory();
     await loadProducts();
     loadInitialCounts();
+
+    showDashboardToast('🗑️ Order deleted permanently.', 'success');
   }
 }
 
@@ -5389,10 +5414,20 @@ async function handleDeleteAllOrders() {
     return;
   }
   if (confirm(`⚠️ Are you sure you want to delete ALL (${allOrdersRecords.length}) customer orders? Active stocks will be restored to Inventory. This cannot be undone.`)) {
-    await dbDeleteAllOrders();
+    (allOrdersRecords || []).forEach(o => {
+      if (typeof recordDeletedOrderId === 'function') {
+        if (o.order_number) recordDeletedOrderId(o.order_number);
+        if (o.id) recordDeletedOrderId(o.id);
+      }
+    });
+
     allOrdersRecords = [];
+    saveLocalCollection('sasi_orders', []);
     populateCompanyFilterOptions();
     filterOrdersData();
+    if (typeof updateBadgesFromMemory === 'function') updateBadgesFromMemory();
+
+    await dbDeleteAllOrders();
     await loadInventory();
     await loadProducts();
     loadInitialCounts();

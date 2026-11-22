@@ -1228,6 +1228,32 @@ async function cloudSaveCollection(dbUsername, dataArray) {
   }
 }
 
+// ================= PERMANENT DELETED ORDERS TOMBSTONING =================
+function recordDeletedOrderId(id) {
+  if (!id) return;
+  try {
+    const raw = localStorage.getItem('sasi_deleted_order_ids') || '[]';
+    const list = JSON.parse(raw);
+    const sId = String(id).trim();
+    if (sId && !list.includes(sId)) {
+      list.push(sId);
+      localStorage.setItem('sasi_deleted_order_ids', JSON.stringify(list));
+    }
+  } catch (e) {}
+}
+
+function isOrderDeleted(id, orderNum) {
+  try {
+    const raw = localStorage.getItem('sasi_deleted_order_ids') || '[]';
+    const list = JSON.parse(raw);
+    const sId = id ? String(id).trim() : '';
+    const sNum = orderNum ? String(orderNum).trim() : '';
+    return (sId && list.includes(sId)) || (sNum && list.includes(sNum));
+  } catch (e) {
+    return false;
+  }
+}
+
 async function cloudSyncCollection(storageKey, dbUsername, idField) {
   let local = getLocalCollection(storageKey) || [];
 
@@ -1254,10 +1280,15 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
 
       // If remote cloud record exists, merge any pending locally created items that haven't synced to remote yet
       if (remote !== null) {
+        if (storageKey === 'sasi_orders') {
+          remote = remote.filter(r => !isOrderDeleted(r.id, r.order_number));
+        }
+
         if (idField && Array.isArray(local) && local.length > 0) {
           const remoteIds = new Set(remote.map(r => String(r[idField] || r.id || '').trim()));
           const pendingItems = local.filter(l => {
             const lid = String(l[idField] || l.id || '').trim();
+            if (storageKey === 'sasi_orders' && isOrderDeleted(l.id, l.order_number)) return false;
             return lid && !remoteIds.has(lid);
           });
           if (pendingItems.length > 0) {
@@ -1271,6 +1302,9 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
 
       // If remote was completely uninitialized in database, seed with local records
       if (local.length > 0) {
+        if (storageKey === 'sasi_orders') {
+          local = local.filter(l => !isOrderDeleted(l.id, l.order_number));
+        }
         await cloudSaveCollection(dbUsername, local);
         return local;
       }
@@ -1467,28 +1501,33 @@ async function dbUpdateOrder(id, updatedData) {
 }
 
 async function dbDeleteOrder(id) {
+  const targetId = String(id || '').trim();
+  recordDeletedOrderId(targetId);
+
   let localList = getLocalCollection('sasi_orders') || [];
-  const target = localList.find(x => String(x.id) === String(id) || String(x.order_number) === String(id));
+  const target = localList.find(x => String(x.id) === targetId || String(x.order_number) === targetId);
 
   if (target) {
+    if (target.order_number) recordDeletedOrderId(target.order_number);
+    if (target.id) recordDeletedOrderId(target.id);
     if (target.order_status !== 'Cancelled') {
       const qty = parseFloat(target.quantity) || 0;
       await adjustInventoryStock(target.inventory_item_id, target.item_name, qty);
     }
   }
 
-  localList = localList.filter(x => String(x.id) !== String(id) && String(x.order_number) !== String(id));
+  localList = localList.filter(x => String(x.id) !== targetId && String(x.order_number) !== targetId);
   saveLocalCollection('sasi_orders', localList);
   await cloudSaveCollection('cloud_orders_sync', localList);
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const isNum = /^\d+$/.test(String(id));
+      const isNum = /^\d+$/.test(targetId);
       if (isNum) {
-        await client.from('orders').delete().eq('id', parseInt(id, 10));
+        await client.from('orders').delete().eq('id', parseInt(targetId, 10));
       } else {
-        await client.from('orders').delete().eq('order_number', String(id));
+        await client.from('orders').delete().eq('order_number', targetId);
       }
     } catch (e) {
       console.warn("Supabase delete order error:", e);
@@ -1501,6 +1540,8 @@ async function dbDeleteAllOrders() {
   let localList = getLocalCollection('sasi_orders') || [];
 
   for (const ord of localList) {
+    if (ord.order_number) recordDeletedOrderId(ord.order_number);
+    if (ord.id) recordDeletedOrderId(ord.id);
     if (ord.order_status !== 'Cancelled') {
       const qty = parseFloat(ord.quantity) || 0;
       await adjustInventoryStock(ord.inventory_item_id, ord.item_name, qty);
