@@ -204,80 +204,7 @@ async function dbSubmitInquiry(inquiryData) {
   return { success: true, data: [newRow] };
 }
 
-const DEFAULT_INQUIRIES = [
-  {
-    id: 1,
-    client_name: 'VARMA',
-    client_phone: '9949321664',
-    client_email: 'varma.goyaz@gmail.com',
-    project_type: 'Showroom Display Racks & Boxes',
-    project_scope: 'Custom Powder Coated Stad Boxes, Wall Type Boxes, T Tripe & Round Brackets for jewellery showroom fixtures.',
-    estimated_cost: '₹ 1,34,562.00',
-    blueprint_url: null,
-    status: 'Quoted',
-    created_at: '2026-09-17T10:30:00.000Z'
-  },
-  {
-    id: 2,
-    client_name: 'Ramesh Reddy (Kavitha Infra)',
-    client_phone: '+91 98480 88990',
-    client_email: 'ramesh@kavithainfra.com',
-    project_type: 'Industrial Warehouse Roofing PEB',
-    project_scope: '120 Sheets Galvalume Corrugated (0.50mm) + 4 Heavy Commercial Display Racks + Gold Partition.',
-    estimated_cost: '₹ 1,25,158.00',
-    blueprint_url: null,
-    status: 'Contacted',
-    created_at: '2026-09-16T14:15:00.000Z'
-  },
-  {
-    id: 3,
-    client_name: 'Venkata Rao (Sri Balaji Engg)',
-    client_phone: '+91 98480 77665',
-    client_email: 'balaji.engg@gmail.com',
-    project_type: 'Storage Racks & Mezzanine',
-    project_scope: 'Multi-Tier Heavy-Duty Warehouse Pallet Storage Racks (3.5 Ton Capacity) + SS 304 Mirror Trolleys.',
-    estimated_cost: '₹ 51,920.00',
-    blueprint_url: null,
-    status: 'Completed',
-    created_at: '2026-09-15T11:00:00.000Z'
-  },
-  {
-    id: 4,
-    client_name: 'Srinivas Murthy',
-    client_phone: '+91 94401 22334',
-    client_email: 'srinivas.m@gmail.com',
-    project_type: 'Steel Staircase & Railings',
-    project_scope: 'Spiral Metal Staircase with SS 304 Safety Glass Railings for 3-floor residential building.',
-    estimated_cost: '₹ 48,000.00',
-    blueprint_url: null,
-    status: 'New',
-    created_at: '2026-09-18T09:30:00.000Z'
-  },
-  {
-    id: 5,
-    client_name: 'Anand Kumar (Lakshmi Constructions)',
-    client_phone: '+91 83339 91114',
-    client_email: 'anand.lakshmi@gmail.com',
-    project_type: 'Industrial Sheds',
-    project_scope: '3000 sq.ft Heavy Welded Structure Fabrication with Foundation Columns and Truss Systems.',
-    estimated_cost: '₹ 3,50,000.00',
-    blueprint_url: null,
-    status: 'Contacted',
-    created_at: '2026-09-17T16:45:00.000Z'
-  },
-  {
-    id: 6,
-    client_name: 'K. Rajesh',
-    client_phone: '+91 99887 76655',
-    client_email: 'rajesh.k@gmail.com',
-    project_type: 'Custom Steel Fabrication',
-    project_scope: 'Architectural Metal Partition Screens with Integrated Planters (Luxury Gold PVD Coated).',
-    estimated_cost: '₹ 35,000.00',
-    blueprint_url: null,
-    status: 'New',
-    created_at: '2026-09-18T08:15:00.000Z'
-  }
-];
+const DEFAULT_INQUIRIES = [];
 
 async function dbGetInquiries() {
   let local = getLocalCollection('sasi_inquiries');
@@ -1139,44 +1066,7 @@ async function adjustInventoryStock(inventoryItemId, itemName, deltaQty) {
   }
 }
 
-const DEFAULT_ORDERS = [
-  {
-    id: 1,
-    order_number: 'ORD-1001',
-    company_name: 'Kavitha Infra Projects',
-    customer_name: 'Kavitha Infra Projects',
-    customer_phone: '+91 98480 88990',
-    item_name: 'Galvalume Corrugated Roofing Sheets',
-    category: 'Plates & Sheets',
-    quantity: 50,
-    unit: 'Sheets',
-    unit_price: 380,
-    total_amount: 19000,
-    paid_amount: 19000,
-    payment_status: 'Paid',
-    order_status: 'Processing',
-    order_date: new Date().toISOString().split('T')[0],
-    notes: 'Urgent delivery for factory roof repair'
-  },
-  {
-    id: 2,
-    order_number: 'ORD-1002',
-    company_name: 'Sri Balaji Engineering Works',
-    customer_name: 'Venkata Rao',
-    customer_phone: '+91 98480 77665',
-    item_name: 'Heavy-Duty Warehouse Pallet Racks',
-    category: 'Structural Steel',
-    quantity: 4,
-    unit: 'Tons',
-    unit_price: 4200,
-    total_amount: 16800,
-    paid_amount: 10000,
-    payment_status: 'Partial',
-    order_status: 'Confirmed',
-    order_date: new Date().toISOString().split('T')[0],
-    notes: 'Guntur bypass site delivery'
-  }
-];
+const DEFAULT_ORDERS = [];
 
 // =========================================================
 // UNIVERSAL CROSS-DEVICE CLOUD SYNC ENGINE (SUPABASE BACKED)
@@ -1368,24 +1258,40 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
             }
           });
 
-          // 1. Update any existing remote items with latest local modifications (preserves confirmed orders & edits)
+          // 1. Cloud-Master: Only update remote item if local item has a strictly NEWER updated_at timestamp
+          let remoteChanged = false;
           remote = remote.map(r => {
             const rid = String(r[idField] || r.id || '').trim();
-            return localMap.has(rid) ? { ...r, ...localMap.get(rid) } : r;
+            if (localMap.has(rid)) {
+              const l = localMap.get(rid);
+              const rTime = new Date(r.updated_at || r.created_at || 0).getTime();
+              const lTime = new Date(l.updated_at || l.created_at || 0).getTime();
+              if (!isNaN(lTime) && (!rTime || lTime > rTime)) {
+                remoteChanged = true;
+                return { ...r, ...l };
+              }
+            }
+            return r;
           });
 
-          // 2. Prepend any newly created local items not yet in remote
+          // 2. Prepend any newly created local items not yet in remote (only if created in last 48 hours)
           const remoteIds = new Set(remote.map(r => String(r[idField] || r.id || '').trim()));
+          const now = Date.now();
           const pendingItems = local.filter(l => {
             const lid = String(l[idField] || l.id || '').trim();
             if (storageKey === 'sasi_orders' && isOrderDeleted(l.id, l.order_number)) return false;
             if (storageKey === 'sasi_quotations' && isQuotationDeleted(l.id, l.quote_number)) return false;
-            return lid && !remoteIds.has(lid);
+            if (!lid || remoteIds.has(lid)) return false;
+            const cTime = new Date(l.created_at || l.updated_at || 0).getTime();
+            return !isNaN(cTime) && (now - cTime < 48 * 3600 * 1000);
           });
           if (pendingItems.length > 0) {
             remote = [...pendingItems, ...remote];
+            remoteChanged = true;
           }
-          cloudSaveCollection(dbUsername, remote).catch(() => {});
+          if (remoteChanged) {
+            cloudSaveCollection(dbUsername, remote).catch(() => {});
+          }
         }
         saveLocalCollection(storageKey, remote);
         return remote;
@@ -1412,14 +1318,8 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
 async function dbGetOrders() {
   let local = getLocalCollection('sasi_orders');
   if (local === null) {
-    if (!localStorage.getItem('sasi_orders_initialized')) {
-      saveLocalCollection('sasi_orders', DEFAULT_ORDERS);
-      localStorage.setItem('sasi_orders_initialized', 'true');
-      local = DEFAULT_ORDERS;
-    } else {
-      local = [];
-      saveLocalCollection('sasi_orders', []);
-    }
+    local = [];
+    saveLocalCollection('sasi_orders', []);
   }
 
   // 1. Cross-device cloud sync
@@ -1525,6 +1425,7 @@ async function dbAddOrder(order) {
 
 async function dbUpdateOrderStatus(id, newStatus) {
   const targetId = String(id || '').trim();
+  const nowIso = new Date().toISOString();
   let localList = getLocalCollection('sasi_orders') || [];
   const existing = localList.find(x => 
     (targetId && (String(x.id || '').trim() === targetId || String(x.order_number || '').trim() === targetId))
@@ -1542,6 +1443,7 @@ async function dbUpdateOrderStatus(id, newStatus) {
     }
 
     existing.order_status = newStatus;
+    existing.updated_at = nowIso;
     saveLocalCollection('sasi_orders', localList);
     await cloudSaveCollection('cloud_orders_sync', localList);
   }
@@ -1550,9 +1452,9 @@ async function dbUpdateOrderStatus(id, newStatus) {
   if (client) {
     try {
       if (/^\d+$/.test(targetId)) {
-        await client.from('orders').update({ order_status: newStatus }).eq('id', parseInt(targetId));
+        await client.from('orders').update({ order_status: newStatus, updated_at: nowIso }).eq('id', parseInt(targetId));
       } else {
-        await client.from('orders').update({ order_status: newStatus }).eq('order_number', targetId);
+        await client.from('orders').update({ order_status: newStatus, updated_at: nowIso }).eq('order_number', targetId);
       }
     } catch (e) {
       console.warn("Supabase update order status error:", e);
@@ -1563,6 +1465,8 @@ async function dbUpdateOrderStatus(id, newStatus) {
 
 async function dbUpdateOrder(id, updatedData) {
   const targetId = String(id || '').trim();
+  const nowIso = new Date().toISOString();
+  updatedData.updated_at = updatedData.updated_at || nowIso;
   let localList = getLocalCollection('sasi_orders') || [];
   const existingIndex = localList.findIndex(x => 
     (targetId && (String(x.id || '').trim() === targetId || String(x.order_number || '').trim() === targetId))
@@ -1585,7 +1489,7 @@ async function dbUpdateOrder(id, updatedData) {
       await adjustInventoryStock(updatedData.inventory_item_id || oldOrder.inventory_item_id, updatedData.item_name || oldOrder.item_name, diff);
     }
 
-    localList[existingIndex] = { ...oldOrder, ...updatedData };
+    localList[existingIndex] = { ...oldOrder, ...updatedData, updated_at: nowIso };
     saveLocalCollection('sasi_orders', localList);
     await cloudSaveCollection('cloud_orders_sync', localList);
   }

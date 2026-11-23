@@ -1916,14 +1916,23 @@ function filterQuotationsData() {
   });
 
   if (filtered.length === 0) {
+    const isFiltered = !!(fromVal || toVal || searchVal || (statusVal && statusVal !== 'ALL'));
+    const totalCount = (allQuotationsRecords || []).length;
     tbody.innerHTML = `
       <tr>
         <td colspan="7" class="py-12 text-center text-slate-400">
           <div class="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-xl mx-auto mb-2 text-slate-400">
             <i class="fa-solid fa-file-invoice"></i>
           </div>
-          <p class="text-sm font-bold text-slate-300">No matching official quotations found.</p>
-          <p class="text-xs text-slate-500 mt-1">Click "+ Create New Quotation" or adjust your search filter.</p>
+          <p class="text-sm font-bold text-slate-300">${isFiltered ? 'No quotations match the active date/search filter.' : 'No official quotations found.'}</p>
+          <p class="text-xs text-slate-500 mt-1">${isFiltered ? `There are ${totalCount} total quotations saved in the database.` : 'Click "+ Create New Quotation" to record a new proposal.'}</p>
+          ${isFiltered ? `
+            <div class="mt-4 flex items-center justify-center gap-2">
+              <button onclick="resetQuotationsFilter()" class="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold inline-flex items-center gap-2 shadow-lg cursor-pointer transition-all">
+                <i class="fa-solid fa-list-check"></i> View All Quotations (${totalCount})
+              </button>
+            </div>
+          ` : ''}
         </td>
       </tr>`;
     return;
@@ -4315,8 +4324,9 @@ async function loadOrders() {
     tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading orders & company ledgers...</td></tr>`;
   }
 
-  // If an order was just confirmed in the last 4 seconds, keep memory state stable to prevent network race conditions
-  if (window._lastConfirmedOrderTime && (Date.now() - window._lastConfirmedOrderTime < 4000)) {
+  // If an order was just confirmed or edited in the last 4 seconds, keep memory state stable to prevent network race conditions
+  if ((window._lastConfirmedOrderTime && (Date.now() - window._lastConfirmedOrderTime < 4000)) ||
+      (window._lastOrderEditTime && (Date.now() - window._lastOrderEditTime < 4000))) {
     return;
   }
 
@@ -4326,13 +4336,28 @@ async function loadOrders() {
       // Safe Merge: Never drop newly created in-memory orders, and never re-add permanently deleted orders
       const cleanOrders = orders.filter(o => typeof isOrderDeleted === 'function' ? !isOrderDeleted(o.id, o.order_number) : true);
 
+      // Keep any in-memory newer modifications
+      const localMap = new Map((allOrdersRecords || []).map(o => [String(o.order_number || o.id || '').trim(), o]));
+      const mergedCleanOrders = cleanOrders.map(r => {
+        const rid = String(r.order_number || r.id || '').trim();
+        if (localMap.has(rid)) {
+          const l = localMap.get(rid);
+          const rTime = new Date(r.updated_at || r.created_at || 0).getTime();
+          const lTime = new Date(l.updated_at || l.created_at || 0).getTime();
+          if (!isNaN(lTime) && (!rTime || lTime >= rTime)) {
+            return { ...r, ...l };
+          }
+        }
+        return r;
+      });
+
       const remoteIds = new Set(cleanOrders.map(o => String(o.order_number || o.id || '').trim()));
       const pendingLocal = (allOrdersRecords || []).filter(o => {
         const oid = String(o.order_number || o.id || '').trim();
         const isDel = typeof isOrderDeleted === 'function' ? isOrderDeleted(o.id, o.order_number) : false;
         return oid && !remoteIds.has(oid) && !isDel;
       });
-      allOrdersRecords = [...pendingLocal, ...cleanOrders];
+      allOrdersRecords = [...pendingLocal, ...mergedCleanOrders];
 
       // Ensure the just-confirmed order stays at index 0 if present
       if (window._lastConfirmedOrderNumber) {
@@ -4416,6 +4441,7 @@ function renderOrdersList(list) {
   if (!tbody) return;
 
   if (list.length === 0) {
+    const totalOrdersCount = (allOrdersRecords || []).length;
     tbody.innerHTML = `
       <tr>
         <td colspan="9" class="py-12 text-center text-slate-400">
@@ -4423,10 +4449,15 @@ function renderOrdersList(list) {
             <i class="fa-solid fa-cart-shopping"></i>
           </div>
           <p class="text-sm font-bold text-slate-300">No orders match your filter.</p>
-          <p class="text-xs text-slate-500 mt-1 mb-4">Select another company, adjust dates, or create a new order.</p>
-          <button onclick="openOrderModal()" class="btn-orange-pill text-xs px-4 py-2 cursor-pointer">
-            <i class="fa-solid fa-plus mr-1"></i> Create Manual Order
-          </button>
+          <p class="text-xs text-slate-500 mt-1 mb-4">Total ${totalOrdersCount} orders booked in ledger.</p>
+          <div class="flex items-center justify-center gap-2">
+            <button onclick="resetOrdersFilter()" class="px-3.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-md cursor-pointer transition-all">
+              <i class="fa-solid fa-rotate-right"></i> View All Orders (${totalOrdersCount})
+            </button>
+            <button onclick="openOrderModal()" class="btn-orange-pill text-xs px-4 py-2 cursor-pointer">
+              <i class="fa-solid fa-plus mr-1"></i> Create Manual Order
+            </button>
+          </div>
         </td>
       </tr>`;
     return;
@@ -4705,10 +4736,12 @@ async function handleOrderPaymentStatusChange(id, newStatus) {
   } else if (newStatus === 'Partial' && paid === 0) {
     paid = Math.round(tot * 0.5 * 100) / 100;
   }
+  const nowIso = new Date().toISOString();
   const updated = {
     ...ord,
     paid_amount: paid,
-    payment_status: newStatus
+    payment_status: newStatus,
+    updated_at: nowIso
   };
   const memIdx = (allOrdersRecords || []).findIndex(o => 
     String(o.id || '').trim() === targetId || String(o.order_number || '').trim() === targetId
@@ -4716,9 +4749,14 @@ async function handleOrderPaymentStatusChange(id, newStatus) {
   if (memIdx !== -1) {
     allOrdersRecords[memIdx] = updated;
     saveLocalCollection('sasi_orders', allOrdersRecords);
+    if (typeof cloudSaveCollection === 'function') {
+      await cloudSaveCollection('cloud_orders_sync', allOrdersRecords);
+    }
   }
+  window._lastOrderEditTime = Date.now();
   await dbUpdateOrder(targetId, updated);
-  await loadOrders();
+  filterOrdersData();
+  if (typeof updateBadgesFromMemory === 'function') updateBadgesFromMemory();
   if (typeof showDashboardToast === 'function') {
     showDashboardToast(`💳 Payment status updated to "${newStatus}" (Paid: ₹${Math.round(paid).toLocaleString('en-IN')})`, 'success');
   }
@@ -7469,6 +7507,7 @@ async function handleCrudSubmit(e) {
         payStatus = 'Partial';
       }
 
+      const nowIso = new Date().toISOString();
       const orderData = {
         inventory_item_id: formData.get('inventory_item_id') ? parseInt(formData.get('inventory_item_id')) : null,
         company_name: compName,
@@ -7487,7 +7526,8 @@ async function handleCrudSubmit(e) {
         order_date: formData.get('order_date') || getLocalDateStr(),
         expected_delivery: formData.get('expected_delivery') || null,
         delivery_address: formData.get('delivery_address') || '',
-        notes: formData.get('notes') || ''
+        notes: formData.get('notes') || '',
+        updated_at: nowIso
       };
 
       if (editingItemId) {
@@ -7497,13 +7537,20 @@ async function handleCrudSubmit(e) {
           String(o.order_number || '').trim() === targetId
         );
         if (memIdx !== -1) {
-          allOrdersRecords[memIdx] = { ...allOrdersRecords[memIdx], ...orderData };
+          allOrdersRecords[memIdx] = { ...allOrdersRecords[memIdx], ...orderData, updated_at: nowIso };
           saveLocalCollection('sasi_orders', allOrdersRecords);
+          if (typeof cloudSaveCollection === 'function') {
+            await cloudSaveCollection('cloud_orders_sync', allOrdersRecords);
+          }
         }
+        window._lastOrderEditTime = Date.now();
         await dbUpdateOrder(editingItemId, orderData);
       } else {
         await dbAddOrder(orderData);
       }
+      populateCompanyFilterOptions();
+      filterOrdersData();
+      if (typeof updateBadgesFromMemory === 'function') updateBadgesFromMemory();
       await loadOrders();
       await loadInventory();
       await loadProducts();
