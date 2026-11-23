@@ -1303,6 +1303,13 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
           local = (local || []).filter(l => !isOrderDeleted(l.id, l.order_number));
         }
 
+        // Safety safeguard: if remote is empty array but local has records, do not wipe local!
+        if (remote.length === 0 && Array.isArray(local) && local.length > 0) {
+          console.warn(`Cloud sync for ${storageKey}: remote is empty but local has ${local.length} items. Re-syncing local to cloud.`);
+          await cloudSaveCollection(dbUsername, local);
+          return local;
+        }
+
         if (idField && Array.isArray(local) && local.length > 0) {
           const localMap = new Map();
           local.forEach(l => {
@@ -2082,7 +2089,9 @@ async function dbAddQuotation(quote) {
 }
 
 async function dbUpdateQuotation(id, updatedData) {
-  let localList = getLocalCollection('sasi_quotations') || [];
+  let localList = (typeof allQuotationsRecords !== 'undefined' && Array.isArray(allQuotationsRecords) && allQuotationsRecords.length > 0)
+    ? [...allQuotationsRecords]
+    : (getLocalCollection('sasi_quotations') || []);
   
   // Find index by updatedData quote_number, or old id / quote_number
   let existingIndex = localList.findIndex(x => 
@@ -2109,6 +2118,9 @@ async function dbUpdateQuotation(id, updatedData) {
   }
 
   saveLocalCollection('sasi_quotations', localList);
+  if (typeof allQuotationsRecords !== 'undefined') {
+    allQuotationsRecords = localList;
+  }
   
   try {
     await cloudSaveCollection('cloud_quotations_sync', localList);
@@ -2133,9 +2145,29 @@ async function dbUpdateQuotation(id, updatedData) {
 }
 
 async function dbDeleteQuotation(id) {
-  let localList = getLocalCollection('sasi_quotations') || [];
+  let localList = (typeof allQuotationsRecords !== 'undefined' && Array.isArray(allQuotationsRecords) && allQuotationsRecords.length > 0)
+    ? [...allQuotationsRecords]
+    : (getLocalCollection('sasi_quotations') || []);
+
+  if (!localList || localList.length === 0) {
+    console.warn("dbDeleteQuotation: Current quotations list is empty. Aborting delete to prevent data loss.");
+    return false;
+  }
+
+  const initialCount = localList.length;
   localList = localList.filter(x => String(x.id) !== String(id) && String(x.quote_number) !== String(id));
+
+  // Safety check: if list had multiple items and now became 0, abort!
+  if (initialCount > 1 && localList.length === 0) {
+    console.warn("dbDeleteQuotation: Safety abort - filtered resulted in 0 items.");
+    return false;
+  }
+
   saveLocalCollection('sasi_quotations', localList);
+  if (typeof allQuotationsRecords !== 'undefined') {
+    allQuotationsRecords = localList;
+  }
+
   try {
     await cloudSaveCollection('cloud_quotations_sync', localList);
   } catch (err) {

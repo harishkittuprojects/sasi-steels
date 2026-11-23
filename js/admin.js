@@ -1577,7 +1577,8 @@ function setDateFilterPreset(prefix, preset) {
   updatePresetButtonStyles(prefix, preset);
 
   // Trigger the appropriate section filter
-  if (prefix === 'inquiry') filterInquiriesData();
+  if (prefix === 'quote' || prefix === 'quotation') filterQuotationsData();
+  else if (prefix === 'inquiry') filterInquiriesData();
   else if (prefix === 'order') filterOrdersData();
   else if (prefix === 'attendance') filterAttendanceData();
   else if (prefix === 'finance') filterFinanceData();
@@ -1602,7 +1603,8 @@ function onDateInputFilterChange(prefix) {
 
   updatePresetButtonStyles(prefix, matchedPreset);
 
-  if (prefix === 'inquiry') filterInquiriesData();
+  if (prefix === 'quote' || prefix === 'quotation') filterQuotationsData();
+  else if (prefix === 'inquiry') filterInquiriesData();
   else if (prefix === 'order') filterOrdersData();
   else if (prefix === 'attendance') filterAttendanceData();
   else if (prefix === 'finance') filterFinanceData();
@@ -2045,8 +2047,12 @@ function filterQuotationsData() {
 function resetQuotationsFilter() {
   const searchInput = document.getElementById('quote-filter-search');
   const statusSelect = document.getElementById('quote-filter-status');
+  const fromInput = document.getElementById('quote-filter-from');
+  const toInput = document.getElementById('quote-filter-to');
   if (searchInput) searchInput.value = '';
   if (statusSelect) statusSelect.value = 'ALL';
+  if (fromInput) fromInput.value = '';
+  if (toInput) toInput.value = '';
   currentQuoteDatePreset = 'all';
 
   const allBtn = document.getElementById('quote-preset-all');
