@@ -4280,12 +4280,6 @@ async function loadOrders() {
     if (Array.isArray(orders)) {
       // Safe Merge: Never drop newly created in-memory orders, and never re-add permanently deleted orders
       const cleanOrders = orders.filter(o => typeof isOrderDeleted === 'function' ? !isOrderDeleted(o.id, o.order_number) : true);
-      const localMap = new Map((allOrdersRecords || []).map(o => [String(o.order_number || o.id || '').trim(), o]));
-      
-      let mergedOrders = cleanOrders.map(r => {
-        const rid = String(r.order_number || r.id || '').trim();
-        return localMap.has(rid) ? { ...r, ...localMap.get(rid) } : r;
-      });
 
       const remoteIds = new Set(cleanOrders.map(o => String(o.order_number || o.id || '').trim()));
       const pendingLocal = (allOrdersRecords || []).filter(o => {
@@ -4293,7 +4287,7 @@ async function loadOrders() {
         const isDel = typeof isOrderDeleted === 'function' ? isOrderDeleted(o.id, o.order_number) : false;
         return oid && !remoteIds.has(oid) && !isDel;
       });
-      allOrdersRecords = [...pendingLocal, ...mergedOrders];
+      allOrdersRecords = [...pendingLocal, ...cleanOrders];
 
       // Ensure the just-confirmed order stays at index 0 if present
       if (window._lastConfirmedOrderNumber) {
@@ -4449,13 +4443,17 @@ function renderOrdersList(list) {
           </div>
         </td>
         <td class="py-3 px-4">
-          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-            ord.payment_status === 'Paid' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-            ord.payment_status === 'Partial' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
-          }">${ord.payment_status || (pendingDue === 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Pending'))}</span>
+          <select onchange="handleOrderPaymentStatusChange('${ord.id || ord.order_number}', this.value)" class="bg-slate-800 border ${
+            ord.payment_status === 'Paid' ? 'border-emerald-500/40 text-emerald-400' :
+            ord.payment_status === 'Partial' ? 'border-amber-500/40 text-amber-400' : 'border-red-500/40 text-red-400'
+          } rounded-lg px-2 py-1 text-[11px] font-semibold cursor-pointer">
+            <option value="Paid" ${ord.payment_status === 'Paid' ? 'selected' : ''}>Paid</option>
+            <option value="Partial" ${ord.payment_status === 'Partial' ? 'selected' : ''}>Partial</option>
+            <option value="Pending" ${!ord.payment_status || ord.payment_status === 'Pending' ? 'selected' : ''}>Pending</option>
+          </select>
         </td>
         <td class="py-3 px-4">
-          <select onchange="handleOrderStatusChange('${ord.id}', this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-semibold cursor-pointer">
+          <select onchange="handleOrderStatusChange('${ord.id || ord.order_number}', this.value)" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-semibold cursor-pointer">
             <option value="Pending" ${ord.order_status === 'Pending' ? 'selected' : ''}>Pending</option>
             <option value="Confirmed" ${ord.order_status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
             <option value="Processing" ${ord.order_status === 'Processing' ? 'selected' : ''}>Processing</option>
@@ -4468,7 +4466,7 @@ function renderOrdersList(list) {
             <a href="https://api.whatsapp.com/send?phone=${phoneLink}&text=Hello%20${encodeURIComponent(customerName)},%20this%20is%20SASI%20Steel%20Engineering%20regarding%20Order%20${encodeURIComponent(ord.order_number || '')}%20(${encodeURIComponent(companyName)}).%20Total:%20₹${Math.round(totalAmount)},%20Paid:%20₹${Math.round(paidAmount)},%20Pending%20Balance:%20₹${Math.round(pendingDue)}." target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer" title="Chat on WhatsApp">
               <i class="fa-brands fa-whatsapp"></i>
             </a>` : ''}
-          <button onclick="openOrderModal('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px] cursor-pointer" title="Edit Order">
+          <button onclick="openOrderModal('${ord.id || ord.order_number}')" class="px-2 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px] cursor-pointer" title="Edit Order">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
           <button onclick="deleteOrderItem('${ord.id || ord.order_number}', '${ord.order_number || ord.id}')" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] cursor-pointer" title="Delete Order">
@@ -4645,6 +4643,40 @@ async function handleOrderStatusChange(id, newStatus) {
   await loadInventory();
   await loadProducts();
   loadInitialCounts();
+}
+
+async function handleOrderPaymentStatusChange(id, newStatus) {
+  const targetId = String(id || '').trim();
+  const ord = (allOrdersRecords || []).find(o => 
+    String(o.id || '').trim() === targetId || String(o.order_number || '').trim() === targetId
+  );
+  if (!ord) return;
+  const tot = parseFloat(ord.total_amount) || 0;
+  let paid = parseFloat(ord.paid_amount) || 0;
+  if (newStatus === 'Paid') {
+    paid = tot;
+  } else if (newStatus === 'Pending') {
+    paid = 0;
+  } else if (newStatus === 'Partial' && paid === 0) {
+    paid = Math.round(tot * 0.5 * 100) / 100;
+  }
+  const updated = {
+    ...ord,
+    paid_amount: paid,
+    payment_status: newStatus
+  };
+  const memIdx = (allOrdersRecords || []).findIndex(o => 
+    String(o.id || '').trim() === targetId || String(o.order_number || '').trim() === targetId
+  );
+  if (memIdx !== -1) {
+    allOrdersRecords[memIdx] = updated;
+    saveLocalCollection('sasi_orders', allOrdersRecords);
+  }
+  await dbUpdateOrder(targetId, updated);
+  await loadOrders();
+  if (typeof showDashboardToast === 'function') {
+    showDashboardToast(`💳 Payment status updated to "${newStatus}" (Paid: ₹${Math.round(paid).toLocaleString('en-IN')})`, 'success');
+  }
 }
 
 function resetOrdersFilter() {
@@ -5300,7 +5332,11 @@ async function openOrderModal(id = null) {
 
   let existing = null;
   if (id) {
-    existing = (allOrdersRecords || []).find(o => String(o.id) === String(id));
+    const sId = String(id || '').trim();
+    existing = (allOrdersRecords || []).find(o => 
+      String(o.id || '').trim() === sId || 
+      String(o.order_number || '').trim() === sId
+    );
   }
 
   // Extract distinct company names for autocomplete datalist
@@ -7410,6 +7446,15 @@ async function handleCrudSubmit(e) {
       };
 
       if (editingItemId) {
+        const targetId = String(editingItemId || '').trim();
+        const memIdx = (allOrdersRecords || []).findIndex(o => 
+          String(o.id || '').trim() === targetId || 
+          String(o.order_number || '').trim() === targetId
+        );
+        if (memIdx !== -1) {
+          allOrdersRecords[memIdx] = { ...allOrdersRecords[memIdx], ...orderData };
+          saveLocalCollection('sasi_orders', allOrdersRecords);
+        }
         await dbUpdateOrder(editingItemId, orderData);
       } else {
         await dbAddOrder(orderData);

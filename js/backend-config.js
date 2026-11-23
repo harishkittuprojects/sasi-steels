@@ -1467,8 +1467,11 @@ async function dbAddOrder(order) {
 }
 
 async function dbUpdateOrderStatus(id, newStatus) {
+  const targetId = String(id || '').trim();
   let localList = getLocalCollection('sasi_orders') || [];
-  const existing = localList.find(x => String(x.id) === String(id));
+  const existing = localList.find(x => 
+    (targetId && (String(x.id || '').trim() === targetId || String(x.order_number || '').trim() === targetId))
+  );
 
   if (existing) {
     const oldStatus = existing.order_status;
@@ -1489,7 +1492,11 @@ async function dbUpdateOrderStatus(id, newStatus) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      await client.from('orders').update({ order_status: newStatus }).eq('id', id);
+      if (/^\d+$/.test(targetId)) {
+        await client.from('orders').update({ order_status: newStatus }).eq('id', parseInt(targetId));
+      } else {
+        await client.from('orders').update({ order_status: newStatus }).eq('order_number', targetId);
+      }
     } catch (e) {
       console.warn("Supabase update order status error:", e);
     }
@@ -1498,8 +1505,11 @@ async function dbUpdateOrderStatus(id, newStatus) {
 }
 
 async function dbUpdateOrder(id, updatedData) {
+  const targetId = String(id || '').trim();
   let localList = getLocalCollection('sasi_orders') || [];
-  const existingIndex = localList.findIndex(x => String(x.id) === String(id));
+  const existingIndex = localList.findIndex(x => 
+    (targetId && (String(x.id || '').trim() === targetId || String(x.order_number || '').trim() === targetId))
+  );
 
   if (existingIndex !== -1) {
     const oldOrder = localList[existingIndex];
@@ -1526,7 +1536,11 @@ async function dbUpdateOrder(id, updatedData) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      await client.from('orders').update(updatedData).eq('id', id);
+      if (/^\d+$/.test(targetId)) {
+        await client.from('orders').update(updatedData).eq('id', parseInt(targetId));
+      } else {
+        await client.from('orders').update(updatedData).eq('order_number', targetId);
+      }
     } catch (e) {
       console.warn("Supabase update order error:", e);
     }
