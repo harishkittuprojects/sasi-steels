@@ -4471,7 +4471,7 @@ function renderOrdersList(list) {
           <button onclick="openOrderModal('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 text-cyan-400 hover:bg-cyan-500 hover:text-white text-[11px] cursor-pointer" title="Edit Order">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
-          <button onclick="deleteOrderItem('${ord.id}')" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] cursor-pointer" title="Delete Order">
+          <button onclick="deleteOrderItem('${ord.id || ord.order_number}', '${ord.order_number || ord.id}')" class="px-2 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] cursor-pointer" title="Delete Order">
             <i class="fa-solid fa-trash"></i>
           </button>
         </td>
@@ -5513,19 +5513,45 @@ async function openOrderModal(id = null) {
   }
 }
 
-async function deleteOrderItem(id) {
+async function deleteOrderItem(id, orderNumber) {
   if (confirm("Are you sure you want to delete this order? Active stock will be restored automatically to Inventory.")) {
-    const targetId = String(id || '').trim();
+    const rawId = String(id || '').trim();
+    const rawOrderNum = String(orderNumber || '').trim();
+
+    // Find the order before removing it so we know all its identifiers
+    const targetOrder = (allOrdersRecords || []).find(o => 
+      String(o.id || '').trim() === rawId ||
+      String(o.order_number || '').trim() === rawId ||
+      (rawOrderNum && String(o.id || '').trim() === rawOrderNum) ||
+      (rawOrderNum && String(o.order_number || '').trim() === rawOrderNum)
+    );
+
+    const realId = targetOrder ? String(targetOrder.id || '').trim() : rawId;
+    const realOrderNum = targetOrder ? String(targetOrder.order_number || '').trim() : rawOrderNum;
+    const realQuoteNum = targetOrder ? String(targetOrder.quotation_number || '').trim() : '';
+
     if (typeof recordDeletedOrderId === 'function') {
-      recordDeletedOrderId(targetId);
+      if (realId) recordDeletedOrderId(realId);
+      if (realOrderNum) recordDeletedOrderId(realOrderNum);
+      if (realQuoteNum) recordDeletedOrderId(realQuoteNum);
     }
 
     // 1. Immediately remove from in-memory records
-    allOrdersRecords = (allOrdersRecords || []).filter(o => 
-      String(o.id || '').trim() !== targetId && 
-      String(o.order_number || '').trim() !== targetId
-    );
+    allOrdersRecords = (allOrdersRecords || []).filter(o => {
+      const oId = String(o.id || '').trim();
+      const oNum = String(o.order_number || '').trim();
+      const oQuote = String(o.quotation_number || '').trim();
+      if (realId && (oId === realId || oNum === realId)) return false;
+      if (realOrderNum && (oId === realOrderNum || oNum === realOrderNum)) return false;
+      if (realQuoteNum && oQuote && oQuote === realQuoteNum) return false;
+      if (rawId && (oId === rawId || oNum === rawId)) return false;
+      if (rawOrderNum && (oId === rawOrderNum || oNum === rawOrderNum)) return false;
+      return true;
+    });
     saveLocalCollection('sasi_orders', allOrdersRecords);
+    if (typeof cloudSaveCollection === 'function') {
+      await cloudSaveCollection('cloud_orders_sync', allOrdersRecords);
+    }
 
     // 2. Immediately update UI and badges (0ms)
     populateCompanyFilterOptions();
@@ -5533,7 +5559,7 @@ async function deleteOrderItem(id) {
     if (typeof updateBadgesFromMemory === 'function') updateBadgesFromMemory();
 
     // 3. Persist deletion to Supabase cloud
-    await dbDeleteOrder(id);
+    await dbDeleteOrder(realId, realOrderNum);
 
     // 4. Update inventory and initial counts
     await loadInventory();
@@ -5564,11 +5590,15 @@ async function handleDeleteAllOrders() {
       if (typeof recordDeletedOrderId === 'function') {
         if (o.order_number) recordDeletedOrderId(o.order_number);
         if (o.id) recordDeletedOrderId(o.id);
+        if (o.quotation_number) recordDeletedOrderId(o.quotation_number);
       }
     });
 
     allOrdersRecords = [];
     saveLocalCollection('sasi_orders', []);
+    if (typeof cloudSaveCollection === 'function') {
+      await cloudSaveCollection('cloud_orders_sync', []);
+    }
     populateCompanyFilterOptions();
     filterOrdersData();
     if (typeof updateBadgesFromMemory === 'function') updateBadgesFromMemory();

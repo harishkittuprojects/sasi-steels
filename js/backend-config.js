@@ -1248,7 +1248,13 @@ function isOrderDeleted(id, orderNum) {
     const list = JSON.parse(raw);
     const sId = id ? String(id).trim() : '';
     const sNum = orderNum ? String(orderNum).trim() : '';
-    return (sId && list.includes(sId)) || (sNum && list.includes(sNum));
+    if (sId && list.includes(sId)) return true;
+    if (sNum && list.includes(sNum)) return true;
+    if (sNum.startsWith('ORD-') && list.includes(sNum.replace(/^ORD-/, ''))) return true;
+    if (sNum && !sNum.startsWith('ORD-') && list.includes(`ORD-${sNum}`)) return true;
+    if (sId.startsWith('ORD-') && list.includes(sId.replace(/^ORD-/, ''))) return true;
+    if (sId && !sId.startsWith('ORD-') && list.includes(`ORD-${sId}`)) return true;
+    return false;
   } catch (e) {
     return false;
   }
@@ -1291,19 +1297,10 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
 
       // If remote cloud record exists, merge any pending locally created items that haven't synced to remote yet
       if (remote !== null) {
-        if (storageKey === 'sasi_orders' && Array.isArray(remote) && remote.length > 0) {
-          // If remote actively has orders returned from cloud, un-tombstone them so they are not hidden
-          remote.forEach(r => {
-            unrecordDeletedOrderId(r.id, r.order_number);
-          });
-        }
-
-        // SAFEGUARD: If remote cloud record is empty array, but local has active items, preserve local and re-sync to cloud
-        if (Array.isArray(remote) && remote.length === 0 && Array.isArray(local) && local.length > 0) {
-          remote = [...local];
-          cloudSaveCollection(dbUsername, remote).catch(() => {});
-          saveLocalCollection(storageKey, remote);
-          return remote;
+        if (storageKey === 'sasi_orders') {
+          // Strictly filter out any deleted orders from remote so deleted orders NEVER resurrect
+          remote = (remote || []).filter(r => !isOrderDeleted(r.id, r.order_number));
+          local = (local || []).filter(l => !isOrderDeleted(l.id, l.order_number));
         }
 
         if (idField && Array.isArray(local) && local.length > 0) {
@@ -1377,7 +1374,7 @@ async function dbGetOrders() {
 
   // Ensure every order object has company_name and paid_amount properly formatted
   let updatedLocal = false;
-  local = (local || []).map(ord => {
+  local = (local || []).filter(ord => !isOrderDeleted(ord.id, ord.order_number)).map(ord => {
     if (!ord.company_name) {
       ord.company_name = ord.customer_name ? ord.customer_name.replace(/\s*\(.*?\)\s*/g, '').trim() : 'General Client';
       updatedLocal = true;
@@ -1537,23 +1534,38 @@ async function dbUpdateOrder(id, updatedData) {
   return true;
 }
 
-async function dbDeleteOrder(id) {
+async function dbDeleteOrder(id, orderNum) {
   const targetId = String(id || '').trim();
-  recordDeletedOrderId(targetId);
+  const targetOrderNum = String(orderNum || '').trim();
+  if (targetId) recordDeletedOrderId(targetId);
+  if (targetOrderNum) recordDeletedOrderId(targetOrderNum);
 
   let localList = getLocalCollection('sasi_orders') || [];
-  const target = localList.find(x => String(x.id) === targetId || String(x.order_number) === targetId);
+  const target = localList.find(x => 
+    (targetId && (String(x.id) === targetId || String(x.order_number) === targetId)) ||
+    (targetOrderNum && (String(x.order_number) === targetOrderNum || String(x.id) === targetOrderNum))
+  );
 
   if (target) {
     if (target.order_number) recordDeletedOrderId(target.order_number);
     if (target.id) recordDeletedOrderId(target.id);
+    if (target.quotation_number) {
+      recordDeletedOrderId(target.quotation_number);
+      recordDeletedOrderId(`ORD-${target.quotation_number}`);
+    }
     if (target.order_status !== 'Cancelled') {
       const qty = parseFloat(target.quantity) || 0;
       await adjustInventoryStock(target.inventory_item_id, target.item_name, qty);
     }
   }
 
-  localList = localList.filter(x => String(x.id) !== targetId && String(x.order_number) !== targetId);
+  localList = localList.filter(x => {
+    const xId = String(x.id || '').trim();
+    const xNum = String(x.order_number || '').trim();
+    if (targetId && (xId === targetId || xNum === targetId)) return false;
+    if (targetOrderNum && (xNum === targetOrderNum || xId === targetOrderNum)) return false;
+    return true;
+  });
   saveLocalCollection('sasi_orders', localList);
   await cloudSaveCollection('cloud_orders_sync', localList);
 
@@ -1565,6 +1577,9 @@ async function dbDeleteOrder(id) {
         await client.from('orders').delete().eq('id', parseInt(targetId, 10));
       } else {
         await client.from('orders').delete().eq('order_number', targetId);
+      }
+      if (targetOrderNum) {
+        await client.from('orders').delete().eq('order_number', targetOrderNum);
       }
     } catch (e) {
       console.warn("Supabase delete order error:", e);
