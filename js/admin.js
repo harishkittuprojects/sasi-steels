@@ -2035,7 +2035,7 @@ function filterQuotationsData() {
           <button onclick="exportQuotationToPDF('${q.quote_number || q.id}')" class="p-1.5 px-2 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs" title="Download PDF">
             <i class="fa-solid fa-file-pdf"></i>
           </button>
-          <button onclick="handleDeleteQuotation('${q.quote_number || q.id}')" class="p-1.5 px-2 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs" title="Delete">
+          <button onclick="handleDeleteQuotation('${q.id}', '${q.quote_number || ''}')" class="p-1.5 px-2 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs cursor-pointer" title="Delete">
             <i class="fa-solid fa-trash"></i>
           </button>
         </td>
@@ -2281,12 +2281,51 @@ async function viewLinkedOrder(quoteNumber) {
   }
 }
 
-async function handleDeleteQuotation(id) {
-  if (confirm("Are you sure you want to delete this quotation record?")) {
-    await dbDeleteQuotation(id);
-    await loadQuotations();
-    await loadOrders();
-    loadInitialCounts();
+async function handleDeleteQuotation(id, quoteNum) {
+  const rawId = String(id || '').trim();
+  const rawQuoteNum = String(quoteNum || '').trim();
+
+  const targetQuote = (allQuotationsRecords || []).find(q =>
+    (rawId && String(q.id || '').trim() === rawId) ||
+    (rawQuoteNum && String(q.quote_number || '').trim() === rawQuoteNum) ||
+    (rawId && String(q.quote_number || '').trim() === rawId)
+  );
+
+  const displayNum = targetQuote?.quote_number || rawQuoteNum || rawId;
+  const clientName = targetQuote?.customer_name || targetQuote?.company_name || '';
+  const confirmMsg = clientName 
+    ? `Are you sure you want to delete Quotation #${displayNum} for "${clientName}"?`
+    : `Are you sure you want to delete Quotation #${displayNum}?`;
+
+  if (!confirm(confirmMsg)) return;
+
+  const realId = targetQuote ? String(targetQuote.id || '').trim() : rawId;
+  const realQuoteNum = targetQuote ? String(targetQuote.quote_number || '').trim() : rawQuoteNum;
+
+  // 1. Immediately remove ONLY this target quote from memory
+  allQuotationsRecords = (allQuotationsRecords || []).filter(q => {
+    const qId = String(q.id || '').trim();
+    const qNum = String(q.quote_number || '').trim();
+    if (realId && qId === realId) return false;
+    if (realQuoteNum && qNum === realQuoteNum) return false;
+    return true;
+  });
+
+  // 2. Immediately update local storage and re-render UI in real time (0ms)
+  saveLocalCollection('sasi_quotations', allQuotationsRecords);
+  updateQuotationKPIs();
+  filterQuotationsData();
+  loadInitialCounts();
+
+  if (typeof showDashboardToast === 'function') {
+    showDashboardToast(`Quotation #${displayNum} deleted. (${allQuotationsRecords.length} remaining)`, 'success');
+  }
+
+  // 3. Persist deletion to Supabase cloud in background
+  try {
+    await dbDeleteQuotation(realId, realQuoteNum);
+  } catch (err) {
+    console.warn("Error deleting quotation in cloud:", err);
   }
 }
 

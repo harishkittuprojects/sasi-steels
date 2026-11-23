@@ -1271,6 +1271,47 @@ function unrecordDeletedOrderId(id, orderNum) {
   } catch (e) {}
 }
 
+// ================= PERMANENT DELETED QUOTATIONS TOMBSTONING =================
+function recordDeletedQuotationId(id) {
+  if (!id) return;
+  try {
+    const raw = localStorage.getItem('sasi_deleted_quotation_ids') || '[]';
+    const list = JSON.parse(raw);
+    const sId = String(id).trim();
+    if (sId && !list.includes(sId)) {
+      list.push(sId);
+      localStorage.setItem('sasi_deleted_quotation_ids', JSON.stringify(list));
+    }
+  } catch (e) {}
+}
+
+function isQuotationDeleted(id, quoteNum) {
+  try {
+    const raw = localStorage.getItem('sasi_deleted_quotation_ids') || '[]';
+    const list = JSON.parse(raw);
+    const sId = id ? String(id).trim() : '';
+    const sNum = quoteNum ? String(quoteNum).trim() : '';
+    if (sId && list.includes(sId)) return true;
+    if (sNum && list.includes(sNum)) return true;
+    if (sNum.startsWith('#') && list.includes(sNum.replace(/^#/, ''))) return true;
+    if (sNum && !sNum.startsWith('#') && list.includes(`#${sNum}`)) return true;
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+function unrecordDeletedQuotationId(id, quoteNum) {
+  try {
+    const raw = localStorage.getItem('sasi_deleted_quotation_ids') || '[]';
+    let list = JSON.parse(raw);
+    const sId = id ? String(id).trim() : '';
+    const sNum = quoteNum ? String(quoteNum).trim() : '';
+    list = list.filter(x => x !== sId && x !== sNum && x !== `#${sNum}` && x !== sNum.replace(/^#/, ''));
+    localStorage.setItem('sasi_deleted_quotation_ids', JSON.stringify(list));
+  } catch (e) {}
+}
+
 async function cloudSyncCollection(storageKey, dbUsername, idField) {
   let local = getLocalCollection(storageKey) || [];
 
@@ -1302,6 +1343,10 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
           remote = (remote || []).filter(r => !isOrderDeleted(r.id, r.order_number));
           local = (local || []).filter(l => !isOrderDeleted(l.id, l.order_number));
         }
+        if (storageKey === 'sasi_quotations') {
+          remote = (remote || []).filter(r => !isQuotationDeleted(r.id, r.quote_number));
+          local = (local || []).filter(l => !isQuotationDeleted(l.id, l.quote_number));
+        }
 
         // Safety safeguard: if remote is empty array but local has records, do not wipe local!
         if (remote.length === 0 && Array.isArray(local) && local.length > 0) {
@@ -1314,7 +1359,11 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
           const localMap = new Map();
           local.forEach(l => {
             const lid = String(l[idField] || l.id || '').trim();
-            if (lid && (storageKey !== 'sasi_orders' || !isOrderDeleted(l.id, l.order_number))) {
+            if (lid && (
+              (storageKey !== 'sasi_orders' && storageKey !== 'sasi_quotations') ||
+              (storageKey === 'sasi_orders' && !isOrderDeleted(l.id, l.order_number)) ||
+              (storageKey === 'sasi_quotations' && !isQuotationDeleted(l.id, l.quote_number))
+            )) {
               localMap.set(lid, l);
             }
           });
@@ -1330,6 +1379,7 @@ async function cloudSyncCollection(storageKey, dbUsername, idField) {
           const pendingItems = local.filter(l => {
             const lid = String(l[idField] || l.id || '').trim();
             if (storageKey === 'sasi_orders' && isOrderDeleted(l.id, l.order_number)) return false;
+            if (storageKey === 'sasi_quotations' && isQuotationDeleted(l.id, l.quote_number)) return false;
             return lid && !remoteIds.has(lid);
           });
           if (pendingItems.length > 0) {
@@ -2144,7 +2194,12 @@ async function dbUpdateQuotation(id, updatedData) {
   return true;
 }
 
-async function dbDeleteQuotation(id) {
+async function dbDeleteQuotation(id, quoteNum) {
+  const targetId = String(id || '').trim();
+  const targetQuoteNum = String(quoteNum || '').trim();
+  if (targetId) recordDeletedQuotationId(targetId);
+  if (targetQuoteNum) recordDeletedQuotationId(targetQuoteNum);
+
   let localList = (typeof allQuotationsRecords !== 'undefined' && Array.isArray(allQuotationsRecords) && allQuotationsRecords.length > 0)
     ? [...allQuotationsRecords]
     : (getLocalCollection('sasi_quotations') || []);
@@ -2155,7 +2210,13 @@ async function dbDeleteQuotation(id) {
   }
 
   const initialCount = localList.length;
-  localList = localList.filter(x => String(x.id) !== String(id) && String(x.quote_number) !== String(id));
+  localList = localList.filter(x => {
+    const xId = String(x.id || '').trim();
+    const xNum = String(x.quote_number || '').trim();
+    if (targetId && (xId === targetId || xNum === targetId)) return false;
+    if (targetQuoteNum && (xNum === targetQuoteNum || xId === targetQuoteNum)) return false;
+    return true;
+  });
 
   // Safety check: if list had multiple items and now became 0, abort!
   if (initialCount > 1 && localList.length === 0) {
@@ -2177,11 +2238,11 @@ async function dbDeleteQuotation(id) {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const isNum = /^\d+$/.test(String(id));
+      const isNum = /^\d+$/.test(targetId);
       if (isNum) {
-        await client.from('quotations').delete().eq('id', parseInt(id, 10));
-      } else {
-        await client.from('quotations').delete().eq('quote_number', String(id));
+        await client.from('quotations').delete().eq('id', parseInt(targetId, 10));
+      } else if (targetQuoteNum) {
+        await client.from('quotations').delete().eq('quote_number', targetQuoteNum);
       }
     } catch (e) {
       console.warn("Supabase delete quotation error:", e);
